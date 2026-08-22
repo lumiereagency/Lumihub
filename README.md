@@ -76,15 +76,16 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–8 (planejamento, fundação/login/segurança, Design System/Shell,
+Fases 0–9 (planejamento, fundação/login/segurança, Design System/Shell,
 Dashboard executivo, CRM e Prospecção, Clientes e Contratos, Projetos/
-Tarefas/Equipe/Captações, Calendário, Financeiro/Visão Financeira) estão
-implementadas e testadas de ponta a ponta (build de produção, fluxo de
-setup → login → RBAC → CRM → conversão de lead em cliente → contrato →
-cobrança automática → projeto com equipe e margem → tarefas → captação e
-vencimento de contrato na Agenda → Visão Financeira com KPIs/indicadores/
-gráficos reais, validado com navegador real). As Fases 9–24 (Cobranças,
-Contas a Pagar, Cartões, Integrações, Lumi AI, etc.) têm o schema de
+Tarefas/Equipe/Captações, Calendário, Financeiro/Visão Financeira, Contas
+a Receber e Cobranças) estão implementadas e testadas de ponta a ponta
+(build de produção, fluxo de setup → login → RBAC → CRM → conversão de
+lead em cliente → contrato → cobrança automática com régua de lembretes →
+projeto com equipe e margem → tarefas → captação e vencimento de contrato
+na Agenda → Visão Financeira com KPIs/indicadores/gráficos reais →
+confirmação de pagamento, validado com navegador real). As Fases 10–24
+(Contas a Pagar, Cartões, Integrações, Lumi AI, etc.) têm o schema de
 banco, RBAC e navegação já prontos; as telas hoje são placeholders
 explícitos ("Módulo em construção") até receberem a implementação
 funcional completa, uma fase por vez — nenhum dado fictício é exibido

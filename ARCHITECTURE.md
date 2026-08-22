@@ -182,11 +182,33 @@ IA for conectado via Integrações.
     (não apenas o mês corrente) para não zerar com poucos dados; "Meses de
     cobertura" mostra "Sem burn rate" em vez de ∞/NaN quando a despesa
     média não supera a receita média.
-- ⏳ Fases 9–24 — Demais módulos de negócio (Cobranças, Contas a Pagar,
-  Cartões, Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de
-  banco para **todos** esses módulos já existem; as páginas hoje são
-  placeholders explícitos ("Módulo em construção") até receberem sua
-  implementação funcional completa, fase a fase.
+- ✅ Fase 9 — Contas a Receber e Cobranças: `/financeiro/receber` (CRUD de
+  cobranças manuais além das geradas por contrato, confirmação de
+  pagamento com forma de pagamento e link de comprovante, cancelamento) e
+  `/financeiro/cobrancas` (LUMI COBRANÇAS — biblioteca de modelos de
+  mensagem por gatilho D-7..D+5 e canal, com placeholders `{{nome}}`,
+  `{{valor}}`, `{{vencimento}}`, `{{pix}}`).
+  - **Régua honesta, não simulada**: criar ou editar uma cobrança gera a
+    régua de lembretes (`PaymentReminder`) a partir dos modelos ativos
+    (`src/lib/billing/reminders.ts`), a mesma função usada pela ativação de
+    contrato da Fase 5. Como não há infraestrutura de cron nesta app, o
+    "modo automático" é implementado como um botão **"Processar régua
+    agora"** que dispara os lembretes vencidos sob demanda — a UI declara
+    isso explicitamente em vez de fingir um agendador em segundo plano.
+  - **Canais de envio são de fato verificados**: `sendReminderMessage`
+    (`src/lib/integrations/messaging.ts`) só tenta enviar se existir uma
+    `Integration` com status `CONECTADO` para WhatsApp Business/SMTP; como
+    nenhuma integração está conectada ainda (Fase 14 pendente), o
+    processamento marca os lembretes como `FALHOU` com o motivo exato
+    ("Nenhum canal conectado") — nunca como enviado com sucesso sem uma
+    entrega real.
+  - Status "Atrasado" é derivado na UI (pendente + vencimento no passado),
+    seguindo a mesma convenção já usada no Dashboard da Fase 3.
+- ⏳ Fases 10–24 — Demais módulos de negócio (Contas a Pagar, Cartões,
+  Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de banco para
+  **todos** esses módulos já existem; as páginas hoje são placeholders
+  explícitos ("Módulo em construção") até receberem sua implementação
+  funcional completa, fase a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 

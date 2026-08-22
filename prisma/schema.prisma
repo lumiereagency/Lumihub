@@ -814,17 +814,19 @@ enum ReminderStatus {
 
 // LUMI COBRANÇAS — régua de cobrança configurável (Fase 9)
 model PaymentReminder {
-  id           String          @id @default(cuid())
-  receivableId String
-  offsetDays   Int
-  channel      ReminderChannel
-  status       ReminderStatus  @default(AGENDADO)
-  scheduledFor DateTime
-  sentAt       DateTime?
-  messageBody  String?
-  createdAt    DateTime        @default(now())
+  id                String          @id @default(cuid())
+  receivableId      String
+  messageTemplateId String?
+  offsetDays        Int
+  channel           ReminderChannel
+  status            ReminderStatus  @default(AGENDADO)
+  scheduledFor      DateTime
+  sentAt            DateTime?
+  messageBody       String?
+  createdAt         DateTime        @default(now())
 
-  receivable AccountReceivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  receivable      AccountReceivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  messageTemplate MessageTemplate?  @relation(fields: [messageTemplateId], references: [id], onDelete: SetNull)
 
   @@map("payment_reminders")
 }
@@ -849,7 +851,8 @@ model MessageTemplate {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reminders    PaymentReminder[]
 
   @@map("message_templates")
 }

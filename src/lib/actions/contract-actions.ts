@@ -12,6 +12,7 @@ import {
   RECURRENCE_LABELS,
 } from "@/lib/validation/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { generateRemindersForReceivable } from "@/lib/billing/reminders";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -43,7 +44,7 @@ async function generateInitialReceivable(tx: TxClient, contractId: string) {
     },
   });
 
-  await tx.accountReceivable.create({
+  const receivable = await tx.accountReceivable.create({
     data: {
       organizationId: contract.organizationId,
       clientId: contract.clientId,
@@ -55,6 +56,8 @@ async function generateInitialReceivable(tx: TxClient, contractId: string) {
       status: "PENDENTE",
     },
   });
+
+  await generateRemindersForReceivable(tx, receivable.id);
 }
 
 // Contrato ativo com data de término → Agenda (Fase 26): mantém um evento

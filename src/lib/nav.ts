@@ -12,6 +12,7 @@ import {
   Wallet,
   ArrowDownCircle,
   ArrowUpCircle,
+  Send,
   CreditCard,
   TrendingUp,
   Landmark,
@@ -90,6 +91,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Visão Financeira", href: "/financeiro", icon: Wallet, permission: permKey("FINANCE", "VIEW") },
       { label: "Contas a Receber", href: "/financeiro/receber", icon: ArrowDownCircle, permission: permKey("RECEIVABLES", "VIEW") },
+      { label: "Cobranças", href: "/financeiro/cobrancas", icon: Send, permission: permKey("RECEIVABLES", "VIEW") },
       { label: "Contas a Pagar", href: "/financeiro/pagar", icon: ArrowUpCircle, permission: permKey("PAYABLES", "VIEW") },
       { label: "Cartões", href: "/financeiro/cartoes", icon: CreditCard, permission: permKey("CARDS", "VIEW") },
       { label: "Fluxo de Caixa", href: "/financeiro/fluxo-de-caixa", icon: TrendingUp, permission: permKey("FINANCE", "VIEW") },
