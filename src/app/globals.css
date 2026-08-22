@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   LUMIHUB DESIGN SYSTEM — tokens de tema (Fase 2)
+   ========================================================================== */
+
+:root {
+  --lh-bg: #09090b;
+  --lh-bg-secondary: #111113;
+  --lh-card: #161618;
+  --lh-card-elevated: #1c1c1f;
+  --lh-border: #27272a;
+
+  --lh-text-primary: #f5f5f5;
+  --lh-text-secondary: #a1a1aa;
+  --lh-text-tertiary: #71717a;
+
+  --lh-gold: #c9a45c;
+  --lh-gold-light: #e3c47a;
+
+  --lh-success: #22c55e;
+  --lh-warning: #eab308;
+  --lh-error: #ef4444;
+  --lh-info: #3b82f6;
+
+  --background: var(--lh-bg);
+  --foreground: var(--lh-text-primary);
+}
+
+@theme inline {
+  --color-background: var(--lh-bg);
+  --color-bg-secondary: var(--lh-bg-secondary);
+  --color-card: var(--lh-card);
+  --color-card-elevated: var(--lh-card-elevated);
+  --color-border: var(--lh-border);
+
+  --color-text-primary: var(--lh-text-primary);
+  --color-text-secondary: var(--lh-text-secondary);
+  --color-text-tertiary: var(--lh-text-tertiary);
+
+  --color-gold: var(--lh-gold);
+  --color-gold-light: var(--lh-gold-light);
+
+  --color-success: var(--lh-success);
+  --color-warning: var(--lh-warning);
+  --color-error: var(--lh-error);
+  --color-info: var(--lh-info);
+
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--lh-bg);
+  color: var(--lh-text-primary);
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--lh-border);
+}
+
+::selection {
+  background: var(--lh-gold);
+  color: #09090b;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--lh-border);
+  border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}

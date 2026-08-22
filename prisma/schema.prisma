@@ -1,0 +1,1236 @@
+// LUMIHUB — Schema de banco de dados
+// Sistema operacional interno da Lumière Agency
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =========================================================================
+// ORGANIZAÇÃO / MULTI-EMPRESA (Fase 45)
+// Toda entidade pertence a uma Organization para permitir evolução futura
+// para múltiplas empresas sem redesenhar o schema.
+// =========================================================================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("America/Sao_Paulo")
+  currency  String   @default("BRL")
+  locale    String   @default("pt-BR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users               User[]
+  roles               Role[]
+  auditLogs           AuditLog[]
+  leads               Lead[]
+  clients             Client[]
+  contractTemplates   ContractTemplate[]
+  contracts           Contract[]
+  proposals           Proposal[]
+  projects            Project[]
+  tasks               Task[]
+  teamMembers         TeamMember[]
+  services            Service[]
+  captures            Capture[]
+  calendarEvents      CalendarEvent[]
+  financialCategories FinancialCategory[]
+  costCenters         CostCenter[]
+  financialMovements  FinancialMovement[]
+  accountsReceivable  AccountReceivable[]
+  accountsPayable     AccountPayable[]
+  messageTemplates    MessageTemplate[]
+  creditCards         CreditCard[]
+  investments         Investment[]
+  goals               Goal[]
+  alerts              Alert[]
+  notifications       Notification[]
+  documents           Document[]
+  integrations        Integration[]
+  integrationWebhooks IntegrationWebhook[]
+  integrationLogs     IntegrationLog[]
+  aiConversations     AiConversation[]
+  aiInsights          AiInsight[]
+
+  @@map("organizations")
+}
+
+// =========================================================================
+// AUTENTICAÇÃO, RBAC E SEGURANÇA (Fase 1)
+// =========================================================================
+
+enum RoleKey {
+  ADMIN
+  FINANCEIRO
+  OPERACAO
+  COMERCIAL
+  GESTAO
+  CUSTOM
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            RoleKey
+  name           String
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+  permissions  RolePermission[]
+
+  @@unique([organizationId, key])
+  @@map("roles")
+}
+
+// Chaves granulares: <MODULE>_<ACTION>, ex: FINANCE_VIEW, FINANCE_CREATE, MANAGE_INTEGRATIONS
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique
+  module      String
+  action      String
+  description String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  organizationId  String
+  roleId          String
+  name            String
+  email           String
+  passwordHash    String
+  avatarUrl       String?
+  isActive        Boolean   @default(true)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role                  Role                 @relation(fields: [roleId], references: [id])
+  sessions              Session[]
+  passwordResets        PasswordResetToken[]
+  auditLogs             AuditLog[]
+  ownedLeads            Lead[]               @relation("LeadOwner")
+  responsibleProjects   Project[]            @relation("ProjectResponsible")
+  assignedTasks         Task[]               @relation("TaskAssignee")
+  teamMemberProfile     TeamMember?
+  calendarEvents        CalendarEvent[]      @relation("EventResponsible")
+  notifications         Notification[]
+  documentsUploaded     Document[]
+  aiConversations       AiConversation[]
+  connectedIntegrations Integration[]
+
+  @@unique([organizationId, email])
+  @@map("users")
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  tokenHash    String    @unique
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+  lastActiveAt DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Rastreia tentativas de login por e-mail e IP para rate limiting / brute force
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@map("login_attempts")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// =========================================================================
+// COMERCIAL — CRM E PROSPECÇÃO (Fase 4)
+// =========================================================================
+
+enum LeadStage {
+  LEAD
+  CONTATO
+  QUALIFICADO
+  REUNIAO
+  PROPOSTA
+  NEGOCIACAO
+  FECHADO
+  PERDIDO
+}
+
+model Lead {
+  id                String    @id @default(cuid())
+  organizationId    String
+  company           String
+  contactName       String?
+  phone             String?
+  whatsapp          String?
+  instagram         String?
+  website           String?
+  city              String?
+  segment           String?
+  source            String?
+  ownerUserId       String?
+  potentialValue    Decimal?  @db.Decimal(14, 2)
+  probability       Int       @default(0)
+  stage             LeadStage @default(LEAD)
+  lastContactAt     DateTime?
+  nextContactAt     DateTime?
+  notes             String?
+  convertedClientId String?   @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?        @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  convertedClient Client?      @relation(fields: [convertedClientId], references: [id])
+  proposals       Proposal[]
+
+  @@index([organizationId, stage])
+  @@map("leads")
+}
+
+enum ProposalStatus {
+  RASCUNHO
+  ENVIADA
+  EM_NEGOCIACAO
+  ACEITA
+  RECUSADA
+  EXPIRADA
+}
+
+model Proposal {
+  id             String         @id @default(cuid())
+  organizationId String
+  leadId         String?
+  clientId       String?
+  title          String
+  value          Decimal        @db.Decimal(14, 2)
+  status         ProposalStatus @default(RASCUNHO)
+  validUntil     DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@map("proposals")
+}
+
+// =========================================================================
+// CLIENTES E CONTRATOS (Fase 5)
+// =========================================================================
+
+enum ClientStatus {
+  ATIVO
+  INATIVO
+  PROSPECTO
+  INADIMPLENTE
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  organizationId String
+  companyName    String
+  cnpj           String?
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  instagram      String?
+  website        String?
+  status         ClientStatus @default(ATIVO)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  originLead         Lead?
+  contracts          Contract[]
+  proposals          Proposal[]
+  projects           Project[]
+  captures           Capture[]
+  calendarEvents     CalendarEvent[]
+  accountsReceivable AccountReceivable[]
+  financialMovements FinancialMovement[]
+  documents          Document[]
+
+  @@index([organizationId, status])
+  @@map("clients")
+}
+
+enum ContractType {
+  CLIENTE
+  FUNCIONARIO
+  FREELANCER
+  PRESTADOR
+  UGC
+  AUDIOVISUAL
+  SOCIAL_MEDIA
+  TRAFEGO
+  DESIGN
+  DESENVOLVIMENTO
+  PERSONALIZADO
+}
+
+model ContractTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  type           ContractType
+  bodyTemplate   String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contracts    Contract[]
+
+  @@map("contract_templates")
+}
+
+enum ContractStatus {
+  RASCUNHO
+  AGUARDANDO_ASSINATURA
+  ATIVO
+  ENCERRADO
+  CANCELADO
+}
+
+enum RecurrenceType {
+  UNICO
+  MENSAL
+  TRIMESTRAL
+  ANUAL
+}
+
+model Contract {
+  id             String         @id @default(cuid())
+  organizationId String
+  clientId       String
+  templateId     String?
+  title          String
+  type           ContractType
+  value          Decimal        @db.Decimal(14, 2)
+  recurrence     RecurrenceType @default(UNICO)
+  startDate      DateTime
+  endDate        DateTime?
+  status         ContractStatus @default(RASCUNHO)
+  fileUrl        String?
+  signedAt       DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template           ContractTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  projects           Project[]
+  accountsReceivable AccountReceivable[]
+  financialMovements FinancialMovement[]
+
+  @@index([organizationId, status])
+  @@map("contracts")
+}
+
+// =========================================================================
+// PROJETOS, TAREFAS, EQUIPE E CAPTAÇÕES (Fase 6)
+// =========================================================================
+
+enum ProjectStatus {
+  BACKLOG
+  PLANEJAMENTO
+  EM_PRODUCAO
+  EM_REVISAO
+  AGUARDANDO_CLIENTE
+  CONCLUIDO
+  ATRASADO
+}
+
+model Project {
+  id                String        @id @default(cuid())
+  organizationId    String
+  clientId          String
+  contractId        String?
+  name              String
+  responsibleUserId String?
+  status            ProjectStatus @default(BACKLOG)
+  startDate         DateTime?
+  dueDate           DateTime?
+  value             Decimal?      @db.Decimal(14, 2)
+  costEstimate      Decimal?      @db.Decimal(14, 2)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contract           Contract?           @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  responsible        User?               @relation("ProjectResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+  tasks              Task[]
+  team               ProjectTeamMember[]
+  captures           Capture[]
+  calendarEvents     CalendarEvent[]
+  documents          Document[]
+  financialMovements FinancialMovement[]
+
+  @@index([organizationId, status])
+  @@map("projects")
+}
+
+enum TaskStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  EM_REVISAO
+  CONCLUIDA
+}
+
+enum TaskPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String?
+  title          String
+  description    String?
+  assigneeUserId String?
+  status         TaskStatus   @default(A_FAZER)
+  priority       TaskPriority @default(MEDIA)
+  dueDate        DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  completedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee     User?        @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@map("tasks")
+}
+
+enum TeamMemberType {
+  FUNCIONARIO
+  FREELANCER
+  PRESTADOR
+}
+
+enum PaymentMethod {
+  PIX
+  TRANSFERENCIA
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  DINHEIRO
+  OUTRO
+}
+
+model TeamMember {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String?        @unique
+  name           String
+  role           String
+  type           TeamMemberType
+  paymentValue   Decimal?       @db.Decimal(14, 2)
+  paymentMethod  PaymentMethod?
+  paymentDay     Int?
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  projects     ProjectTeamMember[]
+
+  @@map("team_members")
+}
+
+model ProjectTeamMember {
+  projectId     String
+  teamMemberId  String
+  roleInProject String?
+  costAllocated Decimal? @db.Decimal(14, 2)
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, teamMemberId])
+  @@map("project_team_members")
+}
+
+model Service {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  category       String?
+  defaultPrice   Decimal? @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("services")
+}
+
+enum CaptureStatus {
+  PLANEJADA
+  CONFIRMADA
+  REALIZADA
+  EM_EDICAO
+  ENTREGUE
+}
+
+model Capture {
+  id             String        @id @default(cuid())
+  organizationId String
+  clientId       String
+  projectId      String?
+  date           DateTime
+  location       String?
+  status         CaptureStatus @default(PLANEJADA)
+  videomaker     String?
+  photographer   String?
+  storymaker     String?
+  droneOperator  String?
+  videoCount     Int?
+  photoCount     Int?
+  scriptNotes    String?
+  equipment      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  calendarEvents CalendarEvent[]
+
+  @@index([organizationId, status])
+  @@map("captures")
+}
+
+// =========================================================================
+// CALENDÁRIO (Fase 7)
+// =========================================================================
+
+enum CalendarEventType {
+  CAPTACAO
+  REUNIAO
+  ENTREGA
+  VENCIMENTO
+  COBRANCA
+  CONTRATO
+  TAREFA
+  INTERNO
+}
+
+model CalendarEvent {
+  id                String            @id @default(cuid())
+  organizationId    String
+  title             String
+  type              CalendarEventType
+  startAt           DateTime
+  endAt             DateTime?
+  allDay            Boolean           @default(false)
+  clientId          String?
+  projectId         String?
+  captureId         String?
+  responsibleUserId String?
+  location          String?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  capture      Capture?     @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  responsible  User?        @relation("EventResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, startAt])
+  @@map("calendar_events")
+}
+
+// =========================================================================
+// MOTOR FINANCEIRO CENTRAL (Fase 27) + FASES 8, 9, 10, 11
+// =========================================================================
+
+enum FinancialCategoryType {
+  RECEITA
+  DESPESA
+}
+
+model FinancialCategory {
+  id             String                @id @default(cuid())
+  organizationId String
+  name           String
+  type           FinancialCategoryType
+  parentId       String?
+  createdAt      DateTime              @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       FinancialCategory?  @relation("CategoryParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children     FinancialCategory[] @relation("CategoryParent")
+  movements    FinancialMovement[]
+  payables     AccountPayable[]
+
+  @@map("financial_categories")
+}
+
+model CostCenter {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  createdAt      DateTime @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  movements    FinancialMovement[]
+  payables     AccountPayable[]
+
+  @@map("cost_centers")
+}
+
+enum MovementType {
+  RECEITA
+  DESPESA
+  RECEBIMENTO
+  PAGAMENTO
+  INVESTIMENTO
+  PARCELA
+  COMISSAO
+  SALARIO
+  CUSTO_PROJETO
+  AJUSTE
+  TRANSFERENCIA
+}
+
+enum MovementStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+// Registro central de todo movimento financeiro da empresa (Fase 27).
+// AccountReceivable, AccountPayable, CreditCardInstallment e Investment
+// geram/vinculam um FinancialMovement para consolidar caixa e previsões.
+model FinancialMovement {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  type               MovementType
+  amount             Decimal        @db.Decimal(14, 2)
+  competenceDate     DateTime
+  dueDate            DateTime?
+  paidAt             DateTime?
+  categoryId         String?
+  costCenterId       String?
+  clientId           String?
+  projectId          String?
+  contractId         String?
+  paymentMethod      PaymentMethod?
+  status             MovementStatus @default(PENDENTE)
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentTotal   Int?
+  notes              String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category        FinancialCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  costCenter      CostCenter?            @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  client          Client?                @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  project         Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  contract        Contract?              @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  receivable      AccountReceivable?
+  payable         AccountPayable?
+  cardInstallment CreditCardInstallment?
+
+  @@index([organizationId, type, status])
+  @@index([organizationId, dueDate])
+  @@map("financial_movements")
+}
+
+enum ReceivableStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+model AccountReceivable {
+  id             String           @id @default(cuid())
+  organizationId String
+  clientId       String
+  contractId     String?
+  movementId     String?          @unique
+  description    String
+  amount         Decimal          @db.Decimal(14, 2)
+  dueDate        DateTime
+  paymentMethod  PaymentMethod?
+  status         ReceivableStatus @default(PENDENTE)
+  paidAt         DateTime?
+  proofUrl       String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contract     Contract?          @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  movement     FinancialMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  reminders    PaymentReminder[]
+
+  @@index([organizationId, status, dueDate])
+  @@map("accounts_receivable")
+}
+
+enum PayableStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+model AccountPayable {
+  id                 String        @id @default(cuid())
+  organizationId     String
+  movementId         String?       @unique
+  description        String
+  supplier           String?
+  categoryId         String?
+  costCenterId       String?
+  amount             Decimal       @db.Decimal(14, 2)
+  dueDate            DateTime
+  recurring          Boolean       @default(false)
+  installmentGroupId String?
+  installmentNumber  Int?
+  installmentTotal   Int?
+  responsibleUserId  String?
+  status             PayableStatus @default(PENDENTE)
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category     FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  costCenter   CostCenter?        @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  movement     FinancialMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, dueDate])
+  @@map("accounts_payable")
+}
+
+enum ReminderChannel {
+  WHATSAPP
+  EMAIL
+}
+
+enum ReminderStatus {
+  AGENDADO
+  ENVIADO
+  FALHOU
+  CANCELADO
+}
+
+// LUMI COBRANÇAS — régua de cobrança configurável (Fase 9)
+model PaymentReminder {
+  id           String          @id @default(cuid())
+  receivableId String
+  offsetDays   Int
+  channel      ReminderChannel
+  status       ReminderStatus  @default(AGENDADO)
+  scheduledFor DateTime
+  sentAt       DateTime?
+  messageBody  String?
+  createdAt    DateTime        @default(now())
+
+  receivable AccountReceivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+
+  @@map("payment_reminders")
+}
+
+enum MessageTrigger {
+  D_MENOS_7
+  D_MENOS_3
+  D_MENOS_1
+  D_0
+  D_MAIS_1
+  D_MAIS_5
+}
+
+model MessageTemplate {
+  id             String          @id @default(cuid())
+  organizationId String
+  name           String
+  trigger        MessageTrigger
+  channel        ReminderChannel
+  body           String
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("message_templates")
+}
+
+model CreditCard {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  institution    String?
+  limitAmount    Decimal? @db.Decimal(14, 2)
+  closingDay     Int
+  dueDay         Int
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions CreditCardTransaction[]
+
+  @@map("credit_cards")
+}
+
+model CreditCardTransaction {
+  id                String   @id @default(cuid())
+  cardId            String
+  description       String
+  category          String?
+  totalAmount       Decimal  @db.Decimal(14, 2)
+  purchaseDate      DateTime
+  installmentsTotal Int      @default(1)
+  createdAt         DateTime @default(now())
+
+  card         CreditCard              @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  installments CreditCardInstallment[]
+
+  @@map("credit_card_transactions")
+}
+
+model CreditCardInstallment {
+  id            String   @id @default(cuid())
+  transactionId String
+  movementId    String?  @unique
+  number        Int
+  amount        Decimal  @db.Decimal(14, 2)
+  invoiceMonth  DateTime
+  paid          Boolean  @default(false)
+
+  transaction CreditCardTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  movement    FinancialMovement?    @relation(fields: [movementId], references: [id], onDelete: SetNull)
+
+  @@map("credit_card_installments")
+}
+
+model Investment {
+  id             String         @id @default(cuid())
+  organizationId String
+  description    String
+  category       String
+  amount         Decimal        @db.Decimal(14, 2)
+  date           DateTime
+  paymentMethod  PaymentMethod?
+  installments   Int            @default(1)
+  objective      String?
+  expectedReturn String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("investments")
+}
+
+// =========================================================================
+// METAS (Fase 13)
+// =========================================================================
+
+enum GoalType {
+  FATURAMENTO
+  NOVOS_CLIENTES
+  PROSPECCAO
+  PROJETOS
+  MARGEM
+  RECEBIMENTOS
+}
+
+model Goal {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           GoalType
+  periodStart    DateTime
+  periodEnd      DateTime
+  targetValue    Decimal  @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("goals")
+}
+
+// =========================================================================
+// ALERTAS E NOTIFICAÇÕES (Fase 17)
+// =========================================================================
+
+enum AlertCategory {
+  FINANCEIRO
+  COMERCIAL
+  OPERACAO
+  CLIENTES
+  CONTRATOS
+  EQUIPE
+}
+
+enum AlertSeverity {
+  URGENTE
+  ATENCAO
+  INFORMATIVO
+  OPORTUNIDADE
+}
+
+enum AlertStatus {
+  ABERTO
+  RESOLVIDO
+  DISPENSADO
+}
+
+model Alert {
+  id                String        @id @default(cuid())
+  organizationId    String
+  category          AlertCategory
+  severity          AlertSeverity
+  title             String
+  message           String
+  relatedEntityType String?
+  relatedEntityId   String?
+  status            AlertStatus   @default(ABERTO)
+  createdAt         DateTime      @default(now())
+  resolvedAt        DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@map("alerts")
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String
+  body           String
+  link           String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// =========================================================================
+// DOCUMENTOS (Fase 15)
+// =========================================================================
+
+enum DocumentCategory {
+  CONTRATO
+  PROPOSTA
+  BRIEFING
+  COMPROVANTE
+  NOTA_FISCAL
+  DOCUMENTO_CLIENTE
+  DOCUMENTO_EQUIPE
+  OUTRO
+}
+
+model Document {
+  id               String           @id @default(cuid())
+  organizationId   String
+  name             String
+  category         DocumentCategory
+  clientId         String?
+  projectId        String?
+  storageProvider  String           @default("local")
+  storageKey       String
+  mimeType         String
+  size             Int
+  uploadedByUserId String?
+  createdAt        DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  uploadedBy   User?        @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+// =========================================================================
+// INTEGRAÇÕES E LUMIHUB VAULT (Fase 14, 32, 33, 34)
+// =========================================================================
+
+enum IntegrationCategory {
+  CALENDARIO
+  COMUNICACAO
+  FINANCEIRO
+  IA
+  ARMAZENAMENTO
+  AUTOMACAO
+  OUTROS
+}
+
+enum IntegrationProviderKey {
+  GOOGLE_CALENDAR
+  OUTLOOK_CALENDAR
+  WHATSAPP_BUSINESS
+  EMAIL_SMTP
+  RESEND
+  PIX
+  ASAAS
+  STRIPE
+  MERCADO_PAGO
+  OPENAI
+  ANTHROPIC
+  GOOGLE_GEMINI
+  GOOGLE_DRIVE
+  DROPBOX
+  N8N
+  MAKE
+  ZAPIER
+  WEBHOOK_CUSTOM
+  CUSTOM_API
+}
+
+enum IntegrationStatus {
+  CONECTADO
+  PENDENTE
+  ERRO
+  EXPIRADO
+  DESCONECTADO
+}
+
+model Integration {
+  id                String                 @id @default(cuid())
+  organizationId    String
+  provider          IntegrationProviderKey
+  category          IntegrationCategory
+  status            IntegrationStatus      @default(DESCONECTADO)
+  config            Json?
+  connectedAt       DateTime?
+  lastSyncAt        DateTime?
+  lastUsedAt        DateTime?
+  connectedByUserId String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connectedBy  User?                   @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  credentials  IntegrationCredential[]
+  webhooks     IntegrationWebhook[]
+  logs         IntegrationLog[]
+
+  @@unique([organizationId, provider])
+  @@map("integrations")
+}
+
+// LUMIHUB VAULT — segredos sempre criptografados (AES-256-GCM), nunca em texto puro.
+model IntegrationCredential {
+  id             String    @id @default(cuid())
+  integrationId  String
+  label          String
+  encryptedValue Bytes
+  iv             Bytes
+  authTag        Bytes
+  maskedPreview  String
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  rotatedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("integration_credentials")
+}
+
+model IntegrationWebhook {
+  id             String   @id @default(cuid())
+  organizationId String
+  integrationId  String?
+  name           String
+  slug           String   @unique
+  secretHash     String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration  Integration?     @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  logs         IntegrationLog[]
+
+  @@map("integration_webhooks")
+}
+
+enum LogDirection {
+  ENTRADA
+  SAIDA
+}
+
+enum LogStatus {
+  SUCESSO
+  FALHA
+  PENDENTE
+}
+
+model IntegrationLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  integrationId  String?
+  webhookId      String?
+  direction      LogDirection
+  eventType      String
+  payload        Json?
+  status         LogStatus
+  responseCode   Int?
+  attempt        Int          @default(1)
+  errorMessage   String?
+  createdAt      DateTime     @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration  Integration?        @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  webhook      IntegrationWebhook? @relation(fields: [webhookId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@map("integration_logs")
+}
+
+// =========================================================================
+// LUMI AI (Fase 16, 30, 31)
+// =========================================================================
+
+model AiConversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     AiMessage[]
+
+  @@map("ai_conversations")
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model AiMessage {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           AiMessageRole
+  content        String
+  createdAt      DateTime      @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+model AiInsight {
+  id                String        @id @default(cuid())
+  organizationId    String
+  type              String
+  title             String
+  description       String
+  severity          AlertSeverity
+  relatedEntityType String?
+  relatedEntityId   String?
+  generatedAt       DateTime      @default(now())
+  dismissedAt       DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_insights")
+}
