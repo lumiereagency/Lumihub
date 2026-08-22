@@ -400,6 +400,7 @@ model Contract {
   projects           Project[]
   accountsReceivable AccountReceivable[]
   financialMovements FinancialMovement[]
+  calendarEvents     CalendarEvent[]
 
   @@index([organizationId, status])
   @@map("contracts")
@@ -611,6 +612,7 @@ model CalendarEvent {
   clientId          String?
   projectId         String?
   captureId         String?
+  contractId        String?
   responsibleUserId String?
   location          String?
   notes             String?
@@ -621,6 +623,7 @@ model CalendarEvent {
   client       Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   capture      Capture?     @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  contract     Contract?    @relation(fields: [contractId], references: [id], onDelete: Cascade)
   responsible  User?        @relation("EventResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, startAt])

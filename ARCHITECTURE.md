@@ -154,11 +154,21 @@ IA for conectado via Integrações.
   projeto cria/atualiza um evento de entrega na Agenda, e criar uma
   captação cria automaticamente seu evento no calendário — ambas
   verificadas diretamente no banco.
-- ⏳ Fases 7–24 — Demais módulos de negócio (Agenda, Financeiro completo,
-  Cobranças, Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de
-  banco para **todos** esses módulos já existem; as páginas hoje são
-  placeholders explícitos ("Módulo em construção") até receberem sua
-  implementação funcional completa, fase a fase.
+- ✅ Fase 7 — Calendário: agenda integrada com visão em Mês (grade) e Agenda
+  (lista cronológica), filtros por cliente/responsável/projeto/tipo, e
+  criação manual de eventos (Reunião, Vencimento, Cobrança, Tarefa, Evento
+  interno). Eventos gerados automaticamente por outros módulos (Captação,
+  Entrega de projeto, Vencimento de contrato) aparecem como somente
+  leitura, com link para o módulo de origem — evita que uma edição manual
+  diverja da fonte de verdade. Terceira automação de agenda implementada:
+  um contrato ativo com data de término mantém um evento de vencimento
+  sincronizado (`syncContractExpiryEvent`), junto às duas da Fase 6
+  (entrega de projeto e captação).
+- ⏳ Fases 8–24 — Demais módulos de negócio (Financeiro completo, Cobranças,
+  Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de banco para
+  **todos** esses módulos já existem; as páginas hoje são placeholders
+  explícitos ("Módulo em construção") até receberem sua implementação
+  funcional completa, fase a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 

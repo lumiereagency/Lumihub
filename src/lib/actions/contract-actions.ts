@@ -57,6 +57,34 @@ async function generateInitialReceivable(tx: TxClient, contractId: string) {
   });
 }
 
+// Contrato ativo com data de término → Agenda (Fase 26): mantém um evento
+// de vencimento sincronizado, permitindo alertar sobre renovação/expiração.
+async function syncContractExpiryEvent(tx: TxClient, contractId: string) {
+  const contract = await tx.contract.findUniqueOrThrow({ where: { id: contractId } });
+  const existing = await tx.calendarEvent.findFirst({ where: { contractId, type: "CONTRATO" } });
+
+  const shouldHaveEvent = contract.status === "ATIVO" && contract.endDate;
+
+  if (!shouldHaveEvent) {
+    if (existing) await tx.calendarEvent.delete({ where: { id: existing.id } });
+    return;
+  }
+
+  const data = {
+    title: `Vencimento de contrato — ${contract.title}`,
+    startAt: contract.endDate as Date,
+    clientId: contract.clientId,
+  };
+
+  if (existing) {
+    await tx.calendarEvent.update({ where: { id: existing.id }, data });
+  } else {
+    await tx.calendarEvent.create({
+      data: { organizationId: contract.organizationId, type: "CONTRATO", contractId: contract.id, ...data },
+    });
+  }
+}
+
 function buildGeneratedBody(
   bodyTemplate: string,
   contract: { title: string; value: unknown; recurrence: string; startDate: Date; endDate?: Date | null },
@@ -125,6 +153,7 @@ export async function createContractAction(_prev: ActionState, formData: FormDat
     if (created.status === "ATIVO") {
       await generateInitialReceivable(tx, created.id);
     }
+    await syncContractExpiryEvent(tx, created.id);
     return created;
   });
 
@@ -176,6 +205,7 @@ export async function updateContractAction(
     if (!wasActive && becomesActive) {
       await generateInitialReceivable(tx, contractId);
     }
+    await syncContractExpiryEvent(tx, contractId);
   });
 
   await audit({
