@@ -122,10 +122,21 @@ IA for conectado via Integrações.
 - ✅ Fase 1 — Fundação, login e segurança.
 - ✅ Fase 2 — Design System e Shell da aplicação.
 - ✅ Fase 3 — Dashboard executivo (dados reais, estados vazios corretos).
-- ⏳ Fases 4–24 — Módulos de negócio completos (CRM, Clientes, Contratos,
-  Projetos, Financeiro, Cobranças, Integrações, Lumi AI, etc.). A navegação,
-  o RBAC e o schema de banco para **todos** esses módulos já existem; as
-  páginas hoje são placeholders explícitos ("Módulo em construção") até
-  receberem sua implementação funcional completa, fase a fase.
+- ✅ Fase 4 — CRM e Prospecção: pipeline Kanban (Lead → Contato →
+  Qualificado → Reunião → Proposta → Negociação → Fechado → Perdido),
+  criação/edição de leads, transição rápida de estágio, alerta de
+  follow-up (lead sem próximo contato ou com contato atrasado), métricas de
+  pipeline (total, ponderado, conversão, novos leads, fechamentos) e
+  conversão de lead fechado em cliente real (`src/lib/actions/crm-actions.ts`
+  → `convertLeadToClientAction`), cumprindo o princípio de integração entre
+  módulos da Fase 26.
+- ⏳ Fases 5–24 — Demais módulos de negócio (Clientes/Contratos, Projetos,
+  Financeiro, Cobranças, Integrações, Lumi AI, etc.). A navegação, o RBAC e
+  o schema de banco para **todos** esses módulos já existem; as páginas hoje
+  são placeholders explícitos ("Módulo em construção") até receberem sua
+  implementação funcional completa, fase a fase. A tela de Clientes em
+  particular já recebe registros reais (criados pela conversão de leads),
+  mas ainda não tem uma UI de listagem/detalhe própria — isso é o objeto da
+  Fase 5.
 
 Consulte o `README.md` para instruções de execução local.

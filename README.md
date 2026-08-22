@@ -73,14 +73,15 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–3 (planejamento, fundação/login/segurança, Design System/Shell,
-Dashboard executivo) estão implementadas e testadas de ponta a ponta
-(build de produção, fluxo de setup → login → RBAC → logout validado com
-navegador real). As Fases 4–24 (CRM, Clientes, Contratos, Projetos,
-Financeiro completo, Integrações, Lumi AI, etc.) têm o schema de banco, RBAC
-e navegação já prontos; as telas hoje são placeholders explícitos
-("Módulo em construção") até receberem a implementação funcional completa,
-uma fase por vez — nenhum dado fictício é exibido como se fosse real.
+Fases 0–4 (planejamento, fundação/login/segurança, Design System/Shell,
+Dashboard executivo, CRM e Prospecção) estão implementadas e testadas de
+ponta a ponta (build de produção, fluxo de setup → login → RBAC → CRM →
+conversão de lead em cliente → logout, validado com navegador real). As
+Fases 5–24 (Clientes/Contratos, Projetos, Financeiro completo, Integrações,
+Lumi AI, etc.) têm o schema de banco, RBAC e navegação já prontos; as telas
+hoje são placeholders explícitos ("Módulo em construção") até receberem a
+implementação funcional completa, uma fase por vez — nenhum dado fictício é
+exibido como se fosse real.
 
 ## Integrações externas necessárias (ainda não configuradas)
 
