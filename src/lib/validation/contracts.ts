@@ -53,7 +53,7 @@ export const RECURRENCE_LABELS: Record<(typeof RECURRENCE_TYPES)[number], string
   ANUAL: "Anual",
 };
 
-const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
 
 export const contractSchema = z.object({
   clientId: z.string().min(1, "Selecione um cliente."),

@@ -9,7 +9,7 @@ export const CLIENT_STATUS_LABELS: Record<(typeof CLIENT_STATUSES)[number], stri
   INADIMPLENTE: "Inadimplente",
 };
 
-const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
 
 export const clientSchema = z.object({
   companyName: z.string().trim().min(1, "Informe o nome da empresa."),

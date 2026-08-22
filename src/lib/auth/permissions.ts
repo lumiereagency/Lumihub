@@ -125,7 +125,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM">, string
     ...grant("CALENDAR", FULL),
     ...grant("CAPTURES", FULL),
     ...grant("CLIENTS", RO),
-    ...grant("TEAM", RO),
+    ...grant("TEAM", RW),
     ...grant("ALERTS", RO),
     ...grant("DOCUMENTS", RW),
   ],

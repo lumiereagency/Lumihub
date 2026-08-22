@@ -22,7 +22,7 @@ export const LEAD_STAGE_LABELS: Record<(typeof LEAD_STAGES)[number], string> = {
   PERDIDO: "Perdido",
 };
 
-const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
 
 export const leadSchema = z.object({
   company: z.string().trim().min(1, "Informe o nome da empresa."),

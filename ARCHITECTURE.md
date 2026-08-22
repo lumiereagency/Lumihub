@@ -144,10 +144,35 @@ IA for conectado via Integrações.
   ativar um contrato gera automaticamente a primeira cobrança em Contas a
   Receber (`FinancialMovement` + `AccountReceivable` vinculados ao
   contrato), o que já alimenta o Dashboard da Fase 3 com dados reais.
-- ⏳ Fases 6–24 — Demais módulos de negócio (Projetos, Financeiro completo,
+- ✅ Fase 6 — Projetos, Tarefas, Equipe e Captações: Equipe (funcionários,
+  freelancers, prestadores) com vínculo opcional a um usuário do sistema;
+  Projetos em Kanban + Lista com equipe alocada (`ProjectTeamMember`, com
+  custo por membro) e cálculo de margem (valor − custo estimado − custo de
+  equipe); Tarefas em Kanban global e embutidas na ficha do projeto;
+  Captações com equipe técnica, equipamentos e status de entrega. Duas
+  automações do roadmap (Fase 36) implementadas: definir o prazo de um
+  projeto cria/atualiza um evento de entrega na Agenda, e criar uma
+  captação cria automaticamente seu evento no calendário — ambas
+  verificadas diretamente no banco.
+- ⏳ Fases 7–24 — Demais módulos de negócio (Agenda, Financeiro completo,
   Cobranças, Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de
   banco para **todos** esses módulos já existem; as páginas hoje são
   placeholders explícitos ("Módulo em construção") até receberem sua
   implementação funcional completa, fase a fase.
+
+### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
+
+Um bug real foi encontrado e corrigido durante a Fase 6: o helper
+`emptyToUndefined` usado nos schemas Zod (`src/lib/validation/*.ts`) só
+tratava string vazia (`""`). Formulários que omitem completamente um campo
+opcional do DOM (em vez de renderizá-lo vazio) fazem `formData.get(...)`
+retornar `null`, que `z.optional()` rejeita (só aceita `undefined`) — a
+validação falhava silenciosamente sempre que o componente não exibia o
+erro retornado pela action. Corrigido em todos os arquivos de validação
+para tratar `""` e `null` da mesma forma. Ao criar um novo formulário
+"enxuto" (poucos campos visíveis para um schema com mais campos opcionais),
+sempre renderizar `<FormMessage error={state.error} />` para que qualquer
+regressão semelhante apareça imediatamente na UI em vez de falhar em
+silêncio.
 
 Consulte o `README.md` para instruções de execução local.
