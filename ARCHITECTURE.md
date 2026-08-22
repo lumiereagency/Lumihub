@@ -164,11 +164,29 @@ IA for conectado via Integrações.
   um contrato ativo com data de término mantém um evento de vencimento
   sincronizado (`syncContractExpiryEvent`), junto às duas da Fase 6
   (entrega de projeto e captação).
-- ⏳ Fases 8–24 — Demais módulos de negócio (Financeiro completo, Cobranças,
-  Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de banco para
-  **todos** esses módulos já existem; as páginas hoje são placeholders
-  explícitos ("Módulo em construção") até receberem sua implementação
-  funcional completa, fase a fase.
+- ✅ Fase 8 — Financeiro Completo (Visão Financeira): dashboard em
+  `/financeiro` com KPIs (saldo, receita/despesa do mês, lucro estimado, a
+  receber/pagar, atrasados, compromissos futuros), indicadores (margem,
+  ponto de equilíbrio, burn rate, reserva operacional, meses de cobertura)
+  e três gráficos (Receita x Despesa últimos 6 meses, Despesas por
+  categoria, Receita por cliente), todos computados a partir de
+  `FinancialMovement`/`AccountReceivable`/`AccountPayable` reais — o motor
+  financeiro central da Fase 27 já em uso, não uma tela solta. CRUD de
+  Categorias Financeiras e Centros de Custo, pré-requisito de dados-mestre
+  para Contas a Pagar (Fase 10).
+  - **Paleta de gráficos**: 8 cores categóricas validadas pelo método da
+    skill de dataviz contra a superfície escura do LUMIHUB (`#161618`) —
+    ver `src/components/charts/colors.ts`. Séries adicionais além de 8 se
+    agrupam em "Outros" em vez de gerar uma nova cor.
+  - Indicadores usam **médias de todo o histórico de movimentos pagos**
+    (não apenas o mês corrente) para não zerar com poucos dados; "Meses de
+    cobertura" mostra "Sem burn rate" em vez de ∞/NaN quando a despesa
+    média não supera a receita média.
+- ⏳ Fases 9–24 — Demais módulos de negócio (Cobranças, Contas a Pagar,
+  Cartões, Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de
+  banco para **todos** esses módulos já existem; as páginas hoje são
+  placeholders explícitos ("Módulo em construção") até receberem sua
+  implementação funcional completa, fase a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 
