@@ -389,6 +389,7 @@ model Contract {
   endDate        DateTime?
   status         ContractStatus @default(RASCUNHO)
   fileUrl        String?
+  generatedBody  String?
   signedAt       DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

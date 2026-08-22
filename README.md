@@ -49,6 +49,9 @@ COMERCIAL, GESTAO) e o usuário administrador inicial.
 - `npx tsx -r dotenv/config scripts/create-test-user.ts` — cria um usuário de
   teste com perfil COMERCIAL na primeira organização existente (apenas para
   desenvolvimento local; não é o seed de demonstração da Fase 20).
+- `npx tsx -r dotenv/config scripts/resync-roles.ts` — reaplica
+  `DEFAULT_ROLE_PERMISSIONS` à primeira organização existente; rode após
+  alterar permissões padrão em `src/lib/auth/permissions.ts`.
 
 ## Estrutura de pastas
 
@@ -73,15 +76,16 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–4 (planejamento, fundação/login/segurança, Design System/Shell,
-Dashboard executivo, CRM e Prospecção) estão implementadas e testadas de
-ponta a ponta (build de produção, fluxo de setup → login → RBAC → CRM →
-conversão de lead em cliente → logout, validado com navegador real). As
-Fases 5–24 (Clientes/Contratos, Projetos, Financeiro completo, Integrações,
-Lumi AI, etc.) têm o schema de banco, RBAC e navegação já prontos; as telas
-hoje são placeholders explícitos ("Módulo em construção") até receberem a
-implementação funcional completa, uma fase por vez — nenhum dado fictício é
-exibido como se fosse real.
+Fases 0–5 (planejamento, fundação/login/segurança, Design System/Shell,
+Dashboard executivo, CRM e Prospecção, Clientes e Contratos) estão
+implementadas e testadas de ponta a ponta (build de produção, fluxo de
+setup → login → RBAC → CRM → conversão de lead em cliente → contrato →
+cobrança gerada automaticamente → refletida no Dashboard → logout, validado
+com navegador real). As Fases 6–24 (Projetos, Financeiro completo,
+Integrações, Lumi AI, etc.) têm o schema de banco, RBAC e navegação já
+prontos; as telas hoje são placeholders explícitos ("Módulo em construção")
+até receberem a implementação funcional completa, uma fase por vez —
+nenhum dado fictício é exibido como se fosse real.
 
 ## Integrações externas necessárias (ainda não configuradas)
 

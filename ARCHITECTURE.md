@@ -56,6 +56,11 @@ para múltiplas organizações no futuro sem redesenhar o banco.
   para `/acesso-negado` sem revelar se o recurso existe.
 - A navegação (sidebar/menu mobile) é filtrada pelas permissões efetivas do
   usuário — módulos sem `VIEW` simplesmente não aparecem.
+- Alterar `DEFAULT_ROLE_PERMISSIONS` no código não afeta organizações já
+  provisionadas automaticamente — `ensureDefaultRoles(organizationId)`
+  precisa ser executado novamente para reconciliar (script de exemplo em
+  `scripts/resync-roles.ts`). Uma futura tela de gestão de permissões
+  (Fase 14/`/configuracoes/permissoes`) deve tornar isso administrável.
 
 ## 5. Auditoria
 
@@ -130,13 +135,19 @@ IA for conectado via Integrações.
   conversão de lead fechado em cliente real (`src/lib/actions/crm-actions.ts`
   → `convertLeadToClientAction`), cumprindo o princípio de integração entre
   módulos da Fase 26.
-- ⏳ Fases 5–24 — Demais módulos de negócio (Clientes/Contratos, Projetos,
-  Financeiro, Cobranças, Integrações, Lumi AI, etc.). A navegação, o RBAC e
-  o schema de banco para **todos** esses módulos já existem; as páginas hoje
-  são placeholders explícitos ("Módulo em construção") até receberem sua
-  implementação funcional completa, fase a fase. A tela de Clientes em
-  particular já recebe registros reais (criados pela conversão de leads),
-  mas ainda não tem uma UI de listagem/detalhe própria — isso é o objeto da
-  Fase 5.
+- ✅ Fase 5 — Clientes e Contratos: listagem e ficha de cliente (contratos,
+  cobranças, histórico/timeline vindo do audit log, margem sinalizada como
+  indisponível até a Fase 6 trazer custos de projeto), biblioteca de
+  modelos de contrato com placeholders (`{{cliente}}`, `{{valor}}`, ...),
+  geração de contrato a partir de um modelo com pré-visualização do texto
+  renderizado, e — cumprindo o princípio de integração entre módulos —
+  ativar um contrato gera automaticamente a primeira cobrança em Contas a
+  Receber (`FinancialMovement` + `AccountReceivable` vinculados ao
+  contrato), o que já alimenta o Dashboard da Fase 3 com dados reais.
+- ⏳ Fases 6–24 — Demais módulos de negócio (Projetos, Financeiro completo,
+  Cobranças, Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de
+  banco para **todos** esses módulos já existem; as páginas hoje são
+  placeholders explícitos ("Módulo em construção") até receberem sua
+  implementação funcional completa, fase a fase.
 
 Consulte o `README.md` para instruções de execução local.
