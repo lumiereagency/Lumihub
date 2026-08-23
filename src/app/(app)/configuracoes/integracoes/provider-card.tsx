@@ -38,10 +38,12 @@ export function ProviderCard({
   provider,
   state,
   canManage,
+  oauthRedirectUri,
 }: {
   provider: ProviderDefinition;
   state: IntegrationState | null;
   canManage: boolean;
+  oauthRedirectUri?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
@@ -83,6 +85,7 @@ export function ProviderCard({
           provider={provider}
           currentConfig={state?.config ?? {}}
           credentialPreviews={state?.credentialPreviews ?? {}}
+          oauthRedirectUri={oauthRedirectUri}
           onSuccess={() => setOpen(false)}
         />
       </Drawer>

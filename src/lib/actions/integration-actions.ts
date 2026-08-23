@@ -30,7 +30,7 @@ export async function connectIntegrationAction(providerKey: string, _prev: Actio
   let verifyMessage = "Credenciais salvas. Este provedor não possui verificação automática disponível.";
 
   if (provider.oauthOnly) {
-    verifyMessage = "Credenciais de OAuth salvas. A conexão completa (login e consentimento) ainda não está disponível nesta fase.";
+    verifyMessage = "Credenciais salvas. Clique em \"Conectar com o provedor\" para concluir a autorização OAuth.";
   } else {
     const result = await verifyIntegration(provider.key, values);
     if (result) {

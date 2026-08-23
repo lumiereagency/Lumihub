@@ -14,11 +14,13 @@ export function IntegrationForm({
   provider,
   currentConfig,
   credentialPreviews,
+  oauthRedirectUri,
   onSuccess,
 }: {
   provider: ProviderDefinition;
   currentConfig: Record<string, string>;
   credentialPreviews: Record<string, string>;
+  oauthRedirectUri?: string;
   onSuccess?: () => void;
 }) {
   const action = connectIntegrationAction.bind(null, provider.key);
@@ -37,11 +39,16 @@ export function IntegrationForm({
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      {provider.oauthOnly && (
-        <p className="rounded-[10px] border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
-          Este provedor usa OAuth. As credenciais abaixo ficam salvas no LUMIHUB Vault, mas o fluxo completo de login e
-          consentimento ainda não está disponível — a conexão fica pendente.
-        </p>
+      {provider.oauthOnly && oauthRedirectUri && (
+        <div className="rounded-[10px] border border-border bg-card p-3 text-xs text-text-secondary">
+          <p className="mb-1.5">
+            Antes de salvar, cadastre este Redirect URI exato no console do provedor (Google Cloud Console ou Azure
+            Portal):
+          </p>
+          <code className="block select-all break-all rounded-[6px] bg-background px-2 py-1.5 text-gold-light">
+            {oauthRedirectUri}
+          </code>
+        </div>
       )}
 
       {provider.fields.map((field) => (
@@ -61,8 +68,17 @@ export function IntegrationForm({
       ))}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
-        {pending ? "Verificando conexão..." : "Salvar e conectar"}
+        {pending ? "Salvando..." : provider.oauthOnly ? "Salvar credenciais" : "Salvar e conectar"}
       </Button>
+
+      {provider.oauthOnly && currentConfig.clientId && (
+        <a
+          href={`/api/integrations/oauth/${provider.key}/start`}
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary transition-colors duration-150 hover:bg-[#232326]"
+        >
+          Conectar com o provedor
+        </a>
+      )}
     </form>
   );
 }

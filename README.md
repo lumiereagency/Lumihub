@@ -169,6 +169,35 @@ armazenamento cifrado prontos desde a Fase 14 — conectar é uma ação
 operacional (colar a credencial real na tela), não uma tarefa de
 código.
 
+### Google Calendar, Google Drive e Outlook Calendar (OAuth)
+
+Esses três usam login/consentimento OAuth de verdade (Fases 32–34) em
+vez de uma chave colada na tela — passos:
+
+1. Abra a integração em `/configuracoes/integracoes` **antes** de criar
+   o app no console do provedor: a tela mostra o **Redirect URI exato**
+   que precisa ser cadastrado lá (baseado em `APP_URL`, ex.:
+   `https://seu-dominio.com/api/integrations/oauth/GOOGLE_CALENDAR/callback`).
+2. Crie as credenciais OAuth no console do provedor com esse Redirect
+   URI:
+   - **Google** (Calendar e Drive): [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+     → criar credencial "ID do cliente OAuth" tipo "Aplicativo da Web".
+   - **Outlook**: [Azure Portal](https://portal.azure.com) → Microsoft
+     Entra ID → Registros de aplicativo → Nova credencial de cliente.
+3. Cole o Client ID e o Client Secret gerados na tela do LUMIHUB e
+   salve (fica `Pendente`).
+4. Clique em "Conectar com o provedor" — você é levado à tela real de
+   login/consentimento do Google ou da Microsoft; ao autorizar, o
+   LUMIHUB troca o código por um token de acesso e um refresh token
+   (guardados cifrados no Vault) e a integração vira `Conectado`, com a
+   conta autorizada exibida.
+
+Uma recusa de autorização, um Redirect URI que não bate exatamente com
+o cadastrado, ou um Client Secret errado voltam como erro honesto na
+tela — nunca uma conexão fingida. O refresh do token é renovado sob
+demanda no primeiro uso após expirar, sem depender de um agendador em
+segundo plano.
+
 ## Multi-organização
 
 A implantação suporta múltiplas organizações isoladas (Fase 45):
@@ -183,16 +212,13 @@ na mesma conta — cada pessoa pertence a exatamente uma.
 
 ## Roadmap restante
 
-Todo o roadmap de módulos de negócio (Fases 0–21) e multi-organização
-(Fase 45) estão implementados. Os itens que restam no schema/
-comentários do roadmap original são de infraestrutura, não novas
-telas:
+Todo o roadmap de módulos de negócio (Fases 0–21), multi-organização
+(Fase 45) e OAuth de Google/Outlook (Fases 32–34) estão implementados.
+Restam apenas:
 
-- **OAuth completo para Google Calendar, Google Drive e Outlook**
-  (hoje aceitam credenciais no Vault mas ficam sempre em `PENDENTE` —
-  falta o fluxo de login/consentimento OAuth de verdade).
-- **Gateway de pagamentos** (Asaas/Stripe/Mercado Pago) para
-  confirmação automática de pagamento em vez de manual.
+- **Gateway de pagamentos** (Asaas/Stripe/Mercado Pago) — descartado
+  por ora: cobrança é via Pix manual (chave/QR compartilhado +
+  confirmação manual em Contas a Receber), já coberto pela Fase 9.
 - **Internacionalização real** (idioma/fuso são salvos desde a Fase
   20, mas a interface só existe em português e as datas seguem o fuso
   do servidor).

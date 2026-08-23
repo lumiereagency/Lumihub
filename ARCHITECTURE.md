@@ -581,15 +581,57 @@ IA for conectado via Integrações.
     para `/dashboard`. Organização de teste removida ao final
     (`ON DELETE CASCADE` limpou usuário/perfis em cascata, confirmado
     no Postgres).
-- ⏳ Itens de infraestrutura/aprimoramento ainda pendentes, citados de
-  forma esparsa nos comentários do roadmap original do schema (Fases
-  26, 27, 30–34, 36) — a maioria já aplicada como princípio
-  transversal em vários módulos (Fase 26 "integração entre módulos" e
-  Fase 36 "automações" já estão em uso desde as Fases 5–12); o que
-  falta de fato:
-  - OAuth completo para Google Calendar/Google Drive/Outlook (hoje
-    aceitam credenciais no Vault mas ficam sempre `PENDENTE`).
-  - Gateway de pagamentos (Asaas/Stripe/Mercado Pago).
+- ✅ Fases 32–34 — OAuth real para Google Calendar, Google Drive e
+  Outlook Calendar: os três provedores `oauthOnly` do catálogo de
+  Integrações, travados em `PENDENTE` desde a Fase 14, agora completam
+  o fluxo real de autorização (Authorization Code + PKCE).
+  - **Fluxo completo em duas rotas novas**
+    (`src/app/api/integrations/oauth/[provider]/{start,callback}/route.ts`):
+    `/start` monta a URL de autorização real do provedor (Google:
+    `accounts.google.com`; Microsoft: `login.microsoftonline.com`) com
+    `client_id`/`redirect_uri` lidos da integração salva, PKCE
+    (`code_challenge` S256) e um `state` assinado (HMAC-SHA256 com
+    `SESSION_SECRET` — primeiro uso real desse segredo no código, antes
+    só documentado) guardado num cookie `httpOnly` de 10 minutos;
+    `/callback` valida esse estado contra o cookie (proteção CSRF),
+    troca o código por tokens com uma chamada `POST` real ao token
+    endpoint do provedor, busca a conta conectada (e-mail) para exibir
+    na UI, e só então marca `CONECTADO`.
+  - **Nunca finge sucesso**: cancelamento pelo usuário no provedor
+    (`error=access_denied`), estado inválido/expirado, ou uma troca de
+    código recusada pelo provedor viram erro honesto (`status=ERRO`,
+    `IntegrationLog` com a mensagem real) — nunca uma integração
+    fictícia. Refresh de token (`src/lib/integrations/oauth-tokens.ts`
+    → `getValidOAuthAccessToken`) segue o mesmo princípio "sem cron"
+    já usado na régua de cobrança (Fase 9) e nos alertas (Fase 17):
+    renovado sob demanda no momento do uso, nunca em segundo plano: se
+    o refresh falhar (token revogado pelo usuário no provedor), a
+    integração vira `EXPIRADO` com o motivo real em vez de continuar
+    sinalizando `CONECTADO` com um token inválido.
+  - **Escopo desta fase é só a conexão**, não o consumo — sincronizar
+    eventos do Google Calendar/Outlook ou armazenar documentos no
+    Google Drive usando o token já obtido fica para quando esses
+    módulos consumirem `getValidOAuthAccessToken`; não construído
+    agora para não expandir o escopo além do que estava descrito como
+    faltante ("fluxo completo de login/consentimento").
+  - Testado ponta a ponta com navegador real e chamadas de rede reais:
+    `/start` sem credenciais salvas rejeitado honestamente; Redirect
+    URI exibido corretamente na UI; credenciais de teste salvas
+    (status `PENDENTE`); `/start` redirecionou de fato para
+    `accounts.google.com/o/oauth2/v2/auth` com todos os parâmetros
+    corretos (`client_id`, `redirect_uri`, PKCE, `access_type=offline`
+    para garantir `refresh_token`); a troca de um código forjado por
+    token contatou a API real do Google e foi recusada com o erro
+    genuíno "The OAuth client was not found" — confirmado no Postgres
+    que a integração ficou `ERRO`, só a credencial `clientSecret`
+    permaneceu salva, nenhum `accessToken`/`refreshToken` fictício foi
+    gravado; um `state` adulterado foi rejeitado antes de qualquer
+    chamada de rede (proteção CSRF). Dados de teste removidos ao
+    final.
+- ⏳ Itens de infraestrutura ainda pendentes:
+  - Gateway de pagamentos (Asaas/Stripe/Mercado Pago) — descartado por
+    ora: o fluxo de cobrança é Pix manual (chave/QR + confirmação
+    manual), já coberto pela Fase 9.
   - Internacionalização real da interface (idioma/fuso já são salvos
     desde a Fase 20, mas a UI só existe em português).
 
