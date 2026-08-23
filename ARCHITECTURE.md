@@ -259,8 +259,38 @@ IA for conectado via Integrações.
     dentro de 90 dias, outra além de 6 meses) e uma conta a receber real
     já existente, os 5 saldos projetados exibidos na tela bateram com o
     cálculo manual esperado antes da limpeza dos dados de teste.
-- ⏳ Fases 12–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
-  A navegação, o RBAC e o schema de banco para **todos** esses módulos já
+- ✅ Fase 13 — Metas: `/metas` permite cadastrar metas de Faturamento,
+  Novos clientes, Prospecção, Projetos concluídos, Margem e Recebimentos,
+  cada uma com até três cenários (Conservador, Realista, Agressivo) para
+  o mesmo tipo e período — o schema original (`Goal`) só tinha um
+  `targetValue` por registro, então a Fase 13 estendeu o modelo com o
+  enum `GoalScenario` e uma constraint única
+  `[organizationId, type, periodStart, periodEnd, scenario]` (migração
+  `20260823032138_add_goal_scenario`), permitindo três metas paralelas
+  sem duplicar tipo/período.
+  - **Progresso sempre real, nunca digitado**: o valor "realizado" de
+    cada meta é calculado a partir dos dados já existentes no sistema
+    para o período exato da meta — nunca um campo que o usuário
+    preenche manualmente (`src/lib/goals/queries.ts`):
+    Faturamento/Recebimentos somam `FinancialMovement`/
+    `AccountReceivable` pagos no período; Novos clientes e Prospecção
+    contam `Client`/`Lead` criados no período; Projetos concluídos conta
+    `Project` com status `CONCLUIDO` atualizado no período; Margem
+    recalcula (receita − despesa) / receita apenas com os movimentos
+    pagos dentro do período (mesma fórmula da Visão Financeira, mas
+    escopada à meta em vez do histórico completo).
+  - Cada cenário tem sua própria barra de progresso e pode ser editado
+    (novo valor-alvo) ou excluído individualmente, sem afetar os demais
+    cenários do mesmo grupo tipo+período.
+  - Testado ponta a ponta: criação de duas metas de Faturamento
+    (Realista e Agressivo) para o mesmo período, uma meta de Novos
+    clientes, rejeição correta de uma meta duplicada (mesmo tipo +
+    cenário + período), edição do valor-alvo persistida no banco — e o
+    valor "realizado" exibido bateu com os dados reais da organização
+    antes da limpeza dos dados de teste.
+- ⏳ Fases 12, 14–24 — Demais módulos de negócio (Propostas, Integrações,
+  Lumi AI, etc.). A navegação, o RBAC e o schema de banco para **todos**
+  esses módulos já
   existem; as páginas hoje são placeholders explícitos ("Módulo em
   construção") até receberem sua implementação funcional completa, fase a
   fase.
