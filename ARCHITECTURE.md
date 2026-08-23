@@ -532,11 +532,26 @@ IA for conectado via Integrações.
     a partir da falha. A exibição e o botão de dispensar insight foram
     validados com registros inseridos diretamente simulando uma geração
     bem-sucedida, já que não há credencial real de IA neste ambiente.
-- ⏳ Fases 22–24 — Demais módulos de negócio ainda não escopados nesta
-  sessão. A navegação, o RBAC e o schema de banco para **todos** esses
-  módulos já existem; as páginas hoje são placeholders explícitos
-  ("Módulo em construção") até receberem sua implementação funcional
-  completa, fase a fase.
+- ✅ Nenhuma página placeholder restante — verificado buscando por
+  `ModulePlaceholder` em todo `src/app/(app)`: zero ocorrências. Os 22
+  módulos do RBAC (`MODULES` em `src/lib/auth/permissions.ts`) têm
+  todos implementação funcional completa. A numeração sequencial usada
+  nesta sessão ("Fase 22, 23, 24...") presumia a existência de módulos
+  de negócio ainda não escopados; a investigação mostrou que não há
+  mais nenhum.
+- ⏳ Itens de infraestrutura/aprimoramento ainda pendentes, citados de
+  forma esparsa nos comentários do roadmap original do schema (Fases
+  26, 27, 30–34, 36, 45) — a maioria já aplicada como princípio
+  transversal em vários módulos (Fase 26 "integração entre módulos" e
+  Fase 36 "automações" já estão em uso desde as Fases 5–12); o que
+  falta de fato:
+  - OAuth completo para Google Calendar/Google Drive/Outlook (hoje
+    aceitam credenciais no Vault mas ficam sempre `PENDENTE`).
+  - Gateway de pagamentos (Asaas/Stripe/Mercado Pago).
+  - Multi-organização — schema já isola por `organizationId`, falta a
+    UI para uma conta gerenciar mais de uma organização (Fase 45).
+  - Internacionalização real da interface (idioma/fuso já são salvos
+    desde a Fase 20, mas a UI só existe em português).
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 
