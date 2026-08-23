@@ -428,11 +428,35 @@ IA for conectado via Integrações.
     projeto sem equipe), todas detectadas corretamente com a severidade
     esperada ao abrir a página, e a ação de Resolver persistiu
     `status=RESOLVIDO` e `resolvedAt` no Postgres.
-- ⏳ Fases 18–24 — Demais módulos de negócio (Relatórios, etc.). A
-  navegação, o RBAC e o schema de banco para **todos** esses módulos já
-  existem; as páginas hoje são placeholders explícitos ("Módulo em
-  construção") até receberem sua implementação funcional completa, fase
-  a fase.
+- ✅ Fase 18 — Relatórios: `/relatorios` cobre as cinco áreas do
+  placeholder original (Financeiro, Comercial, Clientes, Projetos,
+  Equipe e margem) como abas, cada uma com exportação real em CSV — sem
+  modelo de banco próprio, já que um relatório é sempre uma agregação
+  de dados que já existem em outros módulos.
+  - `src/lib/reports/queries.ts` centraliza as agregações: financeiro
+    por categoria (reaproveitando `INCOME_TYPES` da Fase 8), pipeline
+    comercial por estágio, receita total por cliente (soma de
+    `FinancialMovement` pagos), e projetos/equipe com a **mesma fórmula
+    de margem já usada na ficha de projeto da Fase 6**
+    (`valor − custo estimado − custo de equipe`), agora centralizada em
+    vez de duplicada.
+  - **Exportação real**: `/api/relatorios/[type]` (novo Route Handler)
+    gera um CSV de verdade a partir da mesma consulta usada na tela —
+    nunca um arquivo de exemplo —, com BOM UTF-8 para acentuação correta
+    e números em formato decimal puro (sem símbolo de moeda) para
+    importação direta em planilha. Gate por `REPORTS_EXPORT`,
+    independente de `REPORTS_VIEW`, espelhando a distinção `RO_EXPORT`
+    já definida no RBAC.
+  - Testado ponta a ponta: as cinco abas navegadas com dados reais da
+    organização, e o CSV de Projetos baixado e comparado byte a byte
+    com a tabela em tela — mesmos valores de margem, mesmo cliente,
+    inclusive cruzado com o custo total alocado mostrado na aba Equipe
+    para o mesmo membro de equipe.
+- ⏳ Fases 19–24 — Demais módulos de negócio ainda não escopados nesta
+  sessão. A navegação, o RBAC e o schema de banco para **todos** esses
+  módulos já existem; as páginas hoje são placeholders explícitos
+  ("Módulo em construção") até receberem sua implementação funcional
+  completa, fase a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 
