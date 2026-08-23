@@ -171,7 +171,7 @@ export function UsersView({
           (editingRole.isSystem ? (
             <p className="text-sm text-text-secondary">
               Este é um perfil padrão do sistema — suas {editingRole.permissionKeys.length} permissões seguem a configuração
-              original do LUMIHUB e não podem ser editadas por aqui.
+              original do LUMIBASE e não podem ser editadas por aqui.
             </p>
           ) : (
             <RoleEditForm

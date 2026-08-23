@@ -1,4 +1,4 @@
-# LUMIHUB — Arquitetura Técnica (Fase 0)
+# LUMIBASE — Arquitetura Técnica (Fase 0)
 
 Sistema operacional interno da Lumière Agency. Este documento registra as
 decisões de arquitetura tomadas antes da implementação e é atualizado a cada
@@ -93,7 +93,7 @@ externos, seguindo o mesmo padrão de `IntegrationProvider` (Fase 14).
 
 ## 8. Camada de integrações (arquitetura, Fase 14)
 
-Schema já modela `Integration`, `IntegrationCredential` (LUMIHUB Vault),
+Schema já modela `Integration`, `IntegrationCredential` (LUMIBASE Vault),
 `IntegrationWebhook` e `IntegrationLog`. Nenhuma integração externa está
 conectada nesta fase — a UI de Configurações → Integrações e os providers
 concretos (Google Calendar, WhatsApp Business, OpenAI/Anthropic, Asaas,
@@ -178,7 +178,7 @@ IA for conectado via Integrações.
   Categorias Financeiras e Centros de Custo, pré-requisito de dados-mestre
   para Contas a Pagar (Fase 10).
   - **Paleta de gráficos**: 8 cores categóricas validadas pelo método da
-    skill de dataviz contra a superfície escura do LUMIHUB (`#161618`) —
+    skill de dataviz contra a superfície escura do LUMIBASE (`#161618`) —
     ver `src/components/charts/colors.ts`. Séries adicionais além de 8 se
     agrupam em "Outros" em vez de gerar uma nova cor.
   - Indicadores usam **médias de todo o histórico de movimentos pagos**
@@ -311,7 +311,7 @@ IA for conectado via Integrações.
     no Postgres de que o lead avançou para `PROPOSTA`.
 - ✅ Fase 14 — Integrações: `/configuracoes/integracoes` cobre os 19
   provedores do catálogo (`IntegrationProviderKey`) em 7 categorias, com
-  o **LUMIHUB Vault** de verdade — `src/lib/integrations/vault.ts`
+  o **LUMIBASE Vault** de verdade — `src/lib/integrations/vault.ts`
   criptografa cada credencial com AES-256-GCM (chave derivada de
   `VAULT_MASTER_KEY` via SHA-256) antes de gravar em
   `IntegrationCredential`; nenhum segredo toca o banco em texto puro, e a
@@ -348,7 +348,7 @@ IA for conectado via Integrações.
 - ✅ Fase 15 — Documentos: `/documentos` implementa upload, listagem
   (busca + filtro por categoria), edição de metadados, download e
   exclusão de arquivos reais — a primeira feature de upload de arquivo
-  do LUMIHUB, sem precedente de código a reaproveitar.
+  do LUMIBASE, sem precedente de código a reaproveitar.
   - **Armazenamento local real** (`src/lib/storage/local.ts`,
     `storageProvider = "local"` já previsto no schema): arquivos ficam
     em `storage/documents/<organizationId>/<uuid+ext>`, fora de
@@ -358,7 +358,7 @@ IA for conectado via Integrações.
     podem trocar por Google Drive/Dropbox sem mudar o contrato do
     `Document`.
   - **Download autenticado**: `/api/documentos/[id]` (primeiro Route
-    Handler do LUMIHUB) valida sessão e a permissão `DOCUMENTS_VIEW`
+    Handler do LUMIBASE) valida sessão e a permissão `DOCUMENTS_VIEW`
     antes de ler o arquivo do disco e servi-lo com o `Content-Type` e
     nome reais — a checagem de cookie do `proxy.ts` (nome do arquivo de
     middleware no Next.js 16) já barra requisições sem sessão antes
@@ -376,7 +376,7 @@ IA for conectado via Integrações.
   - **Reaproveita o Vault da Fase 14**: `src/lib/ai/providers.ts`
     procura, em ordem de preferência (Anthropic → OpenAI → Google
     Gemini), a primeira `Integration` de IA com status `CONECTADO` e
-    descriptografa sua API key do LUMIHUB Vault. Sem nenhum provedor
+    descriptografa sua API key do LUMIBASE Vault. Sem nenhum provedor
     conectado, a Lumi AI desativa o campo de mensagem e aponta o
     caminho até Integrações, em vez de simular uma resposta.
   - **Chamada real ao provedor** (`src/lib/ai/chat.ts`): a cada

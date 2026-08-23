@@ -8,7 +8,7 @@ export default function AccessDeniedPage() {
       <ShieldAlert className="text-gold" size={40} />
       <h1 className="text-xl font-semibold text-text-primary">Acesso negado</h1>
       <p className="max-w-sm text-sm text-text-tertiary">
-        Você não tem permissão para acessar esta área do LUMIHUB. Entre em contato com um
+        Você não tem permissão para acessar esta área do LUMIBASE. Entre em contato com um
         administrador se acredita que isso é um engano.
       </p>
       <Link href="/dashboard">

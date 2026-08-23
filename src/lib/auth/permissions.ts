@@ -1,6 +1,6 @@
 import type { RoleKey } from "@/generated/prisma/enums";
 
-// Catálogo de módulos do LUMIHUB. Cada módulo recebe permissões granulares
+// Catálogo de módulos do LUMIBASE. Cada módulo recebe permissões granulares
 // no formato `<MODULO>_<ACAO>` (ex: FINANCE_VIEW, MANAGE_INTEGRATIONS).
 export const MODULES = [
   "DASHBOARD",

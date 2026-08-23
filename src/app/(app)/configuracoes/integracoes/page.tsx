@@ -30,7 +30,7 @@ export default async function IntegrationsPage() {
     <div>
       <PageHeader
         title="Integrações"
-        description="Calendário, comunicação, financeiro, IA, armazenamento e automação. Credenciais sempre criptografadas no LUMIHUB Vault."
+        description="Calendário, comunicação, financeiro, IA, armazenamento e automação. Credenciais sempre criptografadas no LUMIBASE Vault."
       />
       <IntegrationsView integrationsByProvider={integrationsByProvider} canManage={canManage} />
     </div>

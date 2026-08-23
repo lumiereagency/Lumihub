@@ -39,7 +39,7 @@ export async function sendWhatsApp(input: SendWhatsAppInput): Promise<SendResult
   const creds = await getWhatsAppCredentials(input.organizationId);
   if (!creds) {
     console.info(
-      `[LUMIHUB][whatsapp:pendente] Nenhuma conta do WhatsApp Business conectada. Mensagem não enviada.\n` +
+      `[LUMIBASE][whatsapp:pendente] Nenhuma conta do WhatsApp Business conectada. Mensagem não enviada.\n` +
         `Para: ${input.to}\n${input.message}`,
     );
     return { delivered: false, pending: true };
@@ -58,10 +58,10 @@ export async function sendWhatsApp(input: SendWhatsAppInput): Promise<SendResult
     });
     if (res.ok) return { delivered: true, pending: false };
     const body = await res.text();
-    console.error(`[LUMIHUB][whatsapp:erro] WhatsApp Cloud API recusou o envio (HTTP ${res.status}): ${body}`);
+    console.error(`[LUMIBASE][whatsapp:erro] WhatsApp Cloud API recusou o envio (HTTP ${res.status}): ${body}`);
     return { delivered: false, pending: false, error: `HTTP ${res.status}` };
   } catch (err) {
-    console.error("[LUMIHUB][whatsapp:erro] Falha ao contatar a WhatsApp Cloud API.", err);
+    console.error("[LUMIBASE][whatsapp:erro] Falha ao contatar a WhatsApp Cloud API.", err);
     return { delivered: false, pending: false, error: (err as Error).message };
   }
 }

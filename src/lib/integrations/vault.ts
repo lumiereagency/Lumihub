@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 
 const ALGORITHM = "aes-256-gcm";
 
-// LUMIHUB VAULT: toda credencial de integração é criptografada com AES-256-GCM
+// LUMIBASE VAULT: toda credencial de integração é criptografada com AES-256-GCM
 // antes de tocar o banco. A chave mestra nunca é gravada — vem só do
 // VAULT_MASTER_KEY do ambiente, derivada para 32 bytes via SHA-256 (aceita
 // qualquer tamanho de segredo configurado, ex: saída de `openssl rand -base64 32`).

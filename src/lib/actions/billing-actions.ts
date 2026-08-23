@@ -108,7 +108,7 @@ export async function processReminderQueueAction(): Promise<ActionState> {
     });
 
     const to = reminder.channel === "WHATSAPP" ? client.phone : client.email;
-    const result = await sendReminderMessage(user.organizationId, reminder.channel, to, "Lembrete de cobrança — LUMIHUB", messageBody);
+    const result = await sendReminderMessage(user.organizationId, reminder.channel, to, "Lembrete de cobrança — LUMIBASE", messageBody);
 
     await db.paymentReminder.update({
       where: { id: reminder.id },

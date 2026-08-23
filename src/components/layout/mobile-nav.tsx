@@ -20,7 +20,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
   return (
     <>
       <div className="flex h-14 items-center justify-between border-b border-border bg-bg-secondary px-4 lg:hidden">
-        <span className="text-base font-semibold tracking-tight text-gold-light">LUMIHUB</span>
+        <span className="text-base font-semibold tracking-tight text-gold-light">LUMIBASE</span>
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -34,7 +34,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
           <div className="flex h-14 items-center justify-between border-b border-border px-4">
-            <span className="text-base font-semibold tracking-tight text-gold-light">LUMIHUB</span>
+            <span className="text-base font-semibold tracking-tight text-gold-light">LUMIBASE</span>
             <button
               type="button"
               onClick={() => setOpen(false)}

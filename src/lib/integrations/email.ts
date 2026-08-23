@@ -44,7 +44,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const creds = await getSmtpCredentials(input.organizationId);
   if (!creds) {
     console.info(
-      `[LUMIHUB][email:pendente] Nenhum provedor de e-mail conectado. Mensagem não enviada.\n` +
+      `[LUMIBASE][email:pendente] Nenhum provedor de e-mail conectado. Mensagem não enviada.\n` +
         `Para: ${input.to}\nAssunto: ${input.subject}\n${input.text}`,
     );
     return { delivered: false, pending: true };
@@ -60,7 +60,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     await transporter.sendMail({ from: creds.fromAddress, to: input.to, subject: input.subject, text: input.text });
     return { delivered: true, pending: false };
   } catch (err) {
-    console.error("[LUMIHUB][email:erro] Falha ao enviar e-mail via SMTP conectado.", err);
+    console.error("[LUMIBASE][email:erro] Falha ao enviar e-mail via SMTP conectado.", err);
     return { delivered: false, pending: false, error: (err as Error).message };
   }
 }

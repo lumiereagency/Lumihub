@@ -178,7 +178,7 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
     key: "WEBHOOK_CUSTOM",
     category: "AUTOMACAO",
     label: "Webhook customizado",
-    description: "Envio de eventos do LUMIHUB para um endpoint próprio.",
+    description: "Envio de eventos do LUMIBASE para um endpoint próprio.",
     fields: [
       { key: "url", label: "URL de destino", type: "text", secret: false, required: true },
       { key: "secret", label: "Segredo (opcional)", type: "password", secret: true, required: false },

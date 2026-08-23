@@ -1,4 +1,4 @@
-# LUMIHUB
+# LUMIBASE
 
 Sistema operacional interno da Lumière Agency — centraliza comercial,
 clientes, contratos, projetos, financeiro, cobranças, equipe, agenda,
@@ -95,7 +95,7 @@ projeção de fluxo de caixa em 7/30/90 dias e 6/12 meses a partir de
 compromissos reais → metas com cenários conservador/realista/
 agressivo comparadas ao resultado real → integração real de e-mail
 (SMTP)/WhatsApp Business com verificação de conexão ao vivo e
-credenciais criptografadas no LUMIHUB Vault → upload, download e
+credenciais criptografadas no LUMIBASE Vault → upload, download e
 exclusão real de documentos em armazenamento local → assistente Lumi
 AI com chamada real a um LLM conectado (Anthropic/OpenAI/Gemini) e
 contexto filtrado pelas permissões do usuário → central de alertas
@@ -144,7 +144,7 @@ de desenvolvimento) somem junto com o container.
 Com o deploy no ar, um usuário com perfil Administrador acessa
 `/configuracoes/integracoes` e conecta cada provedor diretamente pela
 interface — as credenciais **nunca devem ser coladas em um chat ou
-commitadas no código**; o formulário da tela grava direto no LUMIHUB
+commitadas no código**; o formulário da tela grava direto no LUMIBASE
 Vault (AES-256-GCM) e a verificação de conexão é real (Fase 14).
 
 - **Provedor de IA (habilita Lumi AI e Insights)** — escolha um:
@@ -184,11 +184,11 @@ vez de uma chave colada na tela — passos:
      → criar credencial "ID do cliente OAuth" tipo "Aplicativo da Web".
    - **Outlook**: [Azure Portal](https://portal.azure.com) → Microsoft
      Entra ID → Registros de aplicativo → Nova credencial de cliente.
-3. Cole o Client ID e o Client Secret gerados na tela do LUMIHUB e
+3. Cole o Client ID e o Client Secret gerados na tela do LUMIBASE e
    salve (fica `Pendente`).
 4. Clique em "Conectar com o provedor" — você é levado à tela real de
    login/consentimento do Google ou da Microsoft; ao autorizar, o
-   LUMIHUB troca o código por um token de acesso e um refresh token
+   LUMIBASE troca o código por um token de acesso e um refresh token
    (guardados cifrados no Vault) e a integração vira `Conectado`, com a
    conta autorizada exibida.
 

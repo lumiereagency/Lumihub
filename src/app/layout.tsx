@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LUMIHUB — Lumière Agency",
+  title: "LUMIBASE — Lumière Agency",
   description: "Sistema operacional interno da Lumière Agency",
 };
 

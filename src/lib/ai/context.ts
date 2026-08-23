@@ -12,7 +12,7 @@ import type { CurrentUser } from "@/lib/auth/session";
 // revele dados que o usuário não poderia ver na própria interface.
 export async function buildSystemContext(user: CurrentUser, organizationName: string): Promise<string> {
   const sections: string[] = [
-    `Você é a Lumi AI, assistente interna do LUMIHUB para a organização "${organizationName}".`,
+    `Você é a Lumi AI, assistente interna do LUMIBASE para a organização "${organizationName}".`,
     `Responda sempre em português do Brasil, de forma direta e objetiva.`,
     `Use apenas os dados reais listados abaixo — nunca invente números, nomes ou datas. Se a pergunta exigir um dado que não está listado, diga claramente que não tem acesso a essa informação em vez de estimar.`,
     `O usuário atual é ${user.name} (perfil: ${user.role.name}). Os dados abaixo já respeitam as permissões desse perfil.`,

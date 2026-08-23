@@ -122,7 +122,7 @@ export async function requestPasswordResetAction(
     await sendEmail({
       organizationId: user.organizationId,
       to: user.email,
-      subject: "LUMIHUB — Redefinição de senha",
+      subject: "LUMIBASE — Redefinição de senha",
       text: `Olá, ${user.name}. Use o link a seguir para redefinir sua senha (válido por 1 hora): ${resetUrl}`,
     });
   }

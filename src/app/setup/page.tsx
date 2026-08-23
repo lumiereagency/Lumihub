@@ -18,9 +18,9 @@ export default async function SetupPage() {
     <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-[440px]">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <span className="text-2xl font-semibold tracking-tight text-gold-light">LUMIHUB</span>
+          <span className="text-2xl font-semibold tracking-tight text-gold-light">LUMIBASE</span>
           <span className="text-sm text-text-tertiary">
-            Cadastre sua empresa no LUMIHUB — cada organização tem seus
+            Cadastre sua empresa no LUMIBASE — cada organização tem seus
             próprios dados, usuários e permissões, totalmente isolados.
           </span>
         </div>

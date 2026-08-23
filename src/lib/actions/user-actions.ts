@@ -24,8 +24,8 @@ async function sendInviteEmail(organizationId: string, name: string, email: stri
   const result = await sendEmail({
     organizationId,
     to: email,
-    subject: "Bem-vindo(a) ao LUMIHUB — defina sua senha",
-    text: `Olá, ${name}. Sua conta no LUMIHUB foi criada. Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}`,
+    subject: "Bem-vindo(a) ao LUMIBASE — defina sua senha",
+    text: `Olá, ${name}. Sua conta no LUMIBASE foi criada. Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}`,
   });
   return result;
 }

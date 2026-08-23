@@ -58,7 +58,7 @@ export function OrganizationSettingsForm({
 
         <p className="-mt-2 text-xs text-text-tertiary">
           A moeda escolhida já é usada em todos os valores exibidos no sistema. Fuso horário e idioma ficam salvos para
-          uso em agendamentos e internacionalização da interface — hoje a interface do LUMIHUB é exibida apenas em
+          uso em agendamentos e internacionalização da interface — hoje a interface do LUMIBASE é exibida apenas em
           português e as datas seguem o fuso do servidor.
         </p>
 

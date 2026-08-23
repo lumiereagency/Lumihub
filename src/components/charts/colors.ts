@@ -1,5 +1,5 @@
 // Paleta categórica validada (skill de dataviz) para o fundo escuro do
-// LUMIHUB (#161618) — ordem fixa, nunca cíclica. Ver ARCHITECTURE.md.
+// LUMIBASE (#161618) — ordem fixa, nunca cíclica. Ver ARCHITECTURE.md.
 export const CATEGORICAL_COLORS = [
   "#3987e5", // 1 azul
   "#d95926", // 2 laranja
