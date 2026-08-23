@@ -483,7 +483,28 @@ IA for conectado via Integrações.
     corretamente bloqueada; perfil personalizado criado com permissões
     específicas, editado e excluído; todas as ações confirmadas via
     audit log no Postgres.
-- ⏳ Fases 20–24 — Demais módulos de negócio ainda não escopados nesta
+- ✅ Fase 20 — Configurações Gerais: `/configuracoes` edita nome,
+  fuso horário, moeda e idioma da organização (`Organization.timezone/
+  currency/locale`, campos que já existiam no schema desde o bootstrap
+  mas nunca tinham uma tela para editá-los depois da criação).
+  - **Moeda com efeito real e imediato**: como `currency` já era lido
+    dinamicamente por `formatCurrency` em todas as telas financeiras
+    desde a Fase 8, mudar a moeda aqui muda de verdade a exibição em
+    todo o sistema — validado ao vivo: trocar para USD fez a Visão
+    Financeira inteira (KPIs, gráfico, listas) passar a mostrar "US$"
+    em vez de "R$", sem nenhuma mudança de código além da preferência
+    salva.
+  - **Honestidade sobre o que ainda não está implementado**: fuso
+    horário e idioma são salvos de verdade, mas a interface só existe
+    em português e as datas seguem o fuso do servidor — a tela declara
+    isso explicitamente em vez de fingir suporte a i18n completo que
+    exigiria reescrever a formatação de data em dezenas de arquivos,
+    fora do escopo desta fase.
+  - Testado ponta a ponta com navegador real: nome/moeda/fuso/idioma
+    carregados corretamente do banco, moeda alterada para USD com
+    propagação confirmada na Visão Financeira, e revertida para BRL ao
+    final para não alterar o estado da organização de demonstração.
+- ⏳ Fases 21–24 — Demais módulos de negócio ainda não escopados nesta
   sessão. A navegação, o RBAC e o schema de banco para **todos** esses
   módulos já existem; as páginas hoje são placeholders explícitos
   ("Módulo em construção") até receberem sua implementação funcional

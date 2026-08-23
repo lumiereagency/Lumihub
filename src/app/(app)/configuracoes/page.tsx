@@ -1,13 +1,21 @@
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { db } from "@/lib/db";
+import { PageHeader } from "@/components/layout/page-header";
+import { OrganizationSettingsForm } from "./organization-settings-form";
 
 export default async function SettingsPage() {
-  await requirePermission(permKey("SETTINGS", "VIEW"));
+  const user = await requirePermission(permKey("SETTINGS", "VIEW"));
+
+  const organization = await db.organization.findUniqueOrThrow({
+    where: { id: user.organizationId },
+    select: { name: true, timezone: true, currency: true, locale: true },
+  });
+
   return (
-    <ModulePlaceholder
-      title="Configurações"
-      description="Preferências gerais da organização: fuso horário, moeda e idioma."
-    />
+    <div>
+      <PageHeader title="Configurações" description="Preferências gerais da organização: fuso horário, moeda e idioma." />
+      <OrganizationSettingsForm defaultValues={organization} />
+    </div>
   );
 }
