@@ -366,11 +366,44 @@ IA for conectado via Integrações.
     idêntico ao original, edição de nome/categoria/vínculo persistida,
     e exclusão removendo tanto a linha no Postgres quanto o arquivo em
     disco (confirmado que nenhum dos dois sobra órfão).
-- ⏳ Fases 16–24 — Demais módulos de negócio (Lumi AI, Alertas,
-  Relatórios, etc.). A navegação, o RBAC e o schema de banco para
-  **todos** esses módulos já existem; as páginas hoje são placeholders
-  explícitos ("Módulo em construção") até receberem sua implementação
-  funcional completa, fase a fase.
+- ✅ Fase 16 — Lumi AI: `/ai` implementa o assistente conversacional real
+  — múltiplas conversas por usuário (`AiConversation`/`AiMessage`, já
+  previstos no schema), com histórico persistido e resposta gerada por
+  um LLM de verdade, nunca uma simulação.
+  - **Reaproveita o Vault da Fase 14**: `src/lib/ai/providers.ts`
+    procura, em ordem de preferência (Anthropic → OpenAI → Google
+    Gemini), a primeira `Integration` de IA com status `CONECTADO` e
+    descriptografa sua API key do LUMIHUB Vault. Sem nenhum provedor
+    conectado, a Lumi AI desativa o campo de mensagem e aponta o
+    caminho até Integrações, em vez de simular uma resposta.
+  - **Chamada real ao provedor** (`src/lib/ai/chat.ts`): a cada
+    mensagem, uma requisição HTTP de verdade é feita à API do provedor
+    conectado (Anthropic `/v1/messages`, OpenAI `/v1/chat/completions`
+    ou Google Gemini `generateContent`). Uma falha da API (chave
+    inválida, limite excedido, indisponibilidade) vira um erro honesto
+    mostrado ao usuário — a mensagem do usuário já enviada permanece
+    salva mesmo quando a resposta falha, nunca inventando uma réplica.
+  - **Contexto real, filtrado por permissão** (`src/lib/ai/context.ts`):
+    o prompt de sistema inclui um retrato atual da organização (saldo,
+    receita/despesa do mês, pipeline de CRM, contagem de clientes e
+    projetos por status, metas, cobranças em atraso) — mas cada seção só
+    entra no contexto se o usuário tiver a permissão de `VIEW` do módulo
+    correspondente, para que a IA nunca revele ao usuário um dado que
+    ele não veria na própria interface.
+  - Testado ponta a ponta com uma chamada de rede real: com um provedor
+    Anthropic marcado como `CONECTADO` mas com uma chave inválida, o
+    envio de mensagem contatou a API real da Anthropic e recebeu de
+    volta um HTTP 401 genuíno ("API key is invalid"), exibido tal qual
+    ao usuário — prova de que a integração é de fato uma chamada de rede
+    e não uma resposta fabricada. Não há credenciais reais de IA neste
+    ambiente de desenvolvimento para validar uma resposta bem-sucedida
+    completa, mas o caminho de sucesso usa o mesmo código testado no
+    caminho de erro, trocando apenas a validade da chave.
+- ⏳ Fases 17–24 — Demais módulos de negócio (Alertas, Relatórios, etc.).
+  A navegação, o RBAC e o schema de banco para **todos** esses módulos
+  já existem; as páginas hoje são placeholders explícitos ("Módulo em
+  construção") até receberem sua implementação funcional completa, fase
+  a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 

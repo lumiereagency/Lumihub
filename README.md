@@ -76,28 +76,31 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–15 (planejamento, fundação/login/segurança, Design
+Fases 0–16 (planejamento, fundação/login/segurança, Design
 System/Shell, Dashboard executivo, CRM e Prospecção, Propostas,
 Clientes e Contratos, Projetos/Tarefas/Equipe/Captações, Calendário,
 Financeiro/Visão Financeira, Contas a Receber e Cobranças, Contas a
 Pagar/Cartões/Investimentos, Fluxo de Caixa, Metas, Integrações,
-Documentos) estão implementadas e testadas de ponta a ponta (build de
-produção, fluxo de setup → login → RBAC → CRM → proposta comercial que
-avança o estágio do lead → conversão de lead em cliente → contrato →
-cobrança automática com régua de lembretes → projeto com equipe e
-margem → tarefas → captação e vencimento de contrato na Agenda → Visão
-Financeira com KPIs/indicadores/gráficos reais → confirmação de
-pagamento → conta a pagar parcelada e recorrente → cartão de crédito
-com distribuição automática de parcelas nas faturas → investimento
-vinculado ao motor financeiro → projeção de fluxo de caixa em 7/30/90
-dias e 6/12 meses a partir de compromissos reais → metas com cenários
-conservador/realista/agressivo comparadas ao resultado real →
-integração real de e-mail (SMTP)/WhatsApp Business com verificação de
-conexão ao vivo e credenciais criptografadas no LUMIHUB Vault → upload,
-download e exclusão real de documentos em armazenamento local,
-validado com navegador real). As Fases 16–24 (Lumi AI, Alertas,
-Relatórios, etc.) têm o schema de banco, RBAC e navegação já prontos;
-as telas hoje são placeholders explícitos ("Módulo em construção") até
+Documentos, Lumi AI) estão implementadas e testadas de ponta a ponta
+(build de produção, fluxo de setup → login → RBAC → CRM → proposta
+comercial que avança o estágio do lead → conversão de lead em cliente
+→ contrato → cobrança automática com régua de lembretes → projeto com
+equipe e margem → tarefas → captação e vencimento de contrato na
+Agenda → Visão Financeira com KPIs/indicadores/gráficos reais →
+confirmação de pagamento → conta a pagar parcelada e recorrente →
+cartão de crédito com distribuição automática de parcelas nas faturas
+→ investimento vinculado ao motor financeiro → projeção de fluxo de
+caixa em 7/30/90 dias e 6/12 meses a partir de compromissos reais →
+metas com cenários conservador/realista/agressivo comparadas ao
+resultado real → integração real de e-mail (SMTP)/WhatsApp Business
+com verificação de conexão ao vivo e credenciais criptografadas no
+LUMIHUB Vault → upload, download e exclusão real de documentos em
+armazenamento local → assistente Lumi AI com chamada real a um LLM
+conectado (Anthropic/OpenAI/Gemini) e contexto filtrado pelas
+permissões do usuário, validado com navegador real). As Fases 17–24
+(Alertas, Relatórios, etc.) têm o schema de banco, RBAC e navegação já
+prontos; as telas hoje são placeholders explícitos ("Módulo em
+construção") até
 receberem a implementação funcional completa, uma fase por vez —
 nenhum dado fictício é exibido como se fosse real.
 
