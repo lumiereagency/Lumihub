@@ -452,7 +452,38 @@ IA for conectado via Integrações.
     com a tabela em tela — mesmos valores de margem, mesmo cliente,
     inclusive cruzado com o custo total alocado mostrado na aba Equipe
     para o mesmo membro de equipe.
-- ⏳ Fases 19–24 — Demais módulos de negócio ainda não escopados nesta
+- ✅ Fase 19 — Usuários e Permissões: `/configuracoes/usuarios` fecha
+  uma lacuna real da Fase 1 — o motor de RBAC (Role, Permission,
+  RolePermission) já existia desde o bootstrap, mas **não havia nenhuma
+  tela para convidar, editar ou gerenciar usuários e perfis depois do
+  primeiro acesso**; a única forma de existir um segundo usuário era
+  inserir direto no banco.
+  - **Convite real por e-mail, não senha exibida em tela**: criar um
+    usuário nunca mostra ou transmite uma senha — gera um
+    `PasswordResetToken` (o mesmo mecanismo do "Esqueci minha senha" da
+    Fase 1) e envia um e-mail real de boas-vindas via
+    `sendEmail` (Fase 14). Sem provedor de e-mail conectado, o usuário é
+    criado normalmente mas a tela avisa honestamente que o convite não
+    foi enviado, com um botão "Reenviar convite" para depois de conectar
+    um provedor — nunca finge um envio que não aconteceu.
+  - **Editor de permissões granular**: perfis `CUSTOM` podem ser
+    criados com uma grade de checkboxes Módulo × Ação (22 módulos × 6
+    ações = 132 combinações, o mesmo catálogo `ALL_PERMISSIONS` usado
+    pelo RBAC desde a Fase 1) e editados depois; perfis padrão do
+    sistema (`isSystem = true`) são somente leitura na UI para não
+    divergirem da configuração original documentada em
+    `DEFAULT_ROLE_PERMISSIONS`.
+  - **Trava contra autoexclusão de acesso**: remover o perfil Admin ou
+    desativar/excluir o último usuário Administrador ativo da
+    organização é bloqueado com uma mensagem clara, evitando que a
+    organização perca acesso administrativo por engano.
+  - Testado ponta a ponta: usuário criado (com aviso honesto de convite
+    não enviado, sem provedor de e-mail conectado), editado e
+    desativado; tentativa de remover o único Administrador
+    corretamente bloqueada; perfil personalizado criado com permissões
+    específicas, editado e excluído; todas as ações confirmadas via
+    audit log no Postgres.
+- ⏳ Fases 20–24 — Demais módulos de negócio ainda não escopados nesta
   sessão. A navegação, o RBAC e o schema de banco para **todos** esses
   módulos já existem; as páginas hoje são placeholders explícitos
   ("Módulo em construção") até receberem sua implementação funcional

@@ -36,7 +36,7 @@ export function permKey(module: Module, action: Action): string {
   return `${module}_${action}`;
 }
 
-const MODULE_LABELS: Record<Module, string> = {
+export const MODULE_LABELS: Record<Module, string> = {
   DASHBOARD: "Dashboard",
   CRM: "CRM e Prospecção",
   CLIENTS: "Clientes",
@@ -61,7 +61,7 @@ const MODULE_LABELS: Record<Module, string> = {
   SETTINGS: "Configurações",
 };
 
-const ACTION_LABELS: Record<Action, string> = {
+export const ACTION_LABELS: Record<Action, string> = {
   VIEW: "Visualizar",
   CREATE: "Criar",
   EDIT: "Editar",

@@ -76,17 +76,17 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–18 (planejamento, fundação/login/segurança, Design
+Fases 0–19 (planejamento, fundação/login/segurança, Design
 System/Shell, Dashboard executivo, CRM e Prospecção, Propostas,
 Clientes e Contratos, Projetos/Tarefas/Equipe/Captações, Calendário,
 Financeiro/Visão Financeira, Contas a Receber e Cobranças, Contas a
 Pagar/Cartões/Investimentos, Fluxo de Caixa, Metas, Integrações,
-Documentos, Lumi AI, Alertas, Relatórios) estão implementadas e
-testadas de ponta a ponta (build de produção, fluxo de setup → login →
-RBAC → CRM → proposta comercial que avança o estágio do lead →
-conversão de lead em cliente → contrato → cobrança automática com
-régua de lembretes → projeto com equipe e margem → tarefas → captação
-e vencimento de contrato na Agenda → Visão Financeira com
+Documentos, Lumi AI, Alertas, Relatórios, Usuários e Permissões) estão
+implementadas e testadas de ponta a ponta (build de produção, fluxo de
+setup → login → RBAC → CRM → proposta comercial que avança o estágio do
+lead → conversão de lead em cliente → contrato → cobrança automática
+com régua de lembretes → projeto com equipe e margem → tarefas →
+captação e vencimento de contrato na Agenda → Visão Financeira com
 KPIs/indicadores/gráficos reais → confirmação de pagamento → conta a
 pagar parcelada e recorrente → cartão de crédito com distribuição
 automática de parcelas nas faturas → investimento vinculado ao motor
@@ -100,9 +100,11 @@ AI com chamada real a um LLM conectado (Anthropic/OpenAI/Gemini) e
 contexto filtrado pelas permissões do usuário → central de alertas
 detectando condições reais de risco em seis categorias → relatórios
 financeiro/comercial/clientes/projetos/equipe com exportação real em
-CSV, validado com navegador real). As Fases 19–24 ainda não escopadas
-nesta sessão têm o schema de banco, RBAC e navegação já prontos; as
-telas hoje são placeholders explícitos ("Módulo em
+CSV → convite de usuário por e-mail real com editor de permissões
+granular e trava contra autoexclusão de acesso administrativo,
+validado com navegador real). As Fases 20–24 ainda não escopadas nesta
+sessão têm o schema de banco, RBAC e navegação já prontos; as telas
+hoje são placeholders explícitos ("Módulo em
 construção") até
 receberem a implementação funcional completa, uma fase por vez —
 nenhum dado fictício é exibido como se fosse real.
