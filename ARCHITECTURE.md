@@ -288,9 +288,26 @@ IA for conectado via Integrações.
     cenário + período), edição do valor-alvo persistida no banco — e o
     valor "realizado" exibido bateu com os dados reais da organização
     antes da limpeza dos dados de teste.
-- ⏳ Fases 12, 14–24 — Demais módulos de negócio (Propostas, Integrações,
-  Lumi AI, etc.). A navegação, o RBAC e o schema de banco para **todos**
-  esses módulos já
+- ✅ Fase 12 — Propostas: `/propostas` traz um Kanban por status
+  (Rascunho → Enviada → Em negociação → Aceita/Recusada/Expirada),
+  espelhando o padrão visual já usado no board de Leads da Fase 4. O
+  modelo `Proposal` original não tinha campo de observações; estendido
+  com `notes` (migração `20260823044519_add_proposal_notes`) para
+  registrar o escopo da proposta.
+  - **Integração Fase 26 sem sobre-inferência**: enviar uma proposta
+    (`ENVIADA`) ou movê-la para negociação (`EM_NEGOCIACAO`) avança
+    automaticamente o estágio do lead vinculado para `PROPOSTA` ou
+    `NEGOCIACAO`, respectivamente — mas só para frente, nunca reduz o
+    estágio nem marca o lead como perdido a partir de uma proposta
+    recusada, já que um lead pode ter mais de uma proposta em aberto.
+  - Status "Expirada" é derivado na UI (proposta enviada/em negociação
+    com `validUntil` no passado), mesma convenção de "Atrasado" usada em
+    Contas a Pagar/Receber — nunca escrito automaticamente no banco.
+  - Testado ponta a ponta: criação de proposta vinculada a um lead em
+    estágio `LEAD`, mudança de status para `ENVIADA` e confirmação direta
+    no Postgres de que o lead avançou para `PROPOSTA`.
+- ⏳ Fases 14–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
+  A navegação, o RBAC e o schema de banco para **todos** esses módulos já
   existem; as páginas hoje são placeholders explícitos ("Módulo em
   construção") até receberem sua implementação funcional completa, fase a
   fase.
