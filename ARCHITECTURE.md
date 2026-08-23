@@ -235,7 +235,31 @@ IA for conectado via Integrações.
     cartão → lançar compra parcelada em 3x → conferir distribuição correta
     por fatura conforme fechamento → marcar parcela como paga → registrar
     investimento) e cruzado diretamente no Postgres.
-- ⏳ Fases 11–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
+- ✅ Fase 11 — Fluxo de Caixa: `/financeiro/fluxo-de-caixa` fecha o bloco
+  do motor financeiro central iniciado na Fase 8 (comentário no schema
+  agrupa as Fases 8, 9, 10 e 11 sob "MOTOR FINANCEIRO CENTRAL"). Projeta
+  o saldo em 7, 30, 90 dias, 6 e 12 meses somando ao saldo atual (mesmo
+  cálculo da Visão Financeira) todos os eventos futuros já lançados:
+  contas a receber e a pagar pendentes/atrasadas e parcelas de cartão não
+  pagas (com a data de cada parcela derivada do mês da fatura + dia de
+  vencimento do cartão, igual à Fase 10). **Nunca uma extrapolação
+  estatística fictícia** — se não há compromisso lançado além de um
+  horizonte, o saldo projetado simplesmente se mantém estável até o
+  próximo evento real.
+  - Gráfico de linha/área (`src/components/charts/line-area-chart.tsx`,
+    novo tipo de gráfico) mostrando a curva do saldo projetado mês a mês
+    até 12 meses, reutilizando a paleta categórica já validada na Fase 8
+    (`src/components/charts/colors.ts`) — só a primeira cor da paleta é
+    usada, já que é uma série única.
+  - Ponto de equilíbrio e reserva operacional exibidos com a mesma
+    fórmula da Visão Financeira (`getFinanceOverview`), e uma tabela de
+    "Próximos compromissos (90 dias)" lista cada entrada/saída individual
+    que compõe a projeção, para transparência total do cálculo.
+  - Validado matematicamente: lançadas duas contas a pagar de teste (uma
+    dentro de 90 dias, outra além de 6 meses) e uma conta a receber real
+    já existente, os 5 saldos projetados exibidos na tela bateram com o
+    cálculo manual esperado antes da limpeza dos dados de teste.
+- ⏳ Fases 12–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
   A navegação, o RBAC e o schema de banco para **todos** esses módulos já
   existem; as páginas hoje são placeholders explícitos ("Módulo em
   construção") até receberem sua implementação funcional completa, fase a
