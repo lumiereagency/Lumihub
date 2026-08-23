@@ -504,7 +504,35 @@ IA for conectado via Integrações.
     carregados corretamente do banco, moeda alterada para USD com
     propagação confirmada na Visão Financeira, e revertida para BRL ao
     final para não alterar o estado da organização de demonstração.
-- ⏳ Fases 21–24 — Demais módulos de negócio ainda não escopados nesta
+- ✅ Fase 21 — Insights: `/insights` fecha o bloco Lumi AI (comentário no
+  schema agrupa `AiInsight` sob "LUMI AI — Fase 16, 30, 31" junto de
+  `AiConversation`/`AiMessage`), gerando riscos, oportunidades e
+  recomendações a partir de uma análise real do LLM conectado — não um
+  conjunto de regras fixas como os Alertas da Fase 17, e sim texto
+  sintetizado pela IA a partir dos dados.
+  - **Reaproveita toda a infraestrutura da Fase 16**: mesmo
+    `getConnectedAiProvider` (Vault), mesmo `callAiProvider`, mesmo
+    `buildSystemContext` filtrado por permissão — mais a tendência real
+    de receita/despesa dos últimos 6 meses (`getFinanceOverview`) para
+    dar à IA sinal suficiente para detectar padrões como margem em
+    queda. Sem provedor conectado, o botão "Gerar novos insights" fica
+    desabilitado com o mesmo aviso da Fase 16.
+  - **Saída estruturada validada, nunca confiada às cegas**: o prompt
+    pede um array JSON `[{type, title, description, severity}]`; a
+    resposta é extraída, `JSON.parse`ada e validada com Zod
+    (`severity` precisa bater exatamente com um dos 4 valores de
+    `AlertSeverity`) antes de qualquer `AiInsight` ser gravado no banco
+    — uma resposta malformada vira um erro honesto para o usuário
+    ("A IA retornou insights em um formato inesperado"), nunca uma
+    linha fabricada ou uma tentativa de adivinhar o que a IA quis dizer.
+  - Testado ponta a ponta com uma chamada de rede real: com um provedor
+    Anthropic `CONECTADO` mas com chave inválida, gerar insights
+    contatou a API real e recebeu de volta um HTTP 401 genuíno, exibido
+    tal qual — e confirmado que nenhuma linha de `AiInsight` foi criada
+    a partir da falha. A exibição e o botão de dispensar insight foram
+    validados com registros inseridos diretamente simulando uma geração
+    bem-sucedida, já que não há credencial real de IA neste ambiente.
+- ⏳ Fases 22–24 — Demais módulos de negócio ainda não escopados nesta
   sessão. A navegação, o RBAC e o schema de banco para **todos** esses
   módulos já existem; as páginas hoje são placeholders explícitos
   ("Módulo em construção") até receberem sua implementação funcional
