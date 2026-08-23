@@ -306,7 +306,43 @@ IA for conectado via Integrações.
   - Testado ponta a ponta: criação de proposta vinculada a um lead em
     estágio `LEAD`, mudança de status para `ENVIADA` e confirmação direta
     no Postgres de que o lead avançou para `PROPOSTA`.
-- ⏳ Fases 14–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
+- ✅ Fase 14 — Integrações: `/configuracoes/integracoes` cobre os 19
+  provedores do catálogo (`IntegrationProviderKey`) em 7 categorias, com
+  o **LUMIHUB Vault** de verdade — `src/lib/integrations/vault.ts`
+  criptografa cada credencial com AES-256-GCM (chave derivada de
+  `VAULT_MASTER_KEY` via SHA-256) antes de gravar em
+  `IntegrationCredential`; nenhum segredo toca o banco em texto puro, e a
+  UI nunca reexibe o valor salvo, só um `maskedPreview` (`••••1234`).
+  - **Verificação real, não simulada**: ao conectar, `src/lib/integrations/verifiers.ts`
+    tenta uma checagem de verdade sempre que possível — SMTP via
+    `nodemailer.verify()`, WhatsApp Cloud API/OpenAI/Anthropic/Gemini/
+    Stripe/Mercado Pago/Asaas/Resend/Dropbox via uma chamada autenticada
+    real ao provedor, e automações por webhook (n8n/Make/Zapier/Webhook
+    customizado/API customizada) por uma checagem de alcançabilidade
+    HTTP real. O status só vira `CONECTADO` se a chamada de verdade tiver
+    sucesso; uma credencial errada gera `ERRO` com a mensagem real da
+    falha (ex: `getaddrinfo ENOTFOUND ...`), nunca um sucesso fingido.
+  - **Provedores OAuth não são fingidos**: Google Calendar, Outlook
+    Calendar e Google Drive aceitam salvar Client ID/Secret no Vault, mas
+    ficam sempre em `PENDENTE` — o fluxo completo de login/consentimento
+    OAuth é uma fase futura, e a UI declara isso explicitamente em vez de
+    marcar como conectado sem ter validado nada.
+  - **Paga a dívida da Fase 9**: `src/lib/integrations/email.ts` e
+    `whatsapp.ts`, que só registravam "pendente" em log, agora enviam de
+    verdade (SMTP via nodemailer / WhatsApp via Cloud API) quando existe
+    uma Integration `EMAIL_SMTP`/`WHATSAPP_BUSINESS` com status
+    `CONECTADO` — a régua de cobrança da Fase 9 passa a entregar
+    mensagens reais assim que uma dessas integrações é conectada, sem
+    qualquer mudança no código da régua.
+  - Testado ponta a ponta: SMTP com credenciais inválidas gerou `ERRO`
+    com a falha de DNS real; Google Calendar (OAuth) ficou `PENDENTE`
+    mesmo após salvar credenciais; um Webhook customizado com URL real
+    ficou `CONECTADO` via checagem HTTP de verdade; desconectar limpou as
+    credenciais e voltou o status para `DESCONECTADO` — tudo confirmado
+    direto no Postgres, incluindo que o valor armazenado é de fato
+    ciphertext (não o texto original) e que descriptografa corretamente
+    com a `VAULT_MASTER_KEY` real.
+- ⏳ Fases 15–24 — Demais módulos de negócio (Documentos, Lumi AI, etc.).
   A navegação, o RBAC e o schema de banco para **todos** esses módulos já
   existem; as páginas hoje são placeholders explícitos ("Módulo em
   construção") até receberem sua implementação funcional completa, fase a

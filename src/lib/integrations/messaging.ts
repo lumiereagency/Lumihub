@@ -34,7 +34,9 @@ export async function sendReminderMessage(
   }
 
   const result =
-    channel === "WHATSAPP" ? await sendWhatsApp({ to, message }) : await sendEmail({ to, subject, text: message });
+    channel === "WHATSAPP"
+      ? await sendWhatsApp({ organizationId, to, message })
+      : await sendEmail({ organizationId, to, subject, text: message });
 
-  return result.delivered ? { delivered: true } : { delivered: false, error: "Falha no envio." };
+  return result.delivered ? { delivered: true } : { delivered: false, error: result.error ?? "Falha no envio." };
 }

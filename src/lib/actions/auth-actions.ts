@@ -120,6 +120,7 @@ export async function requestPasswordResetAction(
 
     const resetUrl = `${process.env.APP_URL ?? "http://localhost:3000"}/redefinir-senha/${token}`;
     await sendEmail({
+      organizationId: user.organizationId,
       to: user.email,
       subject: "LUMIHUB — Redefinição de senha",
       text: `Olá, ${user.name}. Use o link a seguir para redefinir sua senha (válido por 1 hora): ${resetUrl}`,

@@ -76,23 +76,25 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–13 (planejamento, fundação/login/segurança, Design
+Fases 0–14 (planejamento, fundação/login/segurança, Design
 System/Shell, Dashboard executivo, CRM e Prospecção, Propostas,
 Clientes e Contratos, Projetos/Tarefas/Equipe/Captações, Calendário,
 Financeiro/Visão Financeira, Contas a Receber e Cobranças, Contas a
-Pagar/Cartões/Investimentos, Fluxo de Caixa, Metas) estão implementadas
-e testadas de ponta a ponta (build de produção, fluxo de setup → login
-→ RBAC → CRM → proposta comercial que avança o estágio do lead →
-conversão de lead em cliente → contrato → cobrança automática com régua
-de lembretes → projeto com equipe e margem → tarefas → captação e
-vencimento de contrato na Agenda → Visão Financeira com
+Pagar/Cartões/Investimentos, Fluxo de Caixa, Metas, Integrações) estão
+implementadas e testadas de ponta a ponta (build de produção, fluxo de
+setup → login → RBAC → CRM → proposta comercial que avança o estágio do
+lead → conversão de lead em cliente → contrato → cobrança automática
+com régua de lembretes → projeto com equipe e margem → tarefas →
+captação e vencimento de contrato na Agenda → Visão Financeira com
 KPIs/indicadores/gráficos reais → confirmação de pagamento → conta a
 pagar parcelada e recorrente → cartão de crédito com distribuição
 automática de parcelas nas faturas → investimento vinculado ao motor
 financeiro → projeção de fluxo de caixa em 7/30/90 dias e 6/12 meses a
 partir de compromissos reais → metas com cenários conservador/realista/
-agressivo comparadas ao resultado real, validado com navegador real). As
-Fases 14–24 (Integrações, Lumi AI, etc.) têm o schema de
+agressivo comparadas ao resultado real → integração real de e-mail
+(SMTP)/WhatsApp Business com verificação de conexão ao vivo e
+credenciais criptografadas no LUMIHUB Vault, validado com navegador
+real). As Fases 15–24 (Documentos, Lumi AI, etc.) têm o schema de
 banco, RBAC e navegação já prontos; as telas hoje são placeholders
 explícitos ("Módulo em construção") até receberem a
 implementação funcional completa, uma fase por vez — nenhum dado
