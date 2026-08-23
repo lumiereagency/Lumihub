@@ -399,9 +399,38 @@ IA for conectado via Integrações.
     ambiente de desenvolvimento para validar uma resposta bem-sucedida
     completa, mas o caminho de sucesso usa o mesmo código testado no
     caminho de erro, trocando apenas a validade da chave.
-- ⏳ Fases 17–24 — Demais módulos de negócio (Alertas, Relatórios, etc.).
-  A navegação, o RBAC e o schema de banco para **todos** esses módulos
-  já existem; as páginas hoje são placeholders explícitos ("Módulo em
+- ✅ Fase 17 — Alertas: `/alertas` detecta condições de risco reais em
+  seis categorias (Financeiro, Comercial, Operação, Clientes, Contratos,
+  Equipe — o próprio `AlertCategory` do schema) e nunca insere um alerta
+  fictício ou de exemplo.
+  - **Detecção sob demanda, mesmo princípio da régua da Fase 9**: sem
+    infraestrutura de cron, `src/lib/alerts/rules.ts` roda a cada
+    carregamento da página, verificando o estado atual do banco —
+    contas a pagar/receber atrasadas, leads sem próximo contato em dia,
+    projetos com status `ATRASADO`, clientes `INADIMPLENTE`, contratos
+    `ATIVO` vencidos ou vencendo em 30 dias, e projetos sem nenhum
+    membro de equipe alocado com prazo em até 7 dias. Cada alerta vem de
+    uma consulta real; a categoria "Oportunidade" não tem nenhuma regra
+    ainda, então honestamente nunca aparece um alerta desse tipo em vez
+    de forçar uma categoria vazia a parecer preenchida.
+  - **Sem duplicar a cada visita**: antes de criar um alerta, o
+    sincronizador verifica se já existe algum `Alert` (de qualquer
+    status) para a mesma entidade + categoria — evitando recriar um
+    alerta idêntico só porque a página foi recarregada, e sem apagar o
+    histórico de alertas já resolvidos/dispensados pelo usuário.
+  - Resolver/Dispensar ficam liberados com a permissão `ALERTS_VIEW` (a
+    única concedida a qualquer perfil não-admin no RBAC — o mesmo
+    raciocínio usado para a Lumi AI na Fase 16), já que são ações de
+    triagem pessoal, não de configuração do módulo.
+  - Testado ponta a ponta: seis condições reais foram inseridas
+    cobrindo as seis categorias (conta a pagar atrasada, lead sem
+    follow-up, projeto atrasado, cliente inadimplente, contrato vencido,
+    projeto sem equipe), todas detectadas corretamente com a severidade
+    esperada ao abrir a página, e a ação de Resolver persistiu
+    `status=RESOLVIDO` e `resolvedAt` no Postgres.
+- ⏳ Fases 18–24 — Demais módulos de negócio (Relatórios, etc.). A
+  navegação, o RBAC e o schema de banco para **todos** esses módulos já
+  existem; as páginas hoje são placeholders explícitos ("Módulo em
   construção") até receberem sua implementação funcional completa, fase
   a fase.
 
