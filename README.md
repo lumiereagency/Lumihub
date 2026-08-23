@@ -76,20 +76,22 @@ com `openssl rand -base64 32` — nunca use os valores de exemplo em produção.
 
 ## Estado do roadmap
 
-Fases 0–9 (planejamento, fundação/login/segurança, Design System/Shell,
+Fases 0–10 (planejamento, fundação/login/segurança, Design System/Shell,
 Dashboard executivo, CRM e Prospecção, Clientes e Contratos, Projetos/
 Tarefas/Equipe/Captações, Calendário, Financeiro/Visão Financeira, Contas
-a Receber e Cobranças) estão implementadas e testadas de ponta a ponta
-(build de produção, fluxo de setup → login → RBAC → CRM → conversão de
-lead em cliente → contrato → cobrança automática com régua de lembretes →
-projeto com equipe e margem → tarefas → captação e vencimento de contrato
-na Agenda → Visão Financeira com KPIs/indicadores/gráficos reais →
-confirmação de pagamento, validado com navegador real). As Fases 10–24
-(Contas a Pagar, Cartões, Integrações, Lumi AI, etc.) têm o schema de
-banco, RBAC e navegação já prontos; as telas hoje são placeholders
-explícitos ("Módulo em construção") até receberem a implementação
-funcional completa, uma fase por vez — nenhum dado fictício é exibido
-como se fosse real.
+a Receber e Cobranças, Contas a Pagar/Cartões/Investimentos) estão
+implementadas e testadas de ponta a ponta (build de produção, fluxo de
+setup → login → RBAC → CRM → conversão de lead em cliente → contrato →
+cobrança automática com régua de lembretes → projeto com equipe e margem →
+tarefas → captação e vencimento de contrato na Agenda → Visão Financeira
+com KPIs/indicadores/gráficos reais → confirmação de pagamento → conta a
+pagar parcelada e recorrente → cartão de crédito com distribuição
+automática de parcelas nas faturas → investimento vinculado ao motor
+financeiro, validado com navegador real). As Fases 11–24 (Integrações,
+Lumi AI, etc.) têm o schema de banco, RBAC e navegação já prontos; as
+telas hoje são placeholders explícitos ("Módulo em construção") até
+receberem a implementação funcional completa, uma fase por vez — nenhum
+dado fictício é exibido como se fosse real.
 
 ## Integrações externas necessárias (ainda não configuradas)
 

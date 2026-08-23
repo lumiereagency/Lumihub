@@ -724,6 +724,7 @@ model FinancialMovement {
   receivable      AccountReceivable?
   payable         AccountPayable?
   cardInstallment CreditCardInstallment?
+  investment      Investment?
 
   @@index([organizationId, type, status])
   @@index([organizationId, dueDate])
@@ -906,20 +907,22 @@ model CreditCardInstallment {
 }
 
 model Investment {
-  id             String         @id @default(cuid())
+  id             String             @id @default(cuid())
   organizationId String
+  movementId     String?            @unique
   description    String
   category       String
-  amount         Decimal        @db.Decimal(14, 2)
+  amount         Decimal            @db.Decimal(14, 2)
   date           DateTime
   paymentMethod  PaymentMethod?
-  installments   Int            @default(1)
+  installments   Int                @default(1)
   objective      String?
   expectedReturn String?
   notes          String?
-  createdAt      DateTime       @default(now())
+  createdAt      DateTime           @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  movement     FinancialMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
 
   @@map("investments")
 }

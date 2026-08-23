@@ -1,13 +1,67 @@
-import { requirePermission } from "@/lib/auth/guard";
+import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { db } from "@/lib/db";
+import { PageHeader } from "@/components/layout/page-header";
+import { PayableList } from "./payable-list";
 
 export default async function PayablesPage() {
-  await requirePermission(permKey("PAYABLES", "VIEW"));
+  const user = await requirePermission(permKey("PAYABLES", "VIEW"));
+
+  const [payables, categories, costCenters, users, organization] = await Promise.all([
+    db.accountPayable.findMany({
+      where: { organizationId: user.organizationId },
+      orderBy: { dueDate: "asc" },
+      include: { category: { select: { name: true } } },
+    }),
+    db.financialCategory.findMany({
+      where: { organizationId: user.organizationId, type: "DESPESA" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.costCenter.findMany({
+      where: { organizationId: user.organizationId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.user.findMany({
+      where: { organizationId: user.organizationId, isActive: true, deletedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { currency: true } }),
+  ]);
+
+  const permissions = {
+    canCreate: hasPermission(user, permKey("PAYABLES", "CREATE")),
+    canEdit: hasPermission(user, permKey("PAYABLES", "EDIT")),
+    canDelete: hasPermission(user, permKey("PAYABLES", "DELETE")),
+  };
+
   return (
-    <ModulePlaceholder
-      title="Contas a Pagar"
-      description="Despesas, recorrências, parcelamentos e centros de custo."
-    />
+    <div>
+      <PageHeader title="Contas a Pagar" description="Despesas, recorrências, parcelamentos e centros de custo." />
+      <PayableList
+        payables={payables.map((p) => ({
+          id: p.id,
+          description: p.description,
+          supplier: p.supplier,
+          categoryId: p.categoryId,
+          categoryName: p.category?.name ?? null,
+          costCenterId: p.costCenterId,
+          amount: Number(p.amount),
+          dueDate: p.dueDate.toISOString(),
+          status: p.status,
+          recurring: p.recurring,
+          installmentNumber: p.installmentNumber,
+          installmentTotal: p.installmentTotal,
+          responsibleUserId: p.responsibleUserId,
+        }))}
+        categories={categories}
+        costCenters={costCenters}
+        users={users}
+        currency={organization.currency}
+        permissions={permissions}
+      />
+    </div>
   );
 }

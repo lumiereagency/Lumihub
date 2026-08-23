@@ -204,11 +204,42 @@ IA for conectado via Integrações.
     entrega real.
   - Status "Atrasado" é derivado na UI (pendente + vencimento no passado),
     seguindo a mesma convenção já usada no Dashboard da Fase 3.
-- ⏳ Fases 10–24 — Demais módulos de negócio (Contas a Pagar, Cartões,
-  Integrações, Lumi AI, etc.). A navegação, o RBAC e o schema de banco para
-  **todos** esses módulos já existem; as páginas hoje são placeholders
-  explícitos ("Módulo em construção") até receberem sua implementação
-  funcional completa, fase a fase.
+- ✅ Fase 10 — Contas a Pagar, Cartões e Investimentos:
+  - `/financeiro/pagar` — CRUD de despesas com fornecedor, categoria e
+    centro de custo. **Parcelamento real**: informar N parcelas na criação
+    gera N registros de `AccountPayable` distintos (um por vencimento
+    mensal), cada um com seu próprio `FinancialMovement` vinculado —
+    nunca um único registro com "valor total" fictício. **Recorrência sem
+    cron**: marcar uma conta recorrente como paga gera reativamente a
+    próxima ocorrência (mesmo valor, vencimento um mês à frente),
+    replicando a mesma filosofia "automação honesta" da régua de
+    cobranças da Fase 9 — não há um agendador rodando em segundo plano
+    fingindo previsão futura.
+  - `/financeiro/cartoes` — cadastro de cartões (dia de fechamento/dia de
+    vencimento) e lançamento de compras com **distribuição automática de
+    parcelas nas faturas futuras**: a fatura de cada parcela é calculada a
+    partir do dia da compra frente ao dia de fechamento do cartão
+    (`purchaseDay > closingDay` empurra a primeira parcela para a fatura
+    seguinte), com o vencimento de cada fatura no `dueDay` configurado do
+    cartão. Marcar uma parcela como paga atualiza em par o
+    `FinancialMovement` vinculado dentro da mesma transação.
+  - `/financeiro/investimentos` — registro de investimentos por categoria
+    (Equipamentos, Tecnologia, Marketing, Estrutura, Desenvolvimento,
+    Expansão, Outros) com objetivo e retorno esperado; cada investimento
+    gera um `FinancialMovement` tipo `INVESTIMENTO` já `PAGO`, mantendo o
+    motor financeiro central (Fase 27) como única fonte de verdade também
+    para essa categoria de saída.
+  - Testado ponta a ponta via Playwright (login → criar conta a pagar
+    parcelada em 3x → conferir os 3 vencimentos → marcar recorrente como
+    paga → conferir geração automática da próxima ocorrência → cadastrar
+    cartão → lançar compra parcelada em 3x → conferir distribuição correta
+    por fatura conforme fechamento → marcar parcela como paga → registrar
+    investimento) e cruzado diretamente no Postgres.
+- ⏳ Fases 11–24 — Demais módulos de negócio (Integrações, Lumi AI, etc.).
+  A navegação, o RBAC e o schema de banco para **todos** esses módulos já
+  existem; as páginas hoje são placeholders explícitos ("Módulo em
+  construção") até receberem sua implementação funcional completa, fase a
+  fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 
