@@ -342,11 +342,35 @@ IA for conectado via Integrações.
     direto no Postgres, incluindo que o valor armazenado é de fato
     ciphertext (não o texto original) e que descriptografa corretamente
     com a `VAULT_MASTER_KEY` real.
-- ⏳ Fases 15–24 — Demais módulos de negócio (Documentos, Lumi AI, etc.).
-  A navegação, o RBAC e o schema de banco para **todos** esses módulos já
-  existem; as páginas hoje são placeholders explícitos ("Módulo em
-  construção") até receberem sua implementação funcional completa, fase a
-  fase.
+- ✅ Fase 15 — Documentos: `/documentos` implementa upload, listagem
+  (busca + filtro por categoria), edição de metadados, download e
+  exclusão de arquivos reais — a primeira feature de upload de arquivo
+  do LUMIHUB, sem precedente de código a reaproveitar.
+  - **Armazenamento local real** (`src/lib/storage/local.ts`,
+    `storageProvider = "local"` já previsto no schema): arquivos ficam
+    em `storage/documents/<organizationId>/<uuid+ext>`, fora de
+    `public/` para nunca serem servidos diretamente. `storageKey` é
+    sempre gerado no servidor (nunca a partir de input do usuário), o
+    que evita path traversal por construção. Fases futuras (32/33/34)
+    podem trocar por Google Drive/Dropbox sem mudar o contrato do
+    `Document`.
+  - **Download autenticado**: `/api/documentos/[id]` (primeiro Route
+    Handler do LUMIHUB) valida sessão e a permissão `DOCUMENTS_VIEW`
+    antes de ler o arquivo do disco e servi-lo com o `Content-Type` e
+    nome reais — a checagem de cookie do `proxy.ts` (nome do arquivo de
+    middleware no Next.js 16) já barra requisições sem sessão antes
+    mesmo de chegar na rota, e o Route Handler faz uma segunda checagem
+    de sessão/permissão como camada extra de defesa.
+  - Testado ponta a ponta: upload de um arquivo real, download com
+    comparação byte a byte confirmando que o conteúdo baixado é
+    idêntico ao original, edição de nome/categoria/vínculo persistida,
+    e exclusão removendo tanto a linha no Postgres quanto o arquivo em
+    disco (confirmado que nenhum dos dois sobra órfão).
+- ⏳ Fases 16–24 — Demais módulos de negócio (Lumi AI, Alertas,
+  Relatórios, etc.). A navegação, o RBAC e o schema de banco para
+  **todos** esses módulos já existem; as páginas hoje são placeholders
+  explícitos ("Módulo em construção") até receberem sua implementação
+  funcional completa, fase a fase.
 
 ### Nota técnica — `formData.get()` retorna `null`, não `""`, para campos ausentes
 
