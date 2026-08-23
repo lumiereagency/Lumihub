@@ -12,8 +12,10 @@ datasource db {
 
 // =========================================================================
 // ORGANIZAÇÃO / MULTI-EMPRESA (Fase 45)
-// Toda entidade pertence a uma Organization para permitir evolução futura
-// para múltiplas empresas sem redesenhar o schema.
+// Toda entidade pertence a uma Organization, permitindo múltiplas empresas
+// isoladas na mesma implantação. User.email é único globalmente (não por
+// organização) porque o login resolve a conta apenas pelo e-mail, sem pedir
+// qual organização — cada pessoa pertence a exatamente uma organização.
 // =========================================================================
 
 model Organization {
@@ -120,7 +122,7 @@ model User {
   organizationId  String
   roleId          String
   name            String
-  email           String
+  email           String    @unique
   passwordHash    String
   avatarUrl       String?
   isActive        Boolean   @default(true)
@@ -145,7 +147,7 @@ model User {
   aiConversations       AiConversation[]
   connectedIntegrations Integration[]
 
-  @@unique([organizationId, email])
+  @@index([organizationId])
   @@map("users")
 }
 

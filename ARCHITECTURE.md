@@ -17,13 +17,16 @@ fase concluída do roadmap.
 | Autenticação | Sessão própria (cookie httpOnly + tabela `sessions` no Postgres) | Controle total sobre sessões ativas, revogação, auditoria e RBAC — requisitos explícitos da Fase 1 que soluções prontas (NextAuth/Auth.js) tornam mais difíceis de expor (listagem/revogação de sessão com Credentials provider é limitada). |
 | Senhas | bcrypt (bcryptjs), custo 12 | Hash seguro, sem dependências nativas de compilação. |
 
-## 2. Multi-tenancy preparada (Fase 45)
+## 2. Multi-tenancy (Fase 45)
 
-Toda entidade de negócio pertence a uma `Organization`. Hoje existe apenas uma
-organização (Lumière Agency), criada pelo fluxo de Primeiro Acesso, mas o
-schema já isola dados por `organizationId` em todas as tabelas — login,
-permissões, integrações e todos os módulos de negócio. Isso permite evoluir
-para múltiplas organizações no futuro sem redesenhar o banco.
+Toda entidade de negócio pertence a uma `Organization`, com dados isolados por
+`organizationId` em todas as tabelas — login, permissões, integrações e todos
+os módulos de negócio. A implantação suporta múltiplas organizações
+independentes: `/setup` cadastra uma nova organização a qualquer momento (não
+só na primeira execução), e `User.email` é único globalmente (não mais por
+organização) para que o login resolva a conta corretamente mesmo com várias
+organizações na mesma base. Cada pessoa pertence a exatamente uma organização
+— não há troca entre organizações na mesma conta.
 
 ## 3. Autenticação e sessão
 
@@ -539,17 +542,54 @@ IA for conectado via Integrações.
   nesta sessão ("Fase 22, 23, 24...") presumia a existência de módulos
   de negócio ainda não escopados; a investigação mostrou que não há
   mais nenhum.
+- ✅ Fase 45 — Multi-organização: a implantação passa a suportar mais
+  de uma organização isolada, não só a criada no primeiro acesso.
+  - **`User.email` único globalmente, não mais por organização**
+    (migração `20260823152850_add_multi_organization_global_email`,
+    trocando `@@unique([organizationId, email])` por `email @unique`)
+    — necessário porque o login (`loginAction`) sempre resolveu a
+    conta só pelo e-mail, sem pedir a organização; com múltiplas
+    organizações na mesma implantação, duas contas com o mesmo e-mail
+    em organizações diferentes colidiriam de forma não determinística
+    nessa busca. Cada pessoa continua pertencente a exatamente uma
+    organização — não há troca entre organizações na mesma conta,
+    escopo deliberadamente fora desta fase.
+  - **`/setup` deixa de ser um bootstrap de uso único**: antes,
+    `hasAnyOrganization()` bloqueava a tela permanentemente assim que
+    qualquer organização existia no banco. Agora qualquer visitante
+    sem sessão ativa pode cadastrar uma nova organização a qualquer
+    momento — só quem já está logado é redirecionado (para
+    `/dashboard`, não pode criar uma segunda organização a partir de
+    uma sessão existente). `setupOrganizationAction` valida o e-mail
+    do administrador contra a base inteira antes de criar a
+    organização, com erro honesto ("Já existe uma conta com este
+    e-mail") em vez de deixar a constraint do banco vazar um erro
+    técnico.
+  - **Convite de usuário (Fase 19) também valida globalmente**:
+    `createUserAction` trocou a checagem de duplicidade de
+    `{organizationId, email}` para `{email}` em todo o sistema,
+    coerente com a nova constraint.
+  - Testado ponta a ponta com navegador real: `/setup` continuou
+    acessível com a Lumière Agency já cadastrada; uma segunda
+    organização ("Estúdio Aurora") foi criada com sucesso, logada
+    automaticamente e isolada dos dados da primeira (confirmado
+    listando usuários por organização direto no Postgres); tentar
+    cadastrar uma terceira organização com o mesmo e-mail da segunda
+    foi corretamente rejeitada; o login da Lumière Agency continuou
+    funcionando normalmente sem enxergar nada da nova organização; um
+    usuário já logado que acessa `/setup` foi redirecionado direto
+    para `/dashboard`. Organização de teste removida ao final
+    (`ON DELETE CASCADE` limpou usuário/perfis em cascata, confirmado
+    no Postgres).
 - ⏳ Itens de infraestrutura/aprimoramento ainda pendentes, citados de
   forma esparsa nos comentários do roadmap original do schema (Fases
-  26, 27, 30–34, 36, 45) — a maioria já aplicada como princípio
+  26, 27, 30–34, 36) — a maioria já aplicada como princípio
   transversal em vários módulos (Fase 26 "integração entre módulos" e
   Fase 36 "automações" já estão em uso desde as Fases 5–12); o que
   falta de fato:
   - OAuth completo para Google Calendar/Google Drive/Outlook (hoje
     aceitam credenciais no Vault mas ficam sempre `PENDENTE`).
   - Gateway de pagamentos (Asaas/Stripe/Mercado Pago).
-  - Multi-organização — schema já isola por `organizationId`, falta a
-    UI para uma conta gerenciar mais de uma organização (Fase 45).
   - Internacionalização real da interface (idioma/fuso já são salvos
     desde a Fase 20, mas a UI só existe em português).
 

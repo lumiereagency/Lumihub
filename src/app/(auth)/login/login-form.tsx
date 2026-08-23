@@ -29,6 +29,12 @@ export function LoginForm() {
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Entrando..." : "Entrar"}
       </Button>
+      <p className="text-center text-sm text-text-tertiary">
+        Sua empresa ainda não tem conta?{" "}
+        <Link href="/setup" className="text-gold-light hover:underline">
+          Cadastrar organização
+        </Link>
+      </p>
     </form>
   );
 }

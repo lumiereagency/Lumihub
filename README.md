@@ -169,20 +169,30 @@ armazenamento cifrado prontos desde a Fase 14 — conectar é uma ação
 operacional (colar a credencial real na tela), não uma tarefa de
 código.
 
+## Multi-organização
+
+A implantação suporta múltiplas organizações isoladas (Fase 45):
+`/setup` cadastra uma nova organização a qualquer momento, não só na
+primeira execução — só fica indisponível para quem já está logado
+(evita criar uma segunda organização por engano a partir de uma
+sessão ativa). Cada organização tem seus próprios usuários, perfis e
+dados, totalmente isolados por `organizationId`; o e-mail de um
+usuário é único em toda a implantação (não por organização), já que o
+login resolve a conta só pelo e-mail. Não há troca entre organizações
+na mesma conta — cada pessoa pertence a exatamente uma.
+
 ## Roadmap restante
 
-Todo o roadmap de módulos de negócio (Fases 0–21) está implementado.
-Os itens que restam no schema/comentários do roadmap original são de
-infraestrutura, não novas telas:
+Todo o roadmap de módulos de negócio (Fases 0–21) e multi-organização
+(Fase 45) estão implementados. Os itens que restam no schema/
+comentários do roadmap original são de infraestrutura, não novas
+telas:
 
 - **OAuth completo para Google Calendar, Google Drive e Outlook**
   (hoje aceitam credenciais no Vault mas ficam sempre em `PENDENTE` —
   falta o fluxo de login/consentimento OAuth de verdade).
 - **Gateway de pagamentos** (Asaas/Stripe/Mercado Pago) para
   confirmação automática de pagamento em vez de manual.
-- **Multi-organização** (schema já isola tudo por `organizationId`,
-  mas só existe o fluxo de criar a primeira organização — não há UI
-  para uma conta gerenciar múltiplas organizações).
 - **Internacionalização real** (idioma/fuso são salvos desde a Fase
   20, mas a interface só existe em português e as datas seguem o fuso
   do servidor).

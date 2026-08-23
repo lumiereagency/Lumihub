@@ -45,8 +45,8 @@ export async function createUserAction(_prev: ActionState, formData: FormData): 
   const role = await db.role.findFirst({ where: { id: parsed.data.roleId, organizationId: admin.organizationId } });
   if (!role) return { error: "Perfil inválido." };
 
-  const existing = await db.user.findFirst({ where: { organizationId: admin.organizationId, email: parsed.data.email } });
-  if (existing) return { error: "Já existe um usuário com este e-mail nesta organização." };
+  const existing = await db.user.findFirst({ where: { email: parsed.data.email } });
+  if (existing) return { error: "Já existe uma conta com este e-mail no sistema." };
 
   const randomPassword = crypto.randomBytes(24).toString("hex");
   const user = await db.user.create({

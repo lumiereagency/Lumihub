@@ -1,18 +1,24 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createOrganizationWithAdmin, hasAnyOrganization } from "@/lib/auth/bootstrap";
-import { createSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { createOrganizationWithAdmin } from "@/lib/auth/bootstrap";
+import { getCurrentUser, createSession } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
 import { setupOrganizationSchema } from "@/lib/validation/auth";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
+// Criar uma organização não exige que seja a primeira da implantação (Fase
+// 45 — Multi-organização): qualquer visitante sem sessão ativa pode cadastrar
+// uma nova empresa isolada a qualquer momento. Só bloqueia quem já está
+// logado, para não criar uma segunda organização por engano a partir de uma
+// sessão existente.
 export async function setupOrganizationAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (await hasAnyOrganization()) {
-    return { error: "O LUMIHUB já foi configurado. Acesse a tela de login." };
+  if (await getCurrentUser()) {
+    redirect("/dashboard");
   }
 
   const parsed = setupOrganizationSchema.safeParse({
@@ -27,6 +33,11 @@ export async function setupOrganizationAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  }
+
+  const existing = await db.user.findFirst({ where: { email: parsed.data.adminEmail } });
+  if (existing) {
+    return { error: "Já existe uma conta com este e-mail. Faça login ou use outro e-mail." };
   }
 
   const { organization, user } = await createOrganizationWithAdmin({

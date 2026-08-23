@@ -8,7 +8,7 @@ async function main() {
   });
   const passwordHash = await hashPassword("SenhaForte123");
   const user = await db.user.upsert({
-    where: { organizationId_email: { organizationId: org.id, email: "carla@lumiere.test" } },
+    where: { email: "carla@lumiere.test" },
     create: {
       organizationId: org.id,
       roleId: role.id,
