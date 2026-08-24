@@ -12,52 +12,33 @@ import {
   RECURRENCE_LABELS,
 } from "@/lib/validation/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { generateRemindersForReceivable } from "@/lib/billing/reminders";
+import { createContractReceivable, nextCycleOnOrAfter } from "@/lib/billing/recurring";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
 
 type TxClient = Prisma.TransactionClient;
 
 // Contrato aprovado (status ATIVO) gera receita — Fase 26, princípio de
-// integração entre módulos. Gera apenas a primeira cobrança; a geração
-// recorrente das parcelas seguintes (régua de cobrança) é escopo da Fase 9.
+// integração entre módulos. Gera apenas a primeira cobrança aqui; as
+// parcelas seguintes de contratos recorrentes são geradas pela rodada
+// diária em @/lib/billing/recurring (Fase 46, completa a régua da Fase 9).
+// A data nunca fica no passado: se o início do contrato já passou, avança
+// para a primeira ocorrência do ciclo igual ou posterior a hoje.
 async function generateInitialReceivable(tx: TxClient, contractId: string) {
   const existing = await tx.accountReceivable.findFirst({ where: { contractId } });
   if (existing) return;
 
   const contract = await tx.contract.findUniqueOrThrow({ where: { id: contractId } });
+  const dueDate = nextCycleOnOrAfter(contract.startDate, contract.recurrence);
 
-  const movement = await tx.financialMovement.create({
-    data: {
-      organizationId: contract.organizationId,
-      type: "RECEITA",
-      amount: contract.value,
-      competenceDate: contract.startDate,
-      dueDate: contract.startDate,
-      clientId: contract.clientId,
-      contractId: contract.id,
-      status: "PENDENTE",
-      notes:
-        contract.recurrence === "UNICO"
-          ? "Gerado automaticamente na ativação do contrato."
-          : "Primeira cobrança gerada automaticamente na ativação do contrato (recorrências futuras: Fase 9).",
-    },
-  });
-
-  const receivable = await tx.accountReceivable.create({
-    data: {
-      organizationId: contract.organizationId,
-      clientId: contract.clientId,
-      contractId: contract.id,
-      movementId: movement.id,
-      description: `Contrato — ${contract.title}`,
-      amount: contract.value,
-      dueDate: contract.startDate,
-      status: "PENDENTE",
-    },
-  });
-
-  await generateRemindersForReceivable(tx, receivable.id);
+  await createContractReceivable(
+    tx,
+    contract,
+    dueDate,
+    contract.recurrence === "UNICO"
+      ? "Gerado automaticamente na ativação do contrato."
+      : "Primeira cobrança gerada automaticamente na ativação do contrato.",
+  );
 }
 
 // Contrato ativo com data de término → Agenda (Fase 26): mantém um evento
