@@ -93,7 +93,7 @@ export function ReceivableList({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="TODOS">Todos os status</option>
             {Object.entries(RECEIVABLE_STATUS_LABELS).map(([value, label]) => (

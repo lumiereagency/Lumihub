@@ -24,10 +24,10 @@ interface ProjectData {
   responsibleName: string | null;
 }
 
-const STATUS_TONE: Record<string, "success" | "neutral" | "info" | "error" | "warning" | "gold"> = {
+const STATUS_TONE: Record<string, "success" | "neutral" | "info" | "error" | "warning" | "accent"> = {
   BACKLOG: "neutral",
   PLANEJAMENTO: "info",
-  EM_PRODUCAO: "gold",
+  EM_PRODUCAO: "accent",
   EM_REVISAO: "warning",
   AGUARDANDO_CLIENTE: "info",
   CONCLUIDO: "success",

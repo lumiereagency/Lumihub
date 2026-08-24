@@ -58,7 +58,7 @@ export function InsightList({ insights, hasProvider }: { insights: InsightRow[];
         <div className="flex flex-col gap-2">
           {active.map((i) => (
             <div key={i.id} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4">
-              <Sparkles size={16} className="mt-0.5 shrink-0 text-gold" />
+              <Sparkles size={16} className="mt-0.5 shrink-0 text-accent" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={ALERT_SEVERITY_TONE[i.severity as (typeof ALERT_SEVERITIES)[number]]}>

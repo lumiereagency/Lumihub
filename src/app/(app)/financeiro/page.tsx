@@ -29,7 +29,7 @@ export default async function FinancePage() {
       <PageHeader title="Visão Financeira" description="Saldo, receitas, despesas, margem e indicadores financeiros consolidados." />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Saldo atual" value={formatCurrency(kpis.saldoAtual, currency)} tone="gold" />
+        <MetricCard label="Saldo atual" value={formatCurrency(kpis.saldoAtual, currency)} tone="accent" />
         <MetricCard label="Receita do mês" value={formatCurrency(kpis.receitaMes, currency)} />
         <MetricCard label="Despesas do mês" value={formatCurrency(kpis.despesaMes, currency)} />
         <MetricCard label="Lucro estimado" value={formatCurrency(kpis.lucroEstimado, currency)} />

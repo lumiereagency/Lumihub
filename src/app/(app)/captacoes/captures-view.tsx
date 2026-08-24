@@ -30,12 +30,12 @@ interface CaptureRow {
   projectName: string | null;
 }
 
-const STATUS_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "gold"> = {
+const STATUS_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "accent"> = {
   PLANEJADA: "neutral",
   CONFIRMADA: "info",
   REALIZADA: "success",
   EM_EDICAO: "warning",
-  ENTREGUE: "gold",
+  ENTREGUE: "accent",
 };
 
 function toFormValues(c: CaptureRow): CaptureFormValues {

@@ -6,7 +6,7 @@ interface MetricCardProps {
   value: string;
   trend?: { value: string; positive: boolean } | null;
   icon?: ReactNode;
-  tone?: "default" | "gold";
+  tone?: "default" | "accent";
   className?: string;
 }
 
@@ -14,20 +14,21 @@ export function MetricCard({ label, value, trend, icon, tone = "default", classN
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card p-5 flex flex-col gap-3",
+        "rounded-2xl border p-5 flex flex-col gap-3",
+        tone === "accent" ? "border-accent/25 bg-card-elevated" : "border-border bg-card",
         className,
       )}
     >
       <div className="flex items-center justify-between">
         <span className="text-sm text-text-secondary">{label}</span>
         {icon && (
-          <span className={cn("text-text-tertiary", tone === "gold" && "text-gold")}>{icon}</span>
+          <span className={cn("text-text-tertiary", tone === "accent" && "text-accent")}>{icon}</span>
         )}
       </div>
       <span
         className={cn(
-          "text-[28px] leading-tight font-semibold tracking-tight",
-          tone === "gold" ? "text-gold-light" : "text-text-primary",
+          "lb-figures text-[28px] leading-tight font-semibold tracking-tight",
+          tone === "accent" ? "lb-accent-text" : "text-text-primary",
         )}
       >
         {value}

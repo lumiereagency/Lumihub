@@ -97,7 +97,7 @@ export function ProposalBoard({
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Pipeline de propostas" value={formatCurrency(stats.pipelineValue, currency)} tone="gold" />
+        <MetricCard label="Pipeline de propostas" value={formatCurrency(stats.pipelineValue, currency)} tone="accent" />
         <MetricCard label="Enviadas (mês)" value={String(stats.sentThisMonth)} />
         <MetricCard label="Taxa de aceite" value={`${stats.winRate}%`} />
         <MetricCard label="Expirando em 7 dias" value={String(stats.expiringSoon)} icon={stats.expiringSoon > 0 ? <AlertCircle size={16} /> : undefined} />
@@ -141,14 +141,14 @@ export function ProposalBoard({
                       key={p.id}
                       type="button"
                       onClick={() => setEditingId(p.id)}
-                      className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-gold/40"
+                      className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-accent/40"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium text-text-primary">{p.title}</span>
                         {isExpired(p) && <AlertCircle size={14} className="mt-0.5 shrink-0 text-warning" />}
                       </div>
                       <span className="text-xs text-text-tertiary">{p.leadCompany ?? p.clientName ?? "Sem vínculo"}</span>
-                      <Badge tone="gold">{formatCurrency(p.value, currency)}</Badge>
+                      <Badge tone="accent">{formatCurrency(p.value, currency)}</Badge>
                       <div className="flex items-center justify-between text-xs text-text-tertiary">
                         <span>{p.validUntil ? `Válida até ${formatDate(new Date(p.validUntil))}` : "Sem validade definida"}</span>
                       </div>

@@ -31,7 +31,7 @@ export default async function AlertsPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Abertos" value={String(open.length)} tone="gold" />
+        <MetricCard label="Abertos" value={String(open.length)} tone="accent" />
         <MetricCard label="Urgentes" value={String(urgentCount)} />
         <MetricCard label="Atenção" value={String(attentionCount)} />
         <MetricCard label="Oportunidades" value={String(opportunityCount)} />

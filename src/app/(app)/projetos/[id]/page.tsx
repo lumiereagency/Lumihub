@@ -88,7 +88,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Valor" value={formatCurrency(value, currency)} tone="gold" />
+        <MetricCard label="Valor" value={formatCurrency(value, currency)} tone="accent" />
         <MetricCard label="Custo estimado" value={formatCurrency(costEstimate, currency)} />
         <MetricCard label="Custo de equipe" value={formatCurrency(teamCost, currency)} />
         <MetricCard label="Margem" value={formatCurrency(margin, currency)} />

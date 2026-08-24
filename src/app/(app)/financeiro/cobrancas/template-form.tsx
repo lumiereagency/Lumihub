@@ -54,14 +54,14 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
         <ul className="flex flex-col gap-0.5">
           {TEMPLATE_PLACEHOLDERS.map((p) => (
             <li key={p.key}>
-              <code className="text-gold-light">{p.key}</code> — {p.description}
+              <code className="text-accent-light">{p.key}</code> — {p.description}
             </li>
           ))}
         </ul>
       </div>
 
       <label className="flex items-center gap-2 text-sm text-text-secondary">
-        <input type="checkbox" name="active" defaultChecked className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]" />
+        <input type="checkbox" name="active" defaultChecked className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]" />
         Ativo
       </label>
 

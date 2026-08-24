@@ -45,7 +45,7 @@ export function IntegrationForm({
             Antes de salvar, cadastre este Redirect URI exato no console do provedor (Google Cloud Console ou Azure
             Portal):
           </p>
-          <code className="block select-all break-all rounded-[6px] bg-background px-2 py-1.5 text-gold-light">
+          <code className="block select-all break-all rounded-[6px] bg-background px-2 py-1.5 text-accent-light">
             {oauthRedirectUri}
           </code>
         </div>

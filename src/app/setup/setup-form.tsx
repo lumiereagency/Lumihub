@@ -65,7 +65,7 @@ export function SetupForm() {
             id="timezone"
             name="timezone"
             defaultValue="America/Sao_Paulo"
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>
@@ -82,7 +82,7 @@ export function SetupForm() {
             id="currency"
             name="currency"
             defaultValue="BRL"
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             {CURRENCIES.map((c) => (
               <option key={c.value} value={c.value}>

@@ -21,7 +21,7 @@ export function ChatThread({ messages }: { messages: MessageRow[] }) {
             <div
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-                isUser ? "bg-card-elevated text-text-secondary" : "bg-gold/15 text-gold",
+                isUser ? "bg-card-elevated text-text-secondary" : "bg-accent/15 text-accent",
               )}
             >
               {isUser ? <User size={14} /> : <Sparkles size={14} />}

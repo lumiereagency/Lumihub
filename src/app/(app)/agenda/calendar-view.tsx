@@ -44,8 +44,8 @@ interface EventRow {
   sourceHref: string | null;
 }
 
-const TYPE_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "error" | "gold"> = {
-  CAPTACAO: "gold",
+const TYPE_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "error" | "accent"> = {
+  CAPTACAO: "accent",
   REUNIAO: "info",
   ENTREGA: "success",
   VENCIMENTO: "warning",
@@ -133,7 +133,7 @@ export function CalendarView({
           <select
             value={filters.clientId}
             onChange={(e) => setFilters((f) => ({ ...f, clientId: e.target.value }))}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="">Todos os clientes</option>
             {clients.map((c) => (
@@ -145,7 +145,7 @@ export function CalendarView({
           <select
             value={filters.responsibleUserId}
             onChange={(e) => setFilters((f) => ({ ...f, responsibleUserId: e.target.value }))}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="">Todos os responsáveis</option>
             {users.map((u) => (
@@ -157,7 +157,7 @@ export function CalendarView({
           <select
             value={filters.projectId}
             onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value }))}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="">Todos os projetos</option>
             {projects.map((p) => (
@@ -169,7 +169,7 @@ export function CalendarView({
           <select
             value={filters.type}
             onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="">Todos os tipos</option>
             {CALENDAR_EVENT_TYPES.map((t) => (
@@ -191,14 +191,14 @@ export function CalendarView({
           <button
             type="button"
             onClick={() => setView("mes")}
-            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "mes" ? "bg-card-elevated text-gold-light" : "text-text-secondary")}
+            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "mes" ? "bg-card-elevated text-accent-light" : "text-text-secondary")}
           >
             <CalendarDays size={14} /> Mês
           </button>
           <button
             type="button"
             onClick={() => setView("lista")}
-            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "lista" ? "bg-card-elevated text-gold-light" : "text-text-secondary")}
+            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "lista" ? "bg-card-elevated text-accent-light" : "text-text-secondary")}
           >
             <ListIcon size={14} /> Agenda
           </button>
@@ -239,7 +239,7 @@ export function CalendarView({
               const today = isSameDay(day, new Date());
               return (
                 <div key={key} className={cn("min-h-[110px] border-b border-r border-border p-1.5", !inMonth && "bg-bg-secondary/40")}>
-                  <span className={cn("inline-flex h-6 w-6 items-center justify-center rounded-full text-xs", today ? "bg-gold text-[#1a1408] font-semibold" : inMonth ? "text-text-secondary" : "text-text-tertiary")}>
+                  <span className={cn("inline-flex h-6 w-6 items-center justify-center rounded-full text-xs", today ? "bg-accent text-accent-on font-semibold" : inMonth ? "text-text-secondary" : "text-text-tertiary")}>
                     {format(day, "d")}
                   </span>
                   <div className="mt-1 flex flex-col gap-1">

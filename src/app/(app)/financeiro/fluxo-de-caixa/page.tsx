@@ -33,7 +33,7 @@ export default async function CashFlowPage() {
             key={h.key}
             label={`Saldo projetado — ${h.label}`}
             value={formatCurrency(h.projectedBalance, currency)}
-            tone={h.projectedBalance < 0 ? "default" : "gold"}
+            tone={h.projectedBalance < 0 ? "default" : "accent"}
           />
         ))}
       </div>

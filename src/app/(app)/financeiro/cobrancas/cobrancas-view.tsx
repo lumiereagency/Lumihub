@@ -85,7 +85,7 @@ export function CobrancasView({
                 <div>
                   <p className="text-sm text-text-primary">{t.name}</p>
                   <div className="mt-1 flex items-center gap-1.5">
-                    <Badge tone="gold">{MESSAGE_TRIGGER_LABELS[t.trigger as keyof typeof MESSAGE_TRIGGER_LABELS] ?? t.trigger}</Badge>
+                    <Badge tone="accent">{MESSAGE_TRIGGER_LABELS[t.trigger as keyof typeof MESSAGE_TRIGGER_LABELS] ?? t.trigger}</Badge>
                     <Badge tone="info">{REMINDER_CHANNEL_LABELS[t.channel as keyof typeof REMINDER_CHANNEL_LABELS] ?? t.channel}</Badge>
                   </div>
                 </div>
@@ -96,7 +96,7 @@ export function CobrancasView({
                         type="checkbox"
                         defaultChecked={t.active}
                         onChange={(e) => toggleMessageTemplateAction(t.id, e.target.checked)}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
                       />
                       Ativo
                     </label>

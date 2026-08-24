@@ -84,7 +84,7 @@ export function TaskBoard({
         <select
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
-          className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+          className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           <option value="TODOS">Todos os projetos</option>
           <option value="">Sem projeto</option>
@@ -127,7 +127,7 @@ export function TaskBoard({
                     key={t.id}
                     type="button"
                     onClick={() => setEditingId(t.id)}
-                    className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-gold/40"
+                    className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-accent/40"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-sm font-medium text-text-primary">{t.title}</span>

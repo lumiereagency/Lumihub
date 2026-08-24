@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { NAV_GROUPS, getActiveHref } from "@/lib/nav";
 import { Avatar } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/layout/user-menu";
+import { Wordmark } from "@/components/layout/logo";
 
 interface SidebarUser {
   name: string;
@@ -29,7 +30,7 @@ export function Sidebar({ permissions, user }: { permissions: string[]; user: Si
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-bg-secondary">
       <div className="flex h-16 items-center px-6">
-        <span className="text-lg font-semibold tracking-tight text-gold-light">LUMIBASE</span>
+        <Wordmark />
       </div>
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pb-6">
         {groups.map((group) => (
@@ -48,7 +49,7 @@ export function Sidebar({ permissions, user }: { permissions: string[]; user: Si
                     className={cn(
                       "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm transition-colors",
                       active
-                        ? "bg-card-elevated text-gold-light font-medium"
+                        ? "bg-card-elevated text-accent-light font-medium"
                         : "text-text-secondary hover:bg-card hover:text-text-primary",
                     )}
                   >

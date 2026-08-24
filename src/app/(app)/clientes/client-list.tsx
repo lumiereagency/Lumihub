@@ -69,7 +69,7 @@ export function ClientList({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-gold/40"
+            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="TODOS">Todos os status</option>
             {Object.entries(CLIENT_STATUS_LABELS).map(([value, label]) => (
@@ -120,7 +120,7 @@ export function ClientList({
               {filtered.map((client) => (
                 <tr key={client.id} className="border-b border-border last:border-0 hover:bg-card">
                   <td className="px-4 py-3">
-                    <Link href={`/clientes/${client.id}`} className="font-medium text-text-primary hover:text-gold-light">
+                    <Link href={`/clientes/${client.id}`} className="font-medium text-text-primary hover:text-accent-light">
                       {client.companyName}
                     </Link>
                   </td>

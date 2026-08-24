@@ -45,7 +45,7 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
         <ul className="flex flex-col gap-0.5">
           {TEMPLATE_PLACEHOLDERS.map((p) => (
             <li key={p.key}>
-              <code className="text-gold-light">{p.key}</code> — {p.description}
+              <code className="text-accent-light">{p.key}</code> — {p.description}
             </li>
           ))}
         </ul>

@@ -33,7 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               "h-10 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary",
               "placeholder:text-text-tertiary",
-              "focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold/60",
+              "focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60",
               "disabled:opacity-50 disabled:pointer-events-none",
               isPassword && "pr-10",
               error && "border-error focus:ring-error/40 focus:border-error",

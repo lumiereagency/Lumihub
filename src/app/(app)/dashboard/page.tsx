@@ -111,7 +111,7 @@ export default async function DashboardPage() {
       <PageHeader title={`${greeting()}, ${user.name.split(" ")[0]}.`} description="Aqui está o panorama da Lumière hoje." />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} icon={<Wallet size={16} />} tone="gold" />
+        <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} icon={<Wallet size={16} />} tone="accent" />
         <MetricCard label="A receber" value={formatCurrency(finance.aReceber, currency)} icon={<ArrowDownCircle size={16} />} />
         <MetricCard label="A pagar" value={formatCurrency(finance.aPagar, currency)} icon={<ArrowUpCircle size={16} />} />
         <MetricCard
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
             <CardTitle>Saúde da Lumi</CardTitle>
           </CardHeader>
           <div className="flex flex-col items-center gap-2 py-2">
-            <span className="text-5xl font-semibold text-gold-light">{health.overall}</span>
+            <span className="text-5xl font-semibold text-accent-light">{health.overall}</span>
             <span className="text-xs text-text-tertiary">de 100</span>
           </div>
           <div className="mt-4 flex flex-col gap-2">
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
               <div key={key} className="flex items-center gap-3">
                 <span className="w-28 shrink-0 text-xs capitalize text-text-tertiary">{key}</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-elevated">
-                  <div className="h-full rounded-full bg-gold" style={{ width: `${value}%` }} />
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} />
                 </div>
                 <span className="w-8 text-right text-xs text-text-secondary">{value}</span>
               </div>
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles size={16} className="text-gold" /> Insights
+              <Sparkles size={16} className="text-accent" /> Insights
             </CardTitle>
           </CardHeader>
           <div className="flex flex-col gap-2">

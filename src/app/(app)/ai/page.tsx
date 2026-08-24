@@ -20,7 +20,7 @@ export default async function AiLandingPage() {
         }
         action={
           !provider && (
-            <Link href="/configuracoes/integracoes" className="text-sm font-medium text-gold hover:text-gold-light">
+            <Link href="/configuracoes/integracoes" className="text-sm font-medium text-accent hover:text-accent-light">
               Ir para Integrações →
             </Link>
           )

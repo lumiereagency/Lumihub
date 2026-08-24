@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS, getActiveHref } from "@/lib/nav";
+import { Wordmark } from "@/components/layout/logo";
 
 export function MobileNav({ permissions }: { permissions: string[] }) {
   const [open, setOpen] = useState(false);
@@ -20,7 +21,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
   return (
     <>
       <div className="flex h-14 items-center justify-between border-b border-border bg-bg-secondary px-4 lg:hidden">
-        <span className="text-base font-semibold tracking-tight text-gold-light">LUMIBASE</span>
+        <Wordmark />
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -34,7 +35,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
           <div className="flex h-14 items-center justify-between border-b border-border px-4">
-            <span className="text-base font-semibold tracking-tight text-gold-light">LUMIBASE</span>
+            <Wordmark />
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -62,7 +63,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
                         className={cn(
                           "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm",
                           active
-                            ? "bg-card-elevated text-gold-light font-medium"
+                            ? "bg-card-elevated text-accent-light font-medium"
                             : "text-text-secondary hover:bg-card hover:text-text-primary",
                         )}
                       >

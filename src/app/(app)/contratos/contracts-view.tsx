@@ -85,14 +85,14 @@ export function ContractsView({
         <button
           type="button"
           onClick={() => setTab("contratos")}
-          className={`rounded-[8px] px-3 py-1.5 text-sm ${tab === "contratos" ? "bg-card-elevated text-gold-light" : "text-text-secondary"}`}
+          className={`rounded-[8px] px-3 py-1.5 text-sm ${tab === "contratos" ? "bg-card-elevated text-accent-light" : "text-text-secondary"}`}
         >
           Contratos
         </button>
         <button
           type="button"
           onClick={() => setTab("modelos")}
-          className={`rounded-[8px] px-3 py-1.5 text-sm ${tab === "modelos" ? "bg-card-elevated text-gold-light" : "text-text-secondary"}`}
+          className={`rounded-[8px] px-3 py-1.5 text-sm ${tab === "modelos" ? "bg-card-elevated text-accent-light" : "text-text-secondary"}`}
         >
           Modelos
         </button>
@@ -142,7 +142,7 @@ export function ContractsView({
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <Link href={`/clientes/${c.client.id}`} className="text-text-secondary hover:text-gold-light">
+                        <Link href={`/clientes/${c.client.id}`} className="text-text-secondary hover:text-accent-light">
                           {c.client.companyName}
                         </Link>
                       </td>

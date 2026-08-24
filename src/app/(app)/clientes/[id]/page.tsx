@@ -83,7 +83,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricCard label="Contratos" value={String(contracts.length)} />
-        <MetricCard label="Receita recebida" value={formatCurrency(Number(receivedTotal._sum.amount ?? 0), currency)} tone="gold" />
+        <MetricCard label="Receita recebida" value={formatCurrency(Number(receivedTotal._sum.amount ?? 0), currency)} tone="accent" />
         <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} />
         <MetricCard label="Margem / Rentabilidade" value="Indisponível" />
       </div>

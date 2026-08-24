@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 const SCENARIO_BAR_COLOR: Record<string, string> = {
   CONSERVADOR: "bg-text-tertiary",
   REALISTA: "bg-info",
-  AGRESSIVO: "bg-gold",
+  AGRESSIVO: "bg-accent",
 };
 
 const initialState: ActionState = {};

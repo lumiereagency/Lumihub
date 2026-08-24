@@ -105,7 +105,7 @@ export function TeamMemberForm({
           type="checkbox"
           name="active"
           defaultChecked={defaultValues?.active ?? true}
-          className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]"
+          className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
         />
         Ativo
       </label>

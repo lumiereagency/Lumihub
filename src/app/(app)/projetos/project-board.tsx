@@ -66,14 +66,14 @@ export function ProjectBoard({
           <button
             type="button"
             onClick={() => setView("kanban")}
-            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "kanban" ? "bg-card-elevated text-gold-light" : "text-text-secondary")}
+            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "kanban" ? "bg-card-elevated text-accent-light" : "text-text-secondary")}
           >
             <LayoutGrid size={14} /> Kanban
           </button>
           <button
             type="button"
             onClick={() => setView("lista")}
-            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "lista" ? "bg-card-elevated text-gold-light" : "text-text-secondary")}
+            className={cn("flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-sm", view === "lista" ? "bg-card-elevated text-accent-light" : "text-text-secondary")}
           >
             <ListIcon size={14} /> Lista
           </button>
@@ -112,12 +112,12 @@ export function ProjectBoard({
                 {col.items.map((p) => (
                   <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5">
                     <Link href={`/projetos/${p.id}`} className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium text-text-primary hover:text-gold-light">{p.name}</span>
+                      <span className="text-sm font-medium text-text-primary hover:text-accent-light">{p.name}</span>
                       {isOverdue(p) && <AlertCircle size={14} className="mt-0.5 shrink-0 text-error" />}
                     </Link>
                     <span className="text-xs text-text-tertiary">{p.client.companyName}</span>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {p.value != null && <Badge tone="gold">{formatCurrency(p.value, currency)}</Badge>}
+                      {p.value != null && <Badge tone="accent">{formatCurrency(p.value, currency)}</Badge>}
                       <Badge tone="neutral">{p.tasksCount} tarefas</Badge>
                     </div>
                     <div className="flex items-center justify-between text-xs text-text-tertiary">
@@ -159,7 +159,7 @@ export function ProjectBoard({
               {projects.map((p) => (
                 <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card">
                   <td className="px-4 py-3">
-                    <Link href={`/projetos/${p.id}`} className="font-medium text-text-primary hover:text-gold-light">
+                    <Link href={`/projetos/${p.id}`} className="font-medium text-text-primary hover:text-accent-light">
                       {p.name}
                     </Link>
                   </td>

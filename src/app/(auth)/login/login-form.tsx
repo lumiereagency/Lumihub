@@ -19,10 +19,10 @@ export function LoginForm() {
       <Input label="Senha" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" />
       <div className="flex items-center justify-between text-sm">
         <label className="flex items-center gap-2 text-text-secondary">
-          <input type="checkbox" name="remember" className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]" />
+          <input type="checkbox" name="remember" className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]" />
           Lembrar sessão
         </label>
-        <Link href="/esqueci-senha" className="text-gold-light hover:underline">
+        <Link href="/esqueci-senha" className="text-accent-light hover:underline">
           Esqueci minha senha
         </Link>
       </div>
@@ -31,7 +31,7 @@ export function LoginForm() {
       </Button>
       <p className="text-center text-sm text-text-tertiary">
         Sua empresa ainda não tem conta?{" "}
-        <Link href="/setup" className="text-gold-light hover:underline">
+        <Link href="/setup" className="text-accent-light hover:underline">
           Cadastrar organização
         </Link>
       </p>

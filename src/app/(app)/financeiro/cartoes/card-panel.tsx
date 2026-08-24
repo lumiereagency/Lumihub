@@ -57,7 +57,7 @@ export function CardPanel({
       <CardHeader>
         <div>
           <CardTitle className="flex items-center gap-2">
-            <CreditCardIcon size={16} className="text-gold" /> {card.name}
+            <CreditCardIcon size={16} className="text-accent" /> {card.name}
           </CardTitle>
           <p className="mt-1 text-xs text-text-tertiary">
             {card.institution ?? "Instituição não informada"} · Fecha dia {card.closingDay} · Vence dia {card.dueDay}
@@ -79,7 +79,7 @@ export function CardPanel({
             <div key={invoice.monthKey} className="rounded-[10px] border border-border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium capitalize text-text-primary">{invoice.monthLabel}</span>
-                <Badge tone="gold">{formatCurrency(invoice.total, currency)}</Badge>
+                <Badge tone="accent">{formatCurrency(invoice.total, currency)}</Badge>
               </div>
               <div className="flex flex-col divide-y divide-border">
                 {invoice.items.map((item) => (
@@ -90,7 +90,7 @@ export function CardPanel({
                         checked={item.paid}
                         disabled={!canEdit}
                         onChange={(e) => startTransition(() => toggleInstallmentPaidAction(item.id, e.target.checked))}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
                       />
                       {item.description}
                     </span>

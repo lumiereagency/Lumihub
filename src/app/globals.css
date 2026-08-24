@@ -1,22 +1,27 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   LUMIBASE DESIGN SYSTEM — tokens de tema (Fase 2)
+   LUMIBASE DESIGN SYSTEM — tokens de tema (Fase 2, redesenhado)
+   Acento ancorado no gradiente da marca (vermelho → laranja → pêssego);
+   fundo permanece quase preto para legibilidade dos dados financeiros.
    ========================================================================== */
 
 :root {
-  --lh-bg: #09090b;
-  --lh-bg-secondary: #111113;
-  --lh-card: #161618;
-  --lh-card-elevated: #1c1c1f;
-  --lh-border: #27272a;
+  --lh-bg: #0b0908;
+  --lh-bg-secondary: #121010;
+  --lh-card: #181513;
+  --lh-card-elevated: #1f1b18;
+  --lh-border: #2a2521;
 
-  --lh-text-primary: #f5f5f5;
-  --lh-text-secondary: #a1a1aa;
-  --lh-text-tertiary: #71717a;
+  --lh-text-primary: #f7f5f3;
+  --lh-text-secondary: #a8a29a;
+  --lh-text-tertiary: #726a62;
 
-  --lh-gold: #c9a45c;
-  --lh-gold-light: #e3c47a;
+  --lh-accent-deep: #c41e0a;
+  --lh-accent: #e8540a;
+  --lh-accent-light: #f5a65c;
+  --lh-accent-gradient: linear-gradient(135deg, var(--lh-accent-deep) 0%, var(--lh-accent) 55%, var(--lh-accent-light) 100%);
+  --lh-accent-on: #17100a;
 
   --lh-success: #22c55e;
   --lh-warning: #eab308;
@@ -38,21 +43,27 @@
   --color-text-secondary: var(--lh-text-secondary);
   --color-text-tertiary: var(--lh-text-tertiary);
 
-  --color-gold: var(--lh-gold);
-  --color-gold-light: var(--lh-gold-light);
+  --color-accent: var(--lh-accent);
+  --color-accent-light: var(--lh-accent-light);
+  --color-accent-deep: var(--lh-accent-deep);
+  --color-accent-on: var(--lh-accent-on);
 
   --color-success: var(--lh-success);
   --color-warning: var(--lh-warning);
   --color-error: var(--lh-error);
   --color-info: var(--lh-info);
 
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-sans-display);
+  --font-mono: var(--font-mono-numeric);
+
+  /* Cards mais arredondados — tratamento premium do redesign */
+  --radius-2xl: 20px;
 }
 
 body {
   background: var(--lh-bg);
   color: var(--lh-text-primary);
-  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans-display), "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -60,8 +71,22 @@ body {
 }
 
 ::selection {
-  background: var(--lh-gold);
-  color: #09090b;
+  background: var(--lh-accent);
+  color: var(--lh-accent-on);
+}
+
+/* Números financeiros: tabular, monoespaçado — mesmo tratamento do redesign */
+.lb-figures {
+  font-family: var(--font-mono-numeric), "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Destaque raro: gradiente da marca aplicado ao texto (1-2 usos por tela) */
+.lb-accent-text {
+  background: var(--lh-accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar {

@@ -122,7 +122,7 @@ export function LeadBoard({
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-        <MetricCard label="Pipeline total" value={formatCurrency(stats.pipelineTotal, currency)} tone="gold" />
+        <MetricCard label="Pipeline total" value={formatCurrency(stats.pipelineTotal, currency)} tone="accent" />
         <MetricCard label="Pipeline ponderado" value={formatCurrency(stats.pipelineWeighted, currency)} />
         <MetricCard label="Novos leads (mês)" value={String(stats.newThisMonth)} />
         <MetricCard label="Fechamentos" value={String(stats.closedTotal)} />
@@ -172,7 +172,7 @@ export function LeadBoard({
                       key={lead.id}
                       type="button"
                       onClick={() => setEditingLeadId(lead.id)}
-                      className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-gold/40"
+                      className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:border-accent/40"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium text-text-primary">{lead.company}</span>
@@ -181,7 +181,7 @@ export function LeadBoard({
                       {lead.contactName && <span className="text-xs text-text-tertiary">{lead.contactName}</span>}
                       <div className="flex flex-wrap items-center gap-1.5">
                         {lead.potentialValue != null && (
-                          <Badge tone="gold">{formatCurrency(lead.potentialValue, currency)}</Badge>
+                          <Badge tone="accent">{formatCurrency(lead.potentialValue, currency)}</Badge>
                         )}
                         <Badge tone="neutral">{lead.probability}%</Badge>
                       </div>

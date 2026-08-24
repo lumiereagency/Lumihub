@@ -13,7 +13,7 @@ interface InsightInput {
 }
 
 export interface Insight {
-  tone: "info" | "warning" | "success" | "gold";
+  tone: "info" | "warning" | "success" | "accent";
   text: string;
 }
 
@@ -34,12 +34,12 @@ export function buildDashboardInsights(input: InsightInput): Insight[] {
   if (input.goalTarget && input.goalTarget > 0) {
     const coverage = Math.round((input.pipelineWeighted / input.goalTarget) * 100);
     insights.push({
-      tone: coverage >= 100 ? "success" : "gold",
+      tone: coverage >= 100 ? "success" : "accent",
       text: `Seu pipeline ponderado cobre ${coverage}% da meta comercial do período.`,
     });
   } else if (input.pipelineTotal > 0) {
     insights.push({
-      tone: "gold",
+      tone: "accent",
       text: `Pipeline aberto de ${c(input.pipelineTotal)} (ponderado: ${c(input.pipelineWeighted)}). Cadastre uma meta comercial para ver a cobertura.`,
     });
   }

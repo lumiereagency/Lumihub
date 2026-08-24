@@ -33,7 +33,7 @@ export default async function ProfilePage() {
           <div>
             <p className="text-lg font-semibold text-text-primary">{user.name}</p>
             <p className="text-sm text-text-tertiary">{user.email}</p>
-            <Badge tone="gold" className="mt-2">
+            <Badge tone="accent" className="mt-2">
               {user.role.name}
             </Badge>
           </div>
@@ -60,7 +60,7 @@ export default async function ProfilePage() {
                   <p className="text-sm text-text-primary">
                     {session.userAgent?.slice(0, 60) ?? "Dispositivo desconhecido"}
                     {session.id === user.sessionId && (
-                      <span className="ml-2 text-xs text-gold-light">(sessão atual)</span>
+                      <span className="ml-2 text-xs text-accent-light">(sessão atual)</span>
                     )}
                   </p>
                   <p className="text-xs text-text-tertiary">

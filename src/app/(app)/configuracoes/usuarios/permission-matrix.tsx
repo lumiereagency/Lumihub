@@ -46,7 +46,7 @@ export function PermissionMatrix({ name, defaultKeys = [] }: { name: string; def
             return (
               <tr key={module} className="border-b border-border last:border-0">
                 <td className="px-4 py-2 text-text-primary">
-                  <button type="button" className="text-left hover:text-gold" onClick={() => toggleModule(module, keys)}>
+                  <button type="button" className="text-left hover:text-accent" onClick={() => toggleModule(module, keys)}>
                     {MODULE_LABELS[module]}
                   </button>
                 </td>
@@ -60,7 +60,7 @@ export function PermissionMatrix({ name, defaultKeys = [] }: { name: string; def
                         value={key}
                         checked={selected.has(key)}
                         onChange={() => toggle(key)}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#C9A45C]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
                       />
                     </td>
                   );

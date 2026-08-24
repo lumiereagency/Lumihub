@@ -125,11 +125,11 @@ export function UsersView({
                 key={r.id}
                 type="button"
                 onClick={() => setEditingRoleId(r.id)}
-                className="flex flex-col gap-1.5 rounded-2xl border border-border bg-card p-4 text-left hover:border-gold/40"
+                className="flex flex-col gap-1.5 rounded-2xl border border-border bg-card p-4 text-left hover:border-accent/40"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-text-primary">{r.name}</span>
-                  {r.isSystem && <Badge tone="gold">Padrão do sistema</Badge>}
+                  {r.isSystem && <Badge tone="accent">Padrão do sistema</Badge>}
                 </div>
                 <span className="text-xs text-text-tertiary">
                   {r.permissionKeys.length} permissõe(s) · {r.userCount} usuário(s)

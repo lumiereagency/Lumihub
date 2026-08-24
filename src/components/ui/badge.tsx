@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type Tone = "neutral" | "success" | "warning" | "error" | "info" | "gold";
+type Tone = "neutral" | "success" | "warning" | "error" | "info" | "accent";
 
 const toneClasses: Record<Tone, string> = {
   neutral: "bg-card-elevated text-text-secondary border-border",
@@ -9,7 +9,7 @@ const toneClasses: Record<Tone, string> = {
   warning: "bg-warning/10 text-warning border-warning/30",
   error: "bg-error/10 text-error border-error/30",
   info: "bg-info/10 text-info border-info/30",
-  gold: "bg-gold/10 text-gold-light border-gold/30",
+  accent: "bg-accent/10 text-accent-light border-accent/30",
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
