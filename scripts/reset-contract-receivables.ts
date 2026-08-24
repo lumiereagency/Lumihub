@@ -1,3 +1,6 @@
+// Precisa vir antes de "@/lib/db": ao rodar solto (fora do next start), o
+// Next.js não carrega o .env automaticamente como faz em dev/build/start.
+import "dotenv/config";
 import { db } from "@/lib/db";
 import { generateRemindersForReceivable } from "@/lib/billing/reminders";
 
