@@ -7,6 +7,7 @@ import { NAV_GROUPS, getActiveHref } from "@/lib/nav";
 import { Avatar } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Wordmark } from "@/components/layout/logo";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface SidebarUser {
   name: string;
@@ -29,8 +30,9 @@ export function Sidebar({ permissions, user }: { permissions: string[]; user: Si
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-bg-secondary">
-      <div className="flex h-16 items-center px-6">
+      <div className="flex h-16 items-center justify-between px-6">
         <Wordmark />
+        <ThemeToggle />
       </div>
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pb-6">
         {groups.map((group) => (

@@ -3,6 +3,11 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { CAPTURE_STATUSES, CAPTURE_STATUS_LABELS } from "@/lib/validation/captures";
+import {
+  CAPTURE_CREW_ROLES,
+  CAPTURE_CREW_ROLE_LABELS,
+  CAPTURE_CREW_FORM_FIELDS,
+} from "@/lib/validation/capture-assignments";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +28,10 @@ export interface CaptureFormValues {
   photoCount: number | null;
   scriptNotes: string | null;
   equipment: string | null;
+  videomakerUserId?: string | null;
+  photographerUserId?: string | null;
+  storymakerUserId?: string | null;
+  droneOperatorUserId?: string | null;
 }
 
 const initialState: ActionState = {};
@@ -37,6 +46,7 @@ export function CaptureForm({
   defaultValues,
   clients,
   projects,
+  crewAccounts,
   onSuccess,
   submitLabel,
 }: {
@@ -44,6 +54,7 @@ export function CaptureForm({
   defaultValues?: CaptureFormValues;
   clients: { id: string; companyName: string }[];
   projects: { id: string; name: string }[];
+  crewAccounts: { userId: string; name: string; role: string }[];
   onSuccess?: () => void;
   submitLabel: string;
 }) {
@@ -104,6 +115,39 @@ export function CaptureForm({
         <Input label="Storymaker" name="storymaker" defaultValue={defaultValues?.storymaker ?? ""} />
         <Input label="Operador de drone" name="droneOperator" defaultValue={defaultValues?.droneOperator ?? ""} />
       </div>
+
+      {crewAccounts.length > 0 && (
+        <div className="rounded-[10px] border border-dashed border-border p-3">
+          <p className="mb-3 text-xs font-medium text-text-secondary">
+            Vincular a uma conta do sistema (opcional) — a pessoa recebe uma notificação na tela inicial dela e
+            precisa aceitar ou recusar a escala.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {CAPTURE_CREW_ROLES.map((role) => {
+              const field = CAPTURE_CREW_FORM_FIELDS[role];
+              const defaultUserId = (defaultValues as CaptureFormValues | undefined)?.[
+                field.userField as keyof CaptureFormValues
+              ] as string | null | undefined;
+              return (
+                <Select
+                  key={role}
+                  label={CAPTURE_CREW_ROLE_LABELS[role]}
+                  name={field.userField}
+                  defaultValue={defaultUserId ?? ""}
+                >
+                  <option value="">Não notificar</option>
+                  {crewAccounts.map((c) => (
+                    <option key={c.userId} value={c.userId}>
+                      {c.name} — {c.role}
+                    </option>
+                  ))}
+                </Select>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <Input label="Qtd. vídeos" name="videoCount" type="number" min={0} defaultValue={defaultValues?.videoCount ?? ""} />
         <Input label="Qtd. fotos" name="photoCount" type="number" min={0} defaultValue={defaultValues?.photoCount ?? ""} />

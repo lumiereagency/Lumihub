@@ -28,7 +28,25 @@ interface CaptureRow {
   equipment: string | null;
   clientName: string;
   projectName: string | null;
+  videomakerUserId: string | null;
+  photographerUserId: string | null;
+  storymakerUserId: string | null;
+  droneOperatorUserId: string | null;
+  assignmentStatuses: Record<string, "PENDENTE" | "ACEITO" | "RECUSADO">;
 }
+
+const ASSIGNMENT_ROLE_BY_FIELD: Record<"videomaker" | "photographer" | "storymaker" | "droneOperator", string> = {
+  videomaker: "VIDEOMAKER",
+  photographer: "PHOTOGRAPHER",
+  storymaker: "STORYMAKER",
+  droneOperator: "DRONE_OPERATOR",
+};
+
+const ASSIGNMENT_STATUS_DOT: Record<"PENDENTE" | "ACEITO" | "RECUSADO", string> = {
+  PENDENTE: "bg-warning",
+  ACEITO: "bg-success",
+  RECUSADO: "bg-error",
+};
 
 const STATUS_TONE: Record<string, "neutral" | "info" | "success" | "warning" | "accent"> = {
   PLANEJADA: "neutral",
@@ -53,6 +71,10 @@ function toFormValues(c: CaptureRow): CaptureFormValues {
     photoCount: c.photoCount,
     scriptNotes: c.scriptNotes,
     equipment: c.equipment,
+    videomakerUserId: c.videomakerUserId,
+    photographerUserId: c.photographerUserId,
+    storymakerUserId: c.storymakerUserId,
+    droneOperatorUserId: c.droneOperatorUserId,
   };
 }
 
@@ -60,11 +82,13 @@ export function CapturesView({
   captures,
   clients,
   projects,
+  crewAccounts,
   permissions,
 }: {
   captures: CaptureRow[];
   clients: { id: string; companyName: string }[];
   projects: { id: string; name: string }[];
+  crewAccounts: { userId: string; name: string; role: string }[];
   permissions: { canCreate: boolean; canEdit: boolean };
 }) {
   const [creating, setCreating] = useState(false);
@@ -119,7 +143,26 @@ export function CapturesView({
                   </td>
                   <td className="px-4 py-3 text-text-secondary">{c.location ?? "—"}</td>
                   <td className="px-4 py-3 text-xs text-text-tertiary">
-                    {[c.videomaker, c.photographer, c.storymaker, c.droneOperator].filter(Boolean).join(" · ") || "—"}
+                    {(() => {
+                      const crew = [
+                        { name: c.videomaker, field: "videomaker" as const },
+                        { name: c.photographer, field: "photographer" as const },
+                        { name: c.storymaker, field: "storymaker" as const },
+                        { name: c.droneOperator, field: "droneOperator" as const },
+                      ].filter((entry) => entry.name);
+                      if (crew.length === 0) return "—";
+                      return crew.map((entry) => {
+                        const status = c.assignmentStatuses[ASSIGNMENT_ROLE_BY_FIELD[entry.field]];
+                        return (
+                          <span key={entry.field} className="mr-2 inline-flex items-center gap-1">
+                            {status && (
+                              <span className={`h-1.5 w-1.5 rounded-full ${ASSIGNMENT_STATUS_DOT[status]}`} title={status} />
+                            )}
+                            {entry.name}
+                          </span>
+                        );
+                      });
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>
@@ -145,7 +188,14 @@ export function CapturesView({
       )}
 
       <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Captação">
-        <CaptureForm action={createCaptureAction} clients={clients} projects={projects} submitLabel="Agendar captação" onSuccess={() => setCreating(false)} />
+        <CaptureForm
+          action={createCaptureAction}
+          clients={clients}
+          projects={projects}
+          crewAccounts={crewAccounts}
+          submitLabel="Agendar captação"
+          onSuccess={() => setCreating(false)}
+        />
       </Drawer>
 
       <Drawer open={!!editing} onClose={() => setEditingId(null)} title="Editar Captação">
@@ -156,6 +206,7 @@ export function CapturesView({
             defaultValues={toFormValues(editing)}
             clients={clients}
             projects={projects}
+            crewAccounts={crewAccounts}
             submitLabel="Salvar alterações"
           />
         )}

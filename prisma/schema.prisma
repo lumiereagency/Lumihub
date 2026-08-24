@@ -59,6 +59,7 @@ model Organization {
   integrationLogs     IntegrationLog[]
   aiConversations     AiConversation[]
   aiInsights          AiInsight[]
+  captureAssignments  CaptureAssignment[]
 
   @@map("organizations")
 }
@@ -146,6 +147,7 @@ model User {
   documentsUploaded     Document[]
   aiConversations       AiConversation[]
   connectedIntegrations Integration[]
+  captureAssignments    CaptureAssignment[]
 
   @@index([organizationId])
   @@map("users")
@@ -580,13 +582,42 @@ model Capture {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project        Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
   calendarEvents CalendarEvent[]
+  assignments    CaptureAssignment[]
 
   @@index([organizationId, status])
   @@map("captures")
+}
+
+// Aceite de escala (Fase 46): cada membro de equipe atribuído a uma
+// captação recebe uma notificação e precisa aceitar ou recusar — o aceite
+// confirma a presença dele na Agenda, sem precisar de app nativo/push.
+enum CaptureAssignmentStatus {
+  PENDENTE
+  ACEITO
+  RECUSADO
+}
+
+model CaptureAssignment {
+  id             String                  @id @default(cuid())
+  organizationId String
+  captureId      String
+  userId         String
+  role           String
+  status         CaptureAssignmentStatus @default(PENDENTE)
+  respondedAt    DateTime?
+  createdAt      DateTime                @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  capture      Capture      @relation(fields: [captureId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([captureId, userId, role])
+  @@index([userId, status])
+  @@map("capture_assignments")
 }
 
 // =========================================================================

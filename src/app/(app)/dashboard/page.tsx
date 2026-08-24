@@ -21,6 +21,7 @@ import {
   getHealthScore,
 } from "@/lib/dashboard/queries";
 import { buildDashboardInsights } from "@/lib/dashboard/insights";
+import { PendingCaptureAssignments } from "./pending-captures";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
@@ -109,6 +110,8 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={`${greeting()}, ${user.name.split(" ")[0]}.`} description="Aqui está o panorama da Lumière hoje." />
+
+      <PendingCaptureAssignments userId={user.id} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} icon={<Wallet size={16} />} tone="accent" />

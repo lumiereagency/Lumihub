@@ -14,7 +14,7 @@ const variantClasses: Record<Variant, string> = {
   primary:
     "bg-[image:var(--lh-accent-gradient)] text-accent-on shadow-[0_8px_20px_-6px_var(--lh-accent)] hover:brightness-110 focus-visible:ring-accent/50 font-semibold",
   secondary:
-    "bg-card-elevated text-text-primary hover:bg-[#232326] border border-border focus-visible:ring-border",
+    "bg-card-elevated text-text-primary hover:brightness-110 border border-border focus-visible:ring-border",
   outline:
     "bg-transparent text-text-primary border border-border hover:bg-card focus-visible:ring-border",
   ghost:

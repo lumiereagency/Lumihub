@@ -74,7 +74,7 @@ export function IntegrationForm({
       {provider.oauthOnly && currentConfig.clientId && (
         <a
           href={`/api/integrations/oauth/${provider.key}/start`}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary transition-colors duration-150 hover:bg-[#232326]"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary transition-all duration-150 hover:brightness-110"
         >
           Conectar com o provedor
         </a>

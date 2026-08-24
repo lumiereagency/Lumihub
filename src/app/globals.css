@@ -32,6 +32,31 @@
   --foreground: var(--lh-text-primary);
 }
 
+/* Modo dia — mesmo gradiente de marca, fundo claro e quente em vez de
+   quase-preto. Alternado via [data-theme] em <html> (ver theme-toggle.tsx);
+   aplicado antes da hidratação por um script inline em layout.tsx para
+   não piscar o tema errado no primeiro paint. */
+:root[data-theme="light"] {
+  --lh-bg: #faf7f4;
+  --lh-bg-secondary: #f3efe9;
+  --lh-card: #ffffff;
+  --lh-card-elevated: #f8f4f0;
+  --lh-border: #e8e1d8;
+
+  --lh-text-primary: #1e1a16;
+  --lh-text-secondary: #5f574d;
+  --lh-text-tertiary: #948a7d;
+
+  /* --lh-accent-light também é o texto "destacado" (nav ativo, links, badge) —
+     o pêssego claro do modo noite não tem contraste em fundo claro, então
+     no modo dia ele vira um laranja queimado legível. Ainda funciona como
+     stop final do gradiente (só fica um pouco menos claro na ponta). */
+  --lh-accent-light: #c2410c;
+
+  --background: var(--lh-bg);
+  --foreground: var(--lh-text-primary);
+}
+
 @theme inline {
   --color-background: var(--lh-bg);
   --color-bg-secondary: var(--lh-bg-secondary);

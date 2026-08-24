@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS, getActiveHref } from "@/lib/nav";
 import { Wordmark } from "@/components/layout/logo";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function MobileNav({ permissions }: { permissions: string[] }) {
   const [open, setOpen] = useState(false);
@@ -22,14 +23,17 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
     <>
       <div className="flex h-14 items-center justify-between border-b border-border bg-bg-secondary px-4 lg:hidden">
         <Wordmark />
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
-          aria-label="Abrir menu"
-        >
-          <Menu size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
+            aria-label="Abrir menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
       </div>
 
       {open && (
