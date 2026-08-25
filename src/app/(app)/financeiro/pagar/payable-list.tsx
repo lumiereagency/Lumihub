@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus, ArrowUpCircle } from "lucide-react";
-import { createPayableAction, updatePayableAction, cancelPayableAction } from "@/lib/actions/payable-actions";
+import { createPayableAction, updatePayableAction, cancelPayableAction, undoPayablePaymentAction } from "@/lib/actions/payable-actions";
 import { PAYABLE_STATUS_LABELS } from "@/lib/validation/payables";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Drawer } from "@/components/ui/drawer";
@@ -193,7 +193,23 @@ export function PayableList({
             )}
             {(editing.status === "PENDENTE" || editing.status === "ATRASADO") && <ConfirmPayableForm payableId={editing.id} />}
             {editing.status === "PAGO" && (
-              <div className="rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">Pago</div>
+              <>
+                <div className="rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">Pago</div>
+                {permissions.canEdit && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      if (confirm("Desfazer o pagamento? A conta volta para pendente e sai do Saldo atual.")) {
+                        startTransition(async () => {
+                          await undoPayablePaymentAction(editing.id);
+                        });
+                      }
+                    }}
+                  >
+                    Desfazer pagamento
+                  </Button>
+                )}
+              </>
             )}
 
             {(editing.status === "PENDENTE" || editing.status === "ATRASADO") && (

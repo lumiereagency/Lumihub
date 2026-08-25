@@ -229,6 +229,35 @@ export async function confirmPayablePaymentAction(
   return { success: "Pagamento confirmado." };
 }
 
+// Desfazer pagamento (Fase 46): mesma correção já disponível em Contas a
+// Receber — volta pra Pendente e tira do Saldo atual (que só soma o que
+// está Pago).
+export async function undoPayablePaymentAction(payableId: string) {
+  const user = await requirePermission(permKey("PAYABLES", "EDIT"));
+
+  const existing = await db.accountPayable.findFirst({ where: { id: payableId, organizationId: user.organizationId } });
+  if (!existing || existing.status !== "PAGO") return;
+
+  await db.$transaction(async (tx) => {
+    await tx.accountPayable.update({ where: { id: payableId }, data: { status: "PENDENTE", paidAt: null } });
+    if (existing.movementId) {
+      await tx.financialMovement.update({ where: { id: existing.movementId }, data: { status: "PENDENTE", paidAt: null } });
+    }
+  });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "PAYABLE_PAYMENT_UNDONE",
+    entityType: "AccountPayable",
+    entityId: payableId,
+  });
+
+  revalidatePath("/financeiro/pagar");
+  revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+}
+
 export async function cancelPayableAction(payableId: string) {
   const user = await requirePermission(permKey("PAYABLES", "DELETE"));
 

@@ -527,6 +527,7 @@ model TeamMember {
   organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   projects     ProjectTeamMember[]
+  payables     AccountPayable[]
 
   @@map("team_members")
 }
@@ -823,6 +824,7 @@ model AccountPayable {
   installmentNumber  Int?
   installmentTotal   Int?
   responsibleUserId  String?
+  teamMemberId       String?
   status             PayableStatus @default(PENDENTE)
   paidAt             DateTime?
   createdAt          DateTime      @default(now())
@@ -832,8 +834,10 @@ model AccountPayable {
   category     FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   costCenter   CostCenter?        @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   movement     FinancialMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  teamMember   TeamMember?        @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status, dueDate])
+  @@index([teamMemberId])
   @@map("accounts_payable")
 }
 

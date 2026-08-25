@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { teamMemberSchema } from "@/lib/validation/team";
+import { syncTeamMemberPayable } from "@/lib/billing/payroll";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
 function parseTeamMemberForm(formData: FormData) {
@@ -36,8 +37,12 @@ export async function createTeamMemberAction(_prev: ActionState, formData: FormD
     }
   }
 
-  const member = await db.teamMember.create({
-    data: { organizationId: user.organizationId, ...parsed.data },
+  const member = await db.$transaction(async (tx) => {
+    const created = await tx.teamMember.create({
+      data: { organizationId: user.organizationId, ...parsed.data },
+    });
+    await syncTeamMemberPayable(tx, created.id);
+    return created;
   });
 
   await audit({
@@ -51,6 +56,8 @@ export async function createTeamMemberAction(_prev: ActionState, formData: FormD
 
   revalidatePath("/equipe");
   revalidatePath("/equipe/freelancers");
+  revalidatePath("/financeiro/pagar");
+  revalidatePath("/dashboard");
   return { success: "Membro da equipe cadastrado." };
 }
 
@@ -78,7 +85,10 @@ export async function updateTeamMemberAction(
     }
   }
 
-  await db.teamMember.update({ where: { id: memberId }, data: parsed.data });
+  await db.$transaction(async (tx) => {
+    await tx.teamMember.update({ where: { id: memberId }, data: parsed.data });
+    await syncTeamMemberPayable(tx, memberId);
+  });
 
   await audit({
     organizationId: user.organizationId,
@@ -90,5 +100,7 @@ export async function updateTeamMemberAction(
 
   revalidatePath("/equipe");
   revalidatePath("/equipe/freelancers");
+  revalidatePath("/financeiro/pagar");
+  revalidatePath("/dashboard");
   return { success: "Membro da equipe atualizado." };
 }
