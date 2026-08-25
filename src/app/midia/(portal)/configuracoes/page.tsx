@@ -1,35 +1,31 @@
-import { requirePermission } from "@/lib/auth/guard";
-import { permKey } from "@/lib/auth/permissions";
+import { redirect } from "next/navigation";
+import { requireMediaMember, isMediaLeader } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { ensureMediaAdesfDefaults } from "@/lib/media/bootstrap";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import { BrandSettingsForm, BrandImagesPanel } from "@/components/media/brand-settings-form";
 import { FunctionsPanel } from "@/components/media/functions-panel";
 
-export default async function MediaAdesfSettingsPage() {
-  const user = await requirePermission(permKey("MEDIA_ADESF", "MANAGE"));
+// Configurações de identidade visual e funções, gerenciadas pelo LÍDER de
+// dentro do próprio portal (§13/§39) — não exige acesso à área
+// administrativa da LUMIBASE.
+export default async function MediaPortalSettingsPage() {
+  const user = await requireMediaMember();
+  if (!isMediaLeader(user)) redirect("/midia/inicio");
   await ensureMediaAdesfDefaults(user.organizationId);
 
-  const [brand, functions, rolesWithAccess] = await Promise.all([
+  const [brand, functions] = await Promise.all([
     db.mediaBrandSettings.findUniqueOrThrow({ where: { organizationId: user.organizationId } }),
     db.mediaFunction.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { displayOrder: "asc" },
       include: { _count: { select: { memberFunctions: true } } },
     }),
-    db.role.findMany({
-      where: {
-        organizationId: user.organizationId,
-        permissions: { some: { permission: { key: permKey("MEDIA_ADESF", "VIEW") } } },
-      },
-      include: { _count: { select: { users: true } } },
-    }),
   ]);
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Configurações — Mídia ADESF" description="Identidade visual, funções da equipe e visão geral de acesso." />
+      <PageHeader title="Configurações" description="Identidade visual e funções da equipe de mídia." />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Identidade visual</h2>
@@ -63,22 +59,6 @@ export default async function MediaAdesfSettingsPage() {
             membersCount: f._count.memberFunctions,
           }))}
         />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-text-primary">Acesso administrativo</h2>
-        <p className="mb-3 text-sm text-text-tertiary">
-          Perfis do LUMIBASE com acesso à área administrativa do Mídia ADESF (gestão de equipe, funções e configurações — diferente do
-          acesso ao Portal Mídia ADESF, que é por convite individual).
-        </p>
-        <div className="flex flex-col gap-2">
-          {rolesWithAccess.map((role) => (
-            <div key={role.id} className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-2.5 text-sm">
-              <span className="text-text-primary">{role.name}</span>
-              <Badge tone="neutral">{role._count.users} usuário(s)</Badge>
-            </div>
-          ))}
-        </div>
       </section>
     </div>
   );

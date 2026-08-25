@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MEDIA_PORTAL_NAV, getActiveMediaHref } from "@/lib/media/portal-nav";
 import { Avatar } from "@/components/ui/avatar";
-import { UserMenu } from "@/components/layout/user-menu";
+import { PortalUserMenu } from "@/components/media/portal-user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface PortalUser {
@@ -83,7 +83,7 @@ export function MediaPortalShell({
           <NavLinks items={items} activeHref={activeHref} />
         </nav>
         <div className="border-t border-border p-3">
-          <UserMenu>
+          <PortalUserMenu>
             <div className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left hover:bg-card">
               <Avatar name={user.name} src={user.avatarUrl} size="sm" />
               <div className="flex min-w-0 flex-1 flex-col">
@@ -91,7 +91,7 @@ export function MediaPortalShell({
                 <span className="truncate text-xs text-text-tertiary">{user.roleLabel}</span>
               </div>
             </div>
-          </UserMenu>
+          </PortalUserMenu>
         </div>
       </aside>
 

@@ -1,19 +1,25 @@
-import { notFound } from "next/navigation";
-import { requirePermission } from "@/lib/auth/guard";
-import { permKey } from "@/lib/auth/permissions";
+import { redirect, notFound } from "next/navigation";
+import { History } from "lucide-react";
+import { requireMediaMember, isMediaLeader } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { MEDIA_ROLE_LABELS, MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { History } from "lucide-react";
 import { MemberAccessForm } from "@/components/media/member-access-form";
 import { MemberFunctionsPanel } from "@/components/media/member-functions-panel";
 import { MemberAvailabilityView } from "@/components/media/member-availability-view";
 
-export default async function MediaAdesfMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
+// Gestão de um membro pelo LÍDER — de dentro do portal (não da área
+// administrativa da LUMIBASE, que segue exclusiva de admins). Reaproveita
+// os mesmos componentes/Server Actions da tela administrativa
+// equivalente; o guard de permissão real está nas próprias Actions
+// (media-actions.ts), então um MEMBRO comum tentando acessar esta rota
+// direto pela URL (IDOR) é barrado tanto aqui quanto na Action.
+export default async function MediaPortalMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireMediaMember();
+  if (!isMediaLeader(user)) redirect("/midia/inicio");
   const { id } = await params;
 
   const member = await db.mediaMember.findFirst({
@@ -84,7 +90,7 @@ export default async function MediaAdesfMemberDetailPage({ params }: { params: P
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Histórico</h2>
-        <EmptyState icon={<History size={28} />} title="Disponível na próxima etapa" description="O histórico de escalas e participações será exibido aqui numa fase futura do módulo." />
+        <EmptyState icon={<History size={28} />} title="Disponível na próxima etapa" />
       </section>
     </div>
   );

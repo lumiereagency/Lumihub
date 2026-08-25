@@ -175,9 +175,26 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM">, string
 export const MEDIA_PORTAL_ACCESS = "MEDIA_PORTAL_ACCESS";
 export const MEDIA_PORTAL_TEAM_VIEW = "MEDIA_PORTAL_TEAM_VIEW";
 
+// LÍDER MÍDIA ADESF (spec §13) gerencia a equipe, funções e identidade
+// visual — mas faz isso DE DENTRO DO PORTAL (/midia/*), nunca pela área
+// administrativa da LUMIBASE (que é branded LUMIBASE, o que violaria o
+// white-label exigido no §5 para quem só é membro/líder de mídia). Por
+// isso a união aditiva concede ao LÍDER as MESMAS chaves MEDIA_ADESF_* que
+// um admin LUMIBASE teria — as Server Actions administrativas do módulo
+// (media-actions.ts) são checadas por essas chaves, então passam a
+// funcionar também para o LÍDER quando chamadas a partir de telas de
+// gestão renderizadas dentro do portal.
 export const MEDIA_MEMBER_PORTAL_PERMISSIONS: Record<"MEMBRO" | "LIDER", string[]> = {
   MEMBRO: [MEDIA_PORTAL_ACCESS],
-  LIDER: [MEDIA_PORTAL_ACCESS, MEDIA_PORTAL_TEAM_VIEW],
+  LIDER: [
+    MEDIA_PORTAL_ACCESS,
+    MEDIA_PORTAL_TEAM_VIEW,
+    permKey("MEDIA_ADESF", "VIEW"),
+    permKey("MEDIA_ADESF", "CREATE"),
+    permKey("MEDIA_ADESF", "EDIT"),
+    permKey("MEDIA_ADESF", "DELETE"),
+    permKey("MEDIA_ADESF", "MANAGE"),
+  ],
 };
 
 export const ROLE_LABELS: Record<RoleKey, string> = {

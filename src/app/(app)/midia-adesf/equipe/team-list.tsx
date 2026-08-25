@@ -4,14 +4,15 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Users2 } from "lucide-react";
 import { resendMediaInvitationAction, removeMediaMemberAction } from "@/lib/actions/media-actions";
-import { MEDIA_ROLE_LABELS, MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
+import { MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { InviteMemberForm } from "./invite-member-form";
+import { InviteMemberForm } from "@/components/media/invite-member-form";
 
 interface MemberRow {
   id: string;
@@ -21,24 +22,62 @@ interface MemberRow {
   role: string;
   status: string;
   primaryFunction: string | null;
+  enabledFunctions: string[];
+  functionIds: string[];
+  hasAvailability: boolean;
 }
 
-export function MediaTeamList({ members, canCreate, canEdit }: { members: MemberRow[]; canCreate: boolean; canEdit: boolean }) {
+export function MediaTeamList({
+  members,
+  allFunctions,
+  canCreate,
+  canEdit,
+}: {
+  members: MemberRow[];
+  allFunctions: { id: string; name: string }[];
+  canCreate: boolean;
+  canEdit: boolean;
+}) {
   const [inviting, setInviting] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [functionFilter, setFunctionFilter] = useState("");
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return members;
-    const q = search.toLowerCase();
-    return members.filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
-  }, [members, search]);
+    return members.filter((m) => {
+      if (statusFilter && m.status !== statusFilter) return false;
+      if (functionFilter && !m.functionIds.includes(functionFilter)) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [members, search, statusFilter, functionFilter]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-          <Input placeholder="Buscar por nome ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64 pl-9" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <Input placeholder="Buscar por nome ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64 pl-9" />
+          </div>
+          <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-40">
+            <option value="">Todos os status</option>
+            <option value="ACTIVE">Ativo</option>
+            <option value="INVITED">Convite pendente</option>
+            <option value="INACTIVE">Inativo</option>
+            <option value="SUSPENDED">Suspenso</option>
+          </Select>
+          <Select value={functionFilter} onChange={(e) => setFunctionFilter(e.target.value)} className="w-44">
+            <option value="">Todas as funções</option>
+            {allFunctions.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </Select>
         </div>
         {canCreate && (
           <Button onClick={() => setInviting(true)}>
@@ -50,11 +89,12 @@ export function MediaTeamList({ members, canCreate, canEdit }: { members: Member
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Users2 size={28} />}
-          title="Nenhum membro cadastrado ainda"
+          title={members.length === 0 ? "Nenhum membro cadastrado ainda" : "Nenhum membro encontrado com esses filtros"}
           action={
+            members.length === 0 &&
             canCreate && (
               <Button onClick={() => setInviting(true)}>
-                <Plus size={16} /> Convidar membro
+                <Plus size={16} /> Convidar primeiro membro
               </Button>
             )
           }
@@ -65,9 +105,10 @@ export function MediaTeamList({ members, canCreate, canEdit }: { members: Member
             <thead>
               <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">Papel</th>
                 <th className="px-4 py-3 font-medium">Função principal</th>
+                <th className="px-4 py-3 font-medium">Funções habilitadas</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Disponibilidade</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -83,12 +124,13 @@ export function MediaTeamList({ members, canCreate, canEdit }: { members: Member
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={m.role === "LIDER" ? "accent" : "neutral"}>{MEDIA_ROLE_LABELS[m.role]}</Badge>
-                  </td>
                   <td className="px-4 py-3 text-text-secondary">{m.primaryFunction ?? "—"}</td>
+                  <td className="px-4 py-3 text-text-secondary">{m.enabledFunctions.length > 0 ? m.enabledFunctions.join(", ") : "—"}</td>
                   <td className="px-4 py-3">
                     <Badge tone={MEDIA_STATUS_TONE[m.status]}>{MEDIA_STATUS_LABELS[m.status]}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone={m.hasAvailability ? "success" : "neutral"}>{m.hasAvailability ? "Configurada" : "Não configurada"}</Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     {canEdit && (

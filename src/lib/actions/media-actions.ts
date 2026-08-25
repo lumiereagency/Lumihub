@@ -9,7 +9,11 @@ import { hashPassword } from "@/lib/auth/password";
 import { audit } from "@/lib/audit";
 import { sendEmail } from "@/lib/integrations/email";
 import { ensureMediaOnlyRole } from "@/lib/media/bootstrap";
-import { isAllowedMediaImageType, saveMediaImage, deleteMediaImageByUrl } from "@/lib/storage/media-files";
+import {
+  isAllowedMediaImageType,
+  saveMediaImage,
+  deleteMediaImageByUrl,
+} from "@/lib/storage/media-files";
 import {
   inviteMediaMemberSchema,
   updateMediaMemberSchema,
@@ -28,13 +32,23 @@ function appUrl(): string {
   return process.env.APP_URL ?? "http://localhost:3000";
 }
 
-async function sendMediaInviteEmail(organizationId: string, name: string, email: string) {
+async function sendMediaInviteEmail(
+  organizationId: string,
+  name: string,
+  email: string,
+) {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const user = await db.user.findFirstOrThrow({ where: { organizationId, email } });
+  const user = await db.user.findFirstOrThrow({
+    where: { organizationId, email },
+  });
 
   await db.passwordResetToken.create({
-    data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
   });
 
   const inviteUrl = `${appUrl()}/redefinir-senha/${token}`;
@@ -52,7 +66,10 @@ async function sendMediaInviteEmail(organizationId: string, name: string, email:
 // e-mail novo cria um User "casca" preso a uma role sem nenhuma permissão do
 // LUMIBASE (ensureMediaOnlyRole) e segue o mesmo fluxo de convite por
 // PasswordResetToken já usado em user-actions.ts.
-export async function inviteMediaMemberAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function inviteMediaMemberAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(CREATE);
 
   const parsed = inviteMediaMemberSchema.safeParse({
@@ -62,15 +79,23 @@ export async function inviteMediaMemberAction(_prev: ActionState, formData: Form
     role: formData.get("role"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
   }
   const { name, email, phone, role } = parsed.data;
 
-  const existingUser = await db.user.findFirst({ where: { email, deletedAt: null }, include: { mediaMember: true } });
+  const existingUser = await db.user.findFirst({
+    where: { email, deletedAt: null },
+    include: { mediaMember: true },
+  });
 
   if (existingUser) {
     if (existingUser.organizationId !== admin.organizationId) {
-      return { error: "Já existe uma conta com este e-mail em outra organização." };
+      return {
+        error: "Já existe uma conta com este e-mail em outra organização.",
+      };
     }
     if (existingUser.mediaMember) {
       return { error: "Este usuário já faz parte da equipe de mídia." };
@@ -119,6 +144,7 @@ export async function inviteMediaMemberAction(_prev: ActionState, formData: Form
     });
 
     revalidatePath("/midia-adesf/equipe");
+    revalidatePath("/midia/equipe");
     return { success: "Usuário existente vinculado ao Mídia ADESF." };
   }
 
@@ -158,7 +184,11 @@ export async function inviteMediaMemberAction(_prev: ActionState, formData: Form
     return created;
   });
 
-  const inviteResult = await sendMediaInviteEmail(admin.organizationId, name, email);
+  const inviteResult = await sendMediaInviteEmail(
+    admin.organizationId,
+    name,
+    email,
+  );
 
   await audit({
     organizationId: admin.organizationId,
@@ -170,13 +200,21 @@ export async function inviteMediaMemberAction(_prev: ActionState, formData: Form
   });
 
   revalidatePath("/midia-adesf/equipe");
+  revalidatePath("/midia/equipe");
   if (inviteResult.pending) {
-    return { success: "Membro criado. Nenhum provedor de e-mail conectado — envie o link de acesso manualmente." };
+    return {
+      success:
+        "Membro criado. Nenhum provedor de e-mail conectado — envie o link de acesso manualmente.",
+    };
   }
   return { success: "Convite enviado por e-mail." };
 }
 
-export async function updateMediaMemberAction(memberId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateMediaMemberAction(
+  memberId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(EDIT);
 
   const parsed = updateMediaMemberSchema.safeParse({
@@ -185,9 +223,15 @@ export async function updateMediaMemberAction(memberId: string, _prev: ActionSta
     phone: formData.get("phone"),
     administrativeNotes: formData.get("administrativeNotes"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  if (!parsed.success)
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
 
-  const member = await db.mediaMember.findFirst({ where: { id: memberId, organizationId: admin.organizationId } });
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId },
+  });
   if (!member) return { error: "Membro não encontrado." };
 
   await db.mediaMember.update({
@@ -210,17 +254,24 @@ export async function updateMediaMemberAction(memberId: string, _prev: ActionSta
   });
 
   revalidatePath("/midia-adesf/equipe");
+  revalidatePath("/midia/equipe");
   revalidatePath(`/midia-adesf/equipe/${memberId}`);
+  revalidatePath(`/midia/equipe/${memberId}`);
   return { success: "Membro atualizado." };
 }
 
 export async function removeMediaMemberAction(memberId: string): Promise<void> {
   const admin = await requirePermission(DELETE);
 
-  const member = await db.mediaMember.findFirst({ where: { id: memberId, organizationId: admin.organizationId } });
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId },
+  });
   if (!member) return;
 
-  await db.mediaMember.update({ where: { id: memberId }, data: { status: "INACTIVE" } });
+  await db.mediaMember.update({
+    where: { id: memberId },
+    data: { status: "INACTIVE" },
+  });
 
   await audit({
     organizationId: admin.organizationId,
@@ -231,18 +282,29 @@ export async function removeMediaMemberAction(memberId: string): Promise<void> {
   });
 
   revalidatePath("/midia-adesf/equipe");
+  revalidatePath("/midia/equipe");
 }
 
-export async function resendMediaInvitationAction(memberId: string): Promise<void> {
+export async function resendMediaInvitationAction(
+  memberId: string,
+): Promise<void> {
   const admin = await requirePermission(EDIT);
 
   const member = await db.mediaMember.findFirst({
-    where: { id: memberId, organizationId: admin.organizationId, status: "INVITED" },
+    where: {
+      id: memberId,
+      organizationId: admin.organizationId,
+      status: "INVITED",
+    },
     include: { user: true },
   });
   if (!member) return;
 
-  await sendMediaInviteEmail(admin.organizationId, member.user.name, member.user.email);
+  await sendMediaInviteEmail(
+    admin.organizationId,
+    member.user.name,
+    member.user.email,
+  );
 
   await audit({
     organizationId: admin.organizationId,
@@ -253,10 +315,14 @@ export async function resendMediaInvitationAction(memberId: string): Promise<voi
   });
 
   revalidatePath("/midia-adesf/equipe");
+  revalidatePath("/midia/equipe");
 }
 
 // Funções (ex: Data Show, Fotógrafo) — catálogo configurável por organização.
-export async function createMediaFunctionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function createMediaFunctionAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(MANAGE);
 
   const parsed = mediaFunctionSchema.safeParse({
@@ -264,12 +330,20 @@ export async function createMediaFunctionAction(_prev: ActionState, formData: Fo
     description: formData.get("description"),
     active: formData.get("active"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  if (!parsed.success)
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
 
-  const existing = await db.mediaFunction.findFirst({ where: { organizationId: admin.organizationId, name: parsed.data.name } });
+  const existing = await db.mediaFunction.findFirst({
+    where: { organizationId: admin.organizationId, name: parsed.data.name },
+  });
   if (existing) return { error: "Já existe uma função com este nome." };
 
-  const count = await db.mediaFunction.count({ where: { organizationId: admin.organizationId } });
+  const count = await db.mediaFunction.count({
+    where: { organizationId: admin.organizationId },
+  });
   const created = await db.mediaFunction.create({
     data: {
       organizationId: admin.organizationId,
@@ -290,10 +364,15 @@ export async function createMediaFunctionAction(_prev: ActionState, formData: Fo
   });
 
   revalidatePath("/midia-adesf/configuracoes");
+  revalidatePath("/midia/configuracoes");
   return { success: "Função criada." };
 }
 
-export async function updateMediaFunctionAction(functionId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateMediaFunctionAction(
+  functionId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(MANAGE);
 
   const parsed = mediaFunctionSchema.safeParse({
@@ -301,14 +380,24 @@ export async function updateMediaFunctionAction(functionId: string, _prev: Actio
     description: formData.get("description"),
     active: formData.get("active"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  if (!parsed.success)
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
 
-  const fn = await db.mediaFunction.findFirst({ where: { id: functionId, organizationId: admin.organizationId } });
+  const fn = await db.mediaFunction.findFirst({
+    where: { id: functionId, organizationId: admin.organizationId },
+  });
   if (!fn) return { error: "Função não encontrada." };
 
   await db.mediaFunction.update({
     where: { id: functionId },
-    data: { name: parsed.data.name, description: parsed.data.description || null, active: parsed.data.active },
+    data: {
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      active: parsed.data.active,
+    },
   });
 
   await audit({
@@ -320,10 +409,13 @@ export async function updateMediaFunctionAction(functionId: string, _prev: Actio
   });
 
   revalidatePath("/midia-adesf/configuracoes");
+  revalidatePath("/midia/configuracoes");
   return { success: "Função atualizada." };
 }
 
-export async function deleteMediaFunctionAction(functionId: string): Promise<void> {
+export async function deleteMediaFunctionAction(
+  functionId: string,
+): Promise<void> {
   const admin = await requirePermission(MANAGE);
 
   const fn = await db.mediaFunction.findFirst({
@@ -344,12 +436,17 @@ export async function deleteMediaFunctionAction(functionId: string): Promise<voi
   });
 
   revalidatePath("/midia-adesf/configuracoes");
+  revalidatePath("/midia/configuracoes");
 }
 
 // Vincula/atualiza a função de um membro. Feito em transação porque "função
 // principal" é imposta por um índice único parcial no banco (uma por
 // membro) — zera as demais antes de marcar a nova como principal.
-export async function assignMemberFunctionAction(memberId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function assignMemberFunctionAction(
+  memberId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(EDIT);
 
   const parsed = memberFunctionAssignSchema.safeParse({
@@ -357,21 +454,37 @@ export async function assignMemberFunctionAction(memberId: string, _prev: Action
     isPrimary: formData.get("isPrimary"),
     status: formData.get("status") || "HABILITADO",
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  if (!parsed.success)
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
 
-  const member = await db.mediaMember.findFirst({ where: { id: memberId, organizationId: admin.organizationId } });
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId },
+  });
   if (!member) return { error: "Membro não encontrado." };
 
-  const fn = await db.mediaFunction.findFirst({ where: { id: parsed.data.functionId, organizationId: admin.organizationId } });
+  const fn = await db.mediaFunction.findFirst({
+    where: { id: parsed.data.functionId, organizationId: admin.organizationId },
+  });
   if (!fn) return { error: "Função não encontrada." };
 
   await db.$transaction(async (tx) => {
     if (parsed.data.isPrimary) {
-      await tx.mediaMemberFunction.updateMany({ where: { memberId }, data: { isPrimary: false } });
+      await tx.mediaMemberFunction.updateMany({
+        where: { memberId },
+        data: { isPrimary: false },
+      });
     }
     await tx.mediaMemberFunction.upsert({
       where: { memberId_functionId: { memberId, functionId: fn.id } },
-      create: { memberId, functionId: fn.id, isPrimary: parsed.data.isPrimary, status: parsed.data.status },
+      create: {
+        memberId,
+        functionId: fn.id,
+        isPrimary: parsed.data.isPrimary,
+        status: parsed.data.status,
+      },
       update: { isPrimary: parsed.data.isPrimary, status: parsed.data.status },
     });
   });
@@ -382,17 +495,27 @@ export async function assignMemberFunctionAction(memberId: string, _prev: Action
     action: "MEDIA_MEMBER_FUNCTION_ASSIGNED",
     entityType: "MediaMember",
     entityId: memberId,
-    metadata: { functionId: fn.id, functionName: fn.name, isPrimary: parsed.data.isPrimary },
+    metadata: {
+      functionId: fn.id,
+      functionName: fn.name,
+      isPrimary: parsed.data.isPrimary,
+    },
   });
 
   revalidatePath(`/midia-adesf/equipe/${memberId}`);
+  revalidatePath(`/midia/equipe/${memberId}`);
   return { success: "Função vinculada ao membro." };
 }
 
-export async function removeMemberFunctionAction(memberId: string, functionId: string): Promise<void> {
+export async function removeMemberFunctionAction(
+  memberId: string,
+  functionId: string,
+): Promise<void> {
   const admin = await requirePermission(EDIT);
 
-  const member = await db.mediaMember.findFirst({ where: { id: memberId, organizationId: admin.organizationId } });
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId },
+  });
   if (!member) return;
 
   await db.mediaMemberFunction.deleteMany({ where: { memberId, functionId } });
@@ -407,13 +530,17 @@ export async function removeMemberFunctionAction(memberId: string, functionId: s
   });
 
   revalidatePath(`/midia-adesf/equipe/${memberId}`);
+  revalidatePath(`/midia/equipe/${memberId}`);
 }
 
 // Identidade visual (Fase 01 — configurável por quem tem MANAGE). Upload de
 // logo é feito num arquivo separado de página (Server Action com FormData
 // contendo File) para não acoplar este módulo de ações a next/server apenas
 // por causa do tipo File — mantido aqui mesmo por simplicidade e coesão.
-export async function updateMediaBrandSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateMediaBrandSettingsAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const admin = await requirePermission(MANAGE);
 
   const parsed = mediaBrandSettingsSchema.safeParse({
@@ -423,7 +550,11 @@ export async function updateMediaBrandSettingsAction(_prev: ActionState, formDat
     gradientStart: formData.get("gradientStart"),
     gradientEnd: formData.get("gradientEnd"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  if (!parsed.success)
+    return {
+      error:
+        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
+    };
 
   await db.mediaBrandSettings.upsert({
     where: { organizationId: admin.organizationId },
@@ -439,6 +570,7 @@ export async function updateMediaBrandSettingsAction(_prev: ActionState, formDat
   });
 
   revalidatePath("/midia-adesf/configuracoes");
+  revalidatePath("/midia/configuracoes");
   revalidatePath("/midia/login");
   return { success: "Identidade visual atualizada." };
 }
@@ -451,11 +583,18 @@ export async function uploadMediaBrandImageAction(
   const admin = await requirePermission(MANAGE);
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Selecione uma imagem." };
-  if (file.size > 5 * 1024 * 1024) return { error: "A imagem deve ter no máximo 5MB." };
-  if (!isAllowedMediaImageType(file.type)) return { error: "Formato de imagem não suportado. Use PNG, JPG, WEBP ou SVG." };
+  if (!(file instanceof File) || file.size === 0)
+    return { error: "Selecione uma imagem." };
+  if (file.size > 5 * 1024 * 1024)
+    return { error: "A imagem deve ter no máximo 5MB." };
+  if (!isAllowedMediaImageType(file.type))
+    return {
+      error: "Formato de imagem não suportado. Use PNG, JPG, WEBP ou SVG.",
+    };
 
-  const current = await db.mediaBrandSettings.findUnique({ where: { organizationId: admin.organizationId } });
+  const current = await db.mediaBrandSettings.findUnique({
+    where: { organizationId: admin.organizationId },
+  });
   const url = await saveMediaImage(admin.organizationId, file);
   await db.mediaBrandSettings.upsert({
     where: { organizationId: admin.organizationId },
@@ -473,6 +612,7 @@ export async function uploadMediaBrandImageAction(
   });
 
   revalidatePath("/midia-adesf/configuracoes");
+  revalidatePath("/midia/configuracoes");
   revalidatePath("/midia/login");
   return { success: "Imagem atualizada." };
 }
