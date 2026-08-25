@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Users2, Mail, Clapperboard, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Users2, Mail, Clapperboard, Clock, CheckCircle2, AlertTriangle, CalendarClock, Send, ClipboardCheck, PieChart } from "lucide-react";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { ensureMediaAdesfDefaults } from "@/lib/media/bootstrap";
+import { validateScheduleForPublication } from "@/lib/media/schedule/schedule-service";
 import { MEDIA_ROLE_LABELS, MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
+import { formatDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -39,6 +41,44 @@ export default async function MediaAdesfDashboardPage() {
   const withoutAvailability = activeMembers.length - withAvailability;
   const identityConfigured = !!brand?.logoUrl;
   const functionsConfigured = functionsActive > 0;
+
+  const now = new Date();
+  const [nextEvent, currentSchedule, pendingSwaps, pendingConfirmations] = await Promise.all([
+    db.mediaEvent.findFirst({
+      where: { organizationId: user.organizationId, startAt: { gte: now }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
+      orderBy: { startAt: "asc" },
+    }),
+    db.mediaSchedule.findFirst({ where: { organizationId: user.organizationId, month: now.getMonth() + 1, year: now.getFullYear() } }),
+    db.mediaSwapRequest.count({ where: { organizationId: user.organizationId, status: "PENDING_LEADER" } }),
+    db.mediaAttendance.count({
+      where: { confirmationStatus: "PENDING", assignment: { schedule: { organizationId: user.organizationId, status: "PUBLISHED" }, event: { startAt: { gte: now } } } },
+    }),
+  ]);
+
+  let coverageLabel = "—";
+  let uncoveredMandatory = 0;
+  let distribution: { memberId: string; name: string; count: number }[] = [];
+  if (currentSchedule) {
+    const validation = await validateScheduleForPublication(currentSchedule.id);
+    uncoveredMandatory = validation.uncoveredMandatory;
+    const total = validation.totalAssignments + validation.uncoveredMandatory;
+    coverageLabel = total > 0 ? `${Math.round((validation.totalAssignments / total) * 100)}%` : "—";
+
+    const assignments = await db.mediaScheduleAssignment.findMany({
+      where: { scheduleId: currentSchedule.id, memberId: { not: null } },
+      include: { member: { include: { user: { select: { name: true } } } } },
+    });
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const a of assignments) {
+      const key = a.memberId!;
+      const entry = counts.get(key) ?? { name: a.member!.user.name, count: 0 };
+      entry.count++;
+      counts.set(key, entry);
+    }
+    distribution = Array.from(counts.entries())
+      .map(([memberId, v]) => ({ memberId, ...v }))
+      .sort((a, b) => b.count - a.count);
+  }
 
   return (
     <div>
@@ -99,11 +139,31 @@ export default async function MediaAdesfDashboardPage() {
 
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Escalas e cultos</h2>
-        <EmptyState
-          icon={<Clapperboard size={28} />}
-          title="Disponível na próxima etapa"
-          description="Motor de escalas, geração automática e relatórios avançados são objeto de fases futuras do Mídia ADESF."
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            label="Próximo culto"
+            value={nextEvent ? formatDateTime(nextEvent.startAt) : "Nenhum agendado"}
+            icon={<CalendarClock size={18} />}
+          />
+          <MetricCard label="Escalas do mês" value={currentSchedule ? currentSchedule.name : "Não criada"} icon={<Clapperboard size={18} />} />
+          <MetricCard label="Funções pendentes" value={String(uncoveredMandatory)} icon={<AlertTriangle size={18} />} />
+          <MetricCard label="Trocas pendentes" value={String(pendingSwaps)} icon={<Send size={18} />} />
+          <MetricCard label="Confirmações pendentes" value={String(pendingConfirmations)} icon={<ClipboardCheck size={18} />} />
+          <MetricCard label="Cobertura do mês" value={coverageLabel} icon={<PieChart size={18} />} />
+        </div>
+
+        {distribution.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-sm font-medium text-text-secondary">Distribuição de atribuições no mês</p>
+            <div className="flex flex-wrap gap-2">
+              {distribution.map((d) => (
+                <Badge key={d.memberId} tone="neutral">
+                  {d.name} — {d.count}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

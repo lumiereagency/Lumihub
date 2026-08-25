@@ -28,10 +28,26 @@ export async function ensureMediaAdesfDefaults(organizationId: string): Promise<
     update: {},
   });
 
-  const existing = await db.mediaFunction.count({ where: { organizationId } });
-  if (existing === 0) {
+  let functions = await db.mediaFunction.findMany({ where: { organizationId } });
+  if (functions.length === 0) {
     await db.mediaFunction.createMany({
       data: DEFAULT_FUNCTIONS.map((name, index) => ({ organizationId, name, displayOrder: index })),
+    });
+    functions = await db.mediaFunction.findMany({ where: { organizationId } });
+  }
+
+  await db.mediaOperationsSettings.upsert({
+    where: { organizationId },
+    create: { organizationId },
+    update: {},
+  });
+
+  // "Template de Culto" (§88): configuração padrão de funções aplicada a
+  // todo evento novo — seedada uma vez com 1 vaga de cada função inicial.
+  const hasDefaultRequirements = await db.mediaEventDefaultRequirement.count({ where: { organizationId } });
+  if (hasDefaultRequirements === 0 && functions.length > 0) {
+    await db.mediaEventDefaultRequirement.createMany({
+      data: functions.map((f) => ({ organizationId, functionId: f.id, requiredQuantity: 1, mandatory: true })),
     });
   }
 }

@@ -1,16 +1,20 @@
 import Link from "next/link";
-import { Sparkles, Clock, Bell } from "lucide-react";
+import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MetricCard } from "@/components/ui/metric-card";
+import { AssignmentCard, type AssignmentCardData } from "@/components/media/assignment-card";
+import { formatDateTime } from "@/lib/format";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-// Estrutura exigida pela especificação (§35): Minha Próxima Escala / Minha
-// Função / Minha Disponibilidade / Avisos — todos com dado real (nenhuma
-// escala/aviso é simulado nesta fase).
+// Estrutura exigida pela especificação (§35/§36): Minha Próxima Escala /
+// Minha Função / Minha Disponibilidade / Avisos, com os contadores reais do
+// dashboard do membro (escalas do mês, confirmações pendentes,
+// solicitações) — nenhum dado é simulado.
 export default async function MediaPortalHomePage() {
   const user = await requireMediaMember();
 
@@ -25,13 +29,58 @@ export default async function MediaPortalHomePage() {
   const primaryFunction = member.functions.find((f) => f.isPrimary)?.function.name ?? null;
   const enabledFunctions = member.functions.filter((f) => !f.isPrimary).map((f) => f.function.name);
 
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  const [nextAssignment, assignmentsThisMonth, pendingConfirmations, pendingSwaps, notifications] = await Promise.all([
+    db.mediaScheduleAssignment.findFirst({
+      where: { memberId: member.id, schedule: { status: "PUBLISHED" }, event: { startAt: { gte: now } } },
+      include: { event: true, function: true, attendance: true },
+      orderBy: { event: { startAt: "asc" } },
+    }),
+    db.mediaScheduleAssignment.count({
+      where: { memberId: member.id, schedule: { status: "PUBLISHED" }, event: { startAt: { gte: monthStart, lte: monthEnd } } },
+    }),
+    db.mediaAttendance.count({
+      where: { memberId: member.id, confirmationStatus: "PENDING", assignment: { event: { startAt: { gte: now } } } },
+    }),
+    db.mediaSwapRequest.count({
+      where: { OR: [{ requestedByMemberId: member.id }, { targetMemberId: member.id }], status: { in: ["PENDING_TARGET", "PENDING_LEADER"] } },
+    }),
+    db.notification.findMany({ where: { userId: user.id, readAt: null }, orderBy: { createdAt: "desc" }, take: 5 }),
+  ]);
+
+  const nextCard: AssignmentCardData | null = nextAssignment
+    ? {
+        assignmentId: nextAssignment.id,
+        eventName: nextAssignment.event.name,
+        startAt: nextAssignment.event.startAt.toISOString(),
+        location: nextAssignment.event.location,
+        functionName: nextAssignment.function.name,
+        confirmationStatus: nextAssignment.attendance?.confirmationStatus ?? "PENDING",
+        checkinStatus: nextAssignment.attendance?.checkinStatus ?? "PENDING",
+        isPast: false,
+      }
+    : null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={`Olá, ${user.name.split(" ")[0]}.`} description="Bem-vindo à Mídia ADESF." />
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Minha próxima escala</h2>
-        <p className="text-sm text-text-secondary">Nenhuma escala disponível.</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <MetricCard label="Escalas do mês" value={String(assignmentsThisMonth)} icon={<CalendarClock size={18} />} />
+        <MetricCard label="Confirmações pendentes" value={String(pendingConfirmations)} icon={<ClipboardCheck size={18} />} />
+        <MetricCard label="Solicitações em andamento" value={String(pendingSwaps)} icon={<Send size={18} />} />
+      </div>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Minha próxima escala</h2>
+        {nextCard ? <AssignmentCard data={nextCard} /> : (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-sm text-text-secondary">Nenhuma escala disponível.</p>
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -71,7 +120,19 @@ export default async function MediaPortalHomePage() {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Avisos</h2>
-        <EmptyState icon={<Bell size={24} />} title="Nenhum aviso no momento" />
+        {notifications.length === 0 ? (
+          <EmptyState icon={<Bell size={24} />} title="Nenhum aviso no momento" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {notifications.map((n) => (
+              <div key={n.id} className="rounded-[10px] border border-border bg-card px-4 py-3">
+                <p className="text-sm font-medium text-text-primary">{n.title}</p>
+                <p className="text-sm text-text-secondary">{n.body}</p>
+                <p className="mt-1 text-xs text-text-tertiary">{formatDateTime(n.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

@@ -28,42 +28,48 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users               User[]
-  roles               Role[]
-  auditLogs           AuditLog[]
-  leads               Lead[]
-  clients             Client[]
-  contractTemplates   ContractTemplate[]
-  contracts           Contract[]
-  proposals           Proposal[]
-  projects            Project[]
-  tasks               Task[]
-  teamMembers         TeamMember[]
-  services            Service[]
-  captures            Capture[]
-  calendarEvents      CalendarEvent[]
-  financialCategories FinancialCategory[]
-  costCenters         CostCenter[]
-  financialMovements  FinancialMovement[]
-  accountsReceivable  AccountReceivable[]
-  accountsPayable     AccountPayable[]
-  messageTemplates    MessageTemplate[]
-  creditCards         CreditCard[]
-  investments         Investment[]
-  goals               Goal[]
-  alerts              Alert[]
-  notifications       Notification[]
-  documents           Document[]
-  integrations        Integration[]
-  integrationWebhooks IntegrationWebhook[]
-  integrationLogs     IntegrationLog[]
-  aiConversations     AiConversation[]
-  aiInsights          AiInsight[]
-  captureAssignments  CaptureAssignment[]
-  mediaMembers        MediaMember[]
-  mediaFunctions      MediaFunction[]
-  mediaInvitations    MediaInvitation[]
-  mediaBrandSettings  MediaBrandSettings?
+  users                         User[]
+  roles                         Role[]
+  auditLogs                     AuditLog[]
+  leads                         Lead[]
+  clients                       Client[]
+  contractTemplates             ContractTemplate[]
+  contracts                     Contract[]
+  proposals                     Proposal[]
+  projects                      Project[]
+  tasks                         Task[]
+  teamMembers                   TeamMember[]
+  services                      Service[]
+  captures                      Capture[]
+  calendarEvents                CalendarEvent[]
+  financialCategories           FinancialCategory[]
+  costCenters                   CostCenter[]
+  financialMovements            FinancialMovement[]
+  accountsReceivable            AccountReceivable[]
+  accountsPayable               AccountPayable[]
+  messageTemplates              MessageTemplate[]
+  creditCards                   CreditCard[]
+  investments                   Investment[]
+  goals                         Goal[]
+  alerts                        Alert[]
+  notifications                 Notification[]
+  documents                     Document[]
+  integrations                  Integration[]
+  integrationWebhooks           IntegrationWebhook[]
+  integrationLogs               IntegrationLog[]
+  aiConversations               AiConversation[]
+  aiInsights                    AiInsight[]
+  captureAssignments            CaptureAssignment[]
+  mediaMembers                  MediaMember[]
+  mediaFunctions                MediaFunction[]
+  mediaInvitations              MediaInvitation[]
+  mediaBrandSettings            MediaBrandSettings?
+  mediaEvents                   MediaEvent[]
+  mediaEventRecurrences         MediaEventRecurrence[]
+  mediaEventDefaultRequirements MediaEventDefaultRequirement[]
+  mediaSchedules                MediaSchedule[]
+  mediaSwapRequests             MediaSwapRequest[]
+  mediaOperationsSettings       MediaOperationsSettings?
 
   @@map("organizations")
 }
@@ -138,23 +144,29 @@ model User {
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
-  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  role                  Role                 @relation(fields: [roleId], references: [id])
-  sessions              Session[]
-  passwordResets        PasswordResetToken[]
-  auditLogs             AuditLog[]
-  ownedLeads            Lead[]               @relation("LeadOwner")
-  responsibleProjects   Project[]            @relation("ProjectResponsible")
-  assignedTasks         Task[]               @relation("TaskAssignee")
-  teamMemberProfile     TeamMember?
-  calendarEvents        CalendarEvent[]      @relation("EventResponsible")
-  notifications         Notification[]
-  documentsUploaded     Document[]
-  aiConversations       AiConversation[]
-  connectedIntegrations Integration[]
-  captureAssignments    CaptureAssignment[]
-  mediaMember           MediaMember?
-  mediaInvitationsSent  MediaInvitation[]    @relation("MediaInvitationInviter")
+  organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role                      Role                      @relation(fields: [roleId], references: [id])
+  sessions                  Session[]
+  passwordResets            PasswordResetToken[]
+  auditLogs                 AuditLog[]
+  ownedLeads                Lead[]                    @relation("LeadOwner")
+  responsibleProjects       Project[]                 @relation("ProjectResponsible")
+  assignedTasks             Task[]                    @relation("TaskAssignee")
+  teamMemberProfile         TeamMember?
+  calendarEvents            CalendarEvent[]           @relation("EventResponsible")
+  notifications             Notification[]
+  documentsUploaded         Document[]
+  aiConversations           AiConversation[]
+  connectedIntegrations     Integration[]
+  captureAssignments        CaptureAssignment[]
+  mediaMember               MediaMember?
+  mediaInvitationsSent      MediaInvitation[]         @relation("MediaInvitationInviter")
+  mediaEventsCreated        MediaEvent[]              @relation("MediaEventCreatedBy")
+  mediaSchedulesCreated     MediaSchedule[]           @relation("MediaScheduleCreatedBy")
+  mediaSchedulesPublished   MediaSchedule[]           @relation("MediaSchedulePublishedBy")
+  mediaAssignmentsAssigned  MediaScheduleAssignment[] @relation("MediaAssignmentAssignedBy")
+  mediaSwapRequestsAsLeader MediaSwapRequest[]        @relation("MediaSwapLeader")
+  mediaAttendanceMarked     MediaAttendance[]         @relation("MediaAttendanceMarkedBy")
 
   @@index([organizationId])
   @@map("users")
@@ -642,6 +654,7 @@ enum CalendarEventType {
   CONTRATO
   TAREFA
   INTERNO
+  MIDIA
 }
 
 model CalendarEvent {
@@ -656,6 +669,7 @@ model CalendarEvent {
   projectId         String?
   captureId         String?
   contractId        String?
+  mediaEventId      String?           @unique
   responsibleUserId String?
   location          String?
   notes             String?
@@ -667,6 +681,7 @@ model CalendarEvent {
   project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   capture      Capture?     @relation(fields: [captureId], references: [id], onDelete: Cascade)
   contract     Contract?    @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  mediaEvent   MediaEvent?  @relation(fields: [mediaEventId], references: [id], onDelete: Cascade)
   responsible  User?        @relation("EventResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, startAt])
@@ -953,19 +968,19 @@ model CreditCardInstallment {
 }
 
 model Investment {
-  id             String             @id @default(cuid())
+  id             String         @id @default(cuid())
   organizationId String
-  movementId     String?            @unique
+  movementId     String?        @unique
   description    String
   category       String
-  amount         Decimal            @db.Decimal(14, 2)
+  amount         Decimal        @db.Decimal(14, 2)
   date           DateTime
   paymentMethod  PaymentMethod?
-  installments   Int                @default(1)
+  installments   Int            @default(1)
   objective      String?
   expectedReturn String?
   notes          String?
-  createdAt      DateTime           @default(now())
+  createdAt      DateTime       @default(now())
 
   organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   movement     FinancialMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
@@ -1332,11 +1347,15 @@ model MediaMember {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  functions    MediaMemberFunction[]
-  availabilityRecurring MediaAvailabilityRecurring[]
+  organization           Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                   User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  functions              MediaMemberFunction[]
+  availabilityRecurring  MediaAvailabilityRecurring[]
   availabilityExceptions MediaAvailabilityException[]
+  scheduleAssignments    MediaScheduleAssignment[]    @relation("MediaMemberAssignments")
+  swapRequestsSent       MediaSwapRequest[]           @relation("MediaSwapRequestedBy")
+  swapRequestsReceived   MediaSwapRequest[]           @relation("MediaSwapTarget")
+  attendances            MediaAttendance[]            @relation("MediaMemberAttendance")
 
   @@index([organizationId, status])
   @@map("media_members")
@@ -1352,8 +1371,11 @@ model MediaFunction {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberFunctions MediaMemberFunction[]
+  organization        Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberFunctions     MediaMemberFunction[]
+  eventRequirements   MediaEventRequirement[]
+  defaultRequirements MediaEventDefaultRequirement[]
+  scheduleAssignments MediaScheduleAssignment[]
 
   @@unique([organizationId, name])
   @@map("media_functions")
@@ -1444,19 +1466,288 @@ enum MediaInvitationStatus {
 }
 
 model MediaInvitation {
-  id              String                 @id @default(cuid())
+  id              String                @id @default(cuid())
   organizationId  String
   email           String
-  role            MediaMemberRole        @default(MEMBRO)
+  role            MediaMemberRole       @default(MEMBRO)
   invitedByUserId String
-  status          MediaInvitationStatus  @default(INVITED)
+  status          MediaInvitationStatus @default(INVITED)
   expiresAt       DateTime
   acceptedAt      DateTime?
-  createdAt       DateTime               @default(now())
+  createdAt       DateTime              @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   invitedBy    User         @relation("MediaInvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, email])
   @@map("media_invitations")
+}
+
+// =========================================================================
+// MÍDIA ADESF (Fase 02) — motor operacional: cultos/eventos, escalas,
+// atribuições, trocas e presença. Modelo relacional (EVENTO -> FUNÇÕES
+// NECESSÁRIAS -> ATRIBUIÇÕES -> MEMBROS), nunca uma planilha fixa por dia.
+// Reaproveita CalendarEvent (campo mediaEventId acima) em vez de duplicar
+// um calendário próprio, e Notification (já existente) para os avisos
+// internos — nenhum canal (e-mail/WhatsApp) é acoplado aqui.
+// =========================================================================
+
+enum MediaEventStatus {
+  DRAFT
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+// Só suporta recorrência semanal nesta fase (cobre os exemplos da
+// especificação — "todo domingo às 19h"). Estrutura já preparada para
+// ganhar outras frequências sem migração destrutiva.
+enum MediaRecurrenceFrequency {
+  WEEKLY
+}
+
+model MediaEventRecurrence {
+  id             String                   @id @default(cuid())
+  organizationId String
+  name           String
+  frequency      MediaRecurrenceFrequency @default(WEEKLY)
+  dayOfWeek      Int // 0 = domingo ... 6 = sábado
+  startTime      String // "HH:mm"
+  endTime        String? // "HH:mm"
+  location       String?
+  type           String                   @default("Culto")
+  startDate      DateTime                 @db.Date
+  endDate        DateTime?                @db.Date
+  active         Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       MediaEvent[]
+
+  @@index([organizationId, active])
+  @@map("media_event_recurrences")
+}
+
+model MediaEvent {
+  id                  String           @id @default(cuid())
+  organizationId      String
+  name                String
+  type                String           @default("Culto")
+  startAt             DateTime
+  endAt               DateTime?
+  location            String?
+  description         String?
+  administrativeNotes String?
+  status              MediaEventStatus @default(SCHEDULED)
+  recurrenceId        String?
+  createdByUserId     String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recurrence    MediaEventRecurrence?     @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  createdBy     User?                     @relation("MediaEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  requirements  MediaEventRequirement[]
+  assignments   MediaScheduleAssignment[]
+  calendarEvent CalendarEvent?
+
+  @@index([organizationId, startAt])
+  @@index([recurrenceId])
+  @@map("media_events")
+}
+
+model MediaEventRequirement {
+  id               String   @id @default(cuid())
+  eventId          String
+  functionId       String
+  requiredQuantity Int      @default(1)
+  mandatory        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  event    MediaEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  function MediaFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, functionId])
+  @@map("media_event_requirements")
+}
+
+// Configuração padrão ("Template de Culto", §88) aplicada automaticamente
+// a todo evento novo — o líder edita esta lista uma vez em Configurações
+// em vez de reconfigurar função por função a cada culto criado.
+model MediaEventDefaultRequirement {
+  id               String   @id @default(cuid())
+  organizationId   String
+  functionId       String
+  requiredQuantity Int      @default(1)
+  mandatory        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  function     MediaFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, functionId])
+  @@map("media_event_default_requirements")
+}
+
+enum MediaScheduleStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+model MediaSchedule {
+  id                String              @id @default(cuid())
+  organizationId    String
+  name              String
+  month             Int
+  year              Int
+  periodStart       DateTime            @db.Date
+  periodEnd         DateTime            @db.Date
+  status            MediaScheduleStatus @default(DRAFT)
+  createdByUserId   String?
+  publishedByUserId String?
+  publishedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?                     @relation("MediaScheduleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedBy  User?                     @relation("MediaSchedulePublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+  assignments  MediaScheduleAssignment[]
+
+  @@unique([organizationId, month, year])
+  @@map("media_schedules")
+}
+
+enum MediaAssignmentStatus {
+  UNASSIGNED
+  ASSIGNED
+  CONFIRMED
+  SWAP_PENDING
+  COMPLETED
+  ABSENT
+}
+
+model MediaScheduleAssignment {
+  id               String                @id @default(cuid())
+  scheduleId       String
+  eventId          String
+  functionId       String
+  slotIndex        Int                   @default(0)
+  memberId         String?
+  status           MediaAssignmentStatus @default(UNASSIGNED)
+  assignedByUserId String?
+  assignedAt       DateTime?
+  notes            String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  schedule     MediaSchedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  event        MediaEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  function     MediaFunction      @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  member       MediaMember?       @relation("MediaMemberAssignments", fields: [memberId], references: [id], onDelete: SetNull)
+  assignedBy   User?              @relation("MediaAssignmentAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  swapRequests MediaSwapRequest[]
+  attendance   MediaAttendance?
+
+  @@unique([scheduleId, eventId, functionId, slotIndex])
+  @@index([memberId])
+  @@index([eventId])
+  @@index([status])
+  @@map("media_schedule_assignments")
+}
+
+enum MediaSwapStatus {
+  PENDING_TARGET
+  TARGET_ACCEPTED
+  TARGET_REJECTED
+  PENDING_LEADER
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+model MediaSwapRequest {
+  id                  String          @id @default(cuid())
+  organizationId      String
+  assignmentId        String
+  requestedByMemberId String
+  targetMemberId      String
+  reason              String?
+  status              MediaSwapStatus @default(PENDING_TARGET)
+  requestedAt         DateTime        @default(now())
+  targetRespondedAt   DateTime?
+  leaderRespondedAt   DateTime?
+  leaderUserId        String?
+  decisionNotes       String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignment   MediaScheduleAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  requestedBy  MediaMember             @relation("MediaSwapRequestedBy", fields: [requestedByMemberId], references: [id], onDelete: Cascade)
+  targetMember MediaMember             @relation("MediaSwapTarget", fields: [targetMemberId], references: [id], onDelete: Cascade)
+  leader       User?                   @relation("MediaSwapLeader", fields: [leaderUserId], references: [id], onDelete: SetNull)
+
+  @@index([assignmentId])
+  @@index([organizationId, status])
+  @@index([targetMemberId])
+  @@index([requestedByMemberId])
+  @@map("media_swap_requests")
+}
+
+enum MediaConfirmationStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  EXPIRED
+}
+
+enum MediaCheckinStatus {
+  PENDING
+  CHECKED_IN
+  NO_SHOW
+}
+
+model MediaAttendance {
+  id                 String                  @id @default(cuid())
+  assignmentId       String                  @unique
+  memberId           String
+  confirmationStatus MediaConfirmationStatus @default(PENDING)
+  confirmedAt        DateTime?
+  checkinStatus      MediaCheckinStatus      @default(PENDING)
+  checkedInAt        DateTime?
+  markedByUserId     String?
+  notes              String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  assignment MediaScheduleAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  member     MediaMember             @relation("MediaMemberAttendance", fields: [memberId], references: [id], onDelete: Cascade)
+  markedBy   User?                   @relation("MediaAttendanceMarkedBy", fields: [markedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([memberId])
+  @@map("media_attendances")
+}
+
+// Prazos de confirmação/lembrete (§43) — nunca hardcoded.
+model MediaOperationsSettings {
+  id                    String   @id @default(cuid())
+  organizationId        String   @unique
+  confirmationLeadHours Int      @default(72)
+  reminderLeadHours     Int      @default(24)
+  leaderAlertLeadHours  Int      @default(48)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("media_operations_settings")
 }

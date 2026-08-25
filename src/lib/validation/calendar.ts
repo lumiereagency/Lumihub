@@ -10,6 +10,7 @@ export const CALENDAR_EVENT_TYPES = [
   "CONTRATO",
   "TAREFA",
   "INTERNO",
+  "MIDIA",
 ] as const;
 
 export const CALENDAR_EVENT_TYPE_LABELS: Record<(typeof CALENDAR_EVENT_TYPES)[number], string> = {
@@ -21,6 +22,7 @@ export const CALENDAR_EVENT_TYPE_LABELS: Record<(typeof CALENDAR_EVENT_TYPES)[nu
   CONTRATO: "Contrato",
   TAREFA: "Tarefa",
   INTERNO: "Evento interno",
+  MIDIA: "Mídia ADESF",
 };
 
 // Tipos gerados automaticamente por outros módulos (Captações, Projetos,
