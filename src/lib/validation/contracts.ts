@@ -64,6 +64,10 @@ export const contractSchema = z.object({
   recurrence: z.enum(RECURRENCE_TYPES).default("UNICO"),
   startDate: z.coerce.date({ error: "Informe a data de início." }),
   endDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+  // Independente de início/término (que só contam a duração do contrato):
+  // é o que ancora a geração das cobranças recorrentes. Sem isso, a
+  // primeira cobrança usa o início do contrato como referência.
+  paymentDay: z.preprocess(emptyToUndefined, z.coerce.number().int().min(1).max(31).optional()),
   status: z.enum(CONTRACT_STATUSES).default("RASCUNHO"),
 });
 

@@ -393,6 +393,7 @@ model Contract {
   recurrence     RecurrenceType @default(UNICO)
   startDate      DateTime
   endDate        DateTime?
+  paymentDay     Int?
   status         ContractStatus @default(RASCUNHO)
   fileUrl        String?
   generatedBody  String?

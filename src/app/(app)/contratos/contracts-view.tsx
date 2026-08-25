@@ -21,6 +21,7 @@ interface ContractRow {
   recurrence: string;
   startDate: string;
   endDate: string | null;
+  paymentDay: number | null;
   status: string;
   generatedBody: string | null;
   client: { id: string; companyName: string };
@@ -52,6 +53,7 @@ function toFormValues(contract: ContractRow): ContractFormValues {
     recurrence: contract.recurrence,
     startDate: contract.startDate,
     endDate: contract.endDate,
+    paymentDay: contract.paymentDay,
     status: contract.status,
   };
 }

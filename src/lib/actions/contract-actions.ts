@@ -12,7 +12,7 @@ import {
   RECURRENCE_LABELS,
 } from "@/lib/validation/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { createContractReceivable, nextCycleOnOrAfter } from "@/lib/billing/recurring";
+import { createContractReceivable, nextCycleOnOrAfter, nextPaymentDayOnOrAfter } from "@/lib/billing/recurring";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -22,14 +22,19 @@ type TxClient = Prisma.TransactionClient;
 // integração entre módulos. Gera apenas a primeira cobrança aqui; as
 // parcelas seguintes de contratos recorrentes são geradas pela rodada
 // diária em @/lib/billing/recurring (Fase 46, completa a régua da Fase 9).
-// A data nunca fica no passado: se o início do contrato já passou, avança
-// para a primeira ocorrência do ciclo igual ou posterior a hoje.
+// Início/término do contrato só contam a duração dele — quem ancora a
+// cobrança é o "dia do pagamento" (se informado); sem ele, cai no início
+// do contrato. De qualquer forma a data nunca fica no passado: se a
+// referência já passou, avança para a próxima ocorrência igual ou
+// posterior a hoje.
 async function generateInitialReceivable(tx: TxClient, contractId: string) {
   const existing = await tx.accountReceivable.findFirst({ where: { contractId } });
   if (existing) return;
 
   const contract = await tx.contract.findUniqueOrThrow({ where: { id: contractId } });
-  const dueDate = nextCycleOnOrAfter(contract.startDate, contract.recurrence);
+  const dueDate = contract.paymentDay
+    ? nextPaymentDayOnOrAfter(contract.paymentDay)
+    : nextCycleOnOrAfter(contract.startDate, contract.recurrence);
 
   await createContractReceivable(
     tx,
@@ -99,6 +104,7 @@ function parseContractForm(formData: FormData) {
     recurrence: formData.get("recurrence") || "UNICO",
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
+    paymentDay: formData.get("paymentDay"),
     status: formData.get("status") || "RASCUNHO",
   });
 }

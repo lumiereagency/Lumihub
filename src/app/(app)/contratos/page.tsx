@@ -43,6 +43,7 @@ export default async function ContractsPage() {
           recurrence: c.recurrence,
           startDate: c.startDate.toISOString(),
           endDate: c.endDate?.toISOString() ?? null,
+          paymentDay: c.paymentDay,
           status: c.status,
           generatedBody: c.generatedBody,
           client: c.client,

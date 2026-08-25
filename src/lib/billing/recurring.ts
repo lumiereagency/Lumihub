@@ -37,6 +37,22 @@ export function nextCycleOnOrAfter(anchor: Date, recurrence: string, today: Date
   return next;
 }
 
+// Início/término do contrato contam só a duração dele — quem ancora a
+// cobrança é o dia do pagamento, independente disso. Acha a próxima
+// ocorrência desse dia (nesse mês, se ainda não passou; senão, no
+// seguinte), com o dia sendo limitado aos dias reais do mês (ex: dia 31
+// num mês de 30 dias vira dia 30).
+export function nextPaymentDayOnOrAfter(paymentDay: number, today: Date = new Date()): Date {
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const day = Math.min(paymentDay, daysInMonth);
+  const candidate = new Date(today.getFullYear(), today.getMonth(), day);
+  if (candidate >= today) return candidate;
+
+  const nextMonthFirst = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const daysInNextMonth = new Date(nextMonthFirst.getFullYear(), nextMonthFirst.getMonth() + 1, 0).getDate();
+  return new Date(nextMonthFirst.getFullYear(), nextMonthFirst.getMonth(), Math.min(paymentDay, daysInNextMonth));
+}
+
 interface ContractLike {
   id: string;
   organizationId: string;

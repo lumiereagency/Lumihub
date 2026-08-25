@@ -24,6 +24,7 @@ export interface ContractFormValues {
   recurrence: string;
   startDate: string;
   endDate: string | null;
+  paymentDay: number | null;
   status: string;
 }
 
@@ -116,6 +117,21 @@ export function ContractForm({
         />
         <Input label="Término (opcional)" name="endDate" type="date" defaultValue={toDateInputValue(defaultValues?.endDate ?? null)} />
       </div>
+      <p className="-mt-2 text-xs text-text-tertiary">Início e término só contam a duração do contrato — não geram cobrança sozinhos.</p>
+
+      <Input
+        label="Dia do pagamento (opcional)"
+        name="paymentDay"
+        type="number"
+        min={1}
+        max={31}
+        placeholder="Ex: 10"
+        defaultValue={defaultValues?.paymentDay ?? ""}
+      />
+      <p className="-mt-2 text-xs text-text-tertiary">
+        Dia do mês em que a cobrança vence — é o que decide se ela está pendente ou atrasada. Sem esse dia, a
+        cobrança usa o Início como referência.
+      </p>
 
       <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "RASCUNHO"}>
         {CONTRACT_STATUSES.map((s) => (
