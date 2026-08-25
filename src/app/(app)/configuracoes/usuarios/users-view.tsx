@@ -18,6 +18,8 @@ interface UserRow {
   email: string;
   roleId: string;
   roleName: string;
+  roleKey: string;
+  isOwner: boolean;
   isActive: boolean;
   lastLoginAt: string | null;
 }
@@ -25,6 +27,7 @@ interface UserRow {
 interface RoleRow {
   id: string;
   name: string;
+  key: string;
   isSystem: boolean;
   userCount: number;
   permissionKeys: string[];
@@ -34,11 +37,19 @@ export function UsersView({
   users,
   roles,
   currentUserId,
+  currentUserIsOwner,
 }: {
   users: UserRow[];
   roles: RoleRow[];
   currentUserId: string;
+  currentUserIsOwner: boolean;
 }) {
+  // Trava de segurança (Fase 46): só o proprietário concede o perfil de
+  // Administrador ou mexe em outro administrador — o próprio proprietário
+  // só pode ser alterado por ele mesmo.
+  const assignableRoles = currentUserIsOwner ? roles : roles.filter((r) => r.key !== "ADMIN");
+  const isLocked = (u: UserRow) =>
+    u.id !== currentUserId && (u.isOwner || (u.roleKey === "ADMIN" && !currentUserIsOwner));
   const [tab, setTab] = useState<"usuarios" | "perfis">("usuarios");
   const [creatingUser, setCreatingUser] = useState(false);
   const [creatingRole, setCreatingRole] = useState(false);
@@ -103,6 +114,7 @@ export function UsersView({
                     <td className="px-4 py-3 text-text-secondary">{u.email}</td>
                     <td className="px-4 py-3">
                       <Badge tone="neutral">{u.roleName}</Badge>
+                      {u.isOwner && <Badge tone="accent" className="ml-1.5">Proprietário</Badge>}
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={u.isActive ? "success" : "neutral"}>{u.isActive ? "Ativo" : "Inativo"}</Badge>
@@ -140,7 +152,7 @@ export function UsersView({
         ))}
 
       <Drawer open={creatingUser} onClose={() => setCreatingUser(false)} title="Novo Usuário">
-        <UserForm roles={roles.map((r) => ({ id: r.id, name: r.name }))} onSuccess={() => setCreatingUser(false)} />
+        <UserForm roles={assignableRoles.map((r) => ({ id: r.id, name: r.name }))} onSuccess={() => setCreatingUser(false)} />
       </Drawer>
 
       <Drawer open={creatingRole} onClose={() => setCreatingRole(false)} title="Novo Perfil" widthClassName="max-w-[640px]">
@@ -159,8 +171,18 @@ export function UsersView({
               isActive: editingUser.isActive,
               lastLoginAt: editingUser.lastLoginAt,
             }}
-            roles={roles.map((r) => ({ id: r.id, name: r.name }))}
-            canDelete={editingUser.id !== currentUserId}
+            roles={
+              // O perfil atual do usuário sempre aparece, mesmo quando é
+              // Administrador e quem está editando não é o proprietário —
+              // só não dá pra promover outra pessoa a admin por aqui.
+              editingUser.roleKey === "ADMIN"
+                ? assignableRoles.some((r) => r.id === editingUser.roleId)
+                  ? assignableRoles.map((r) => ({ id: r.id, name: r.name }))
+                  : [{ id: editingUser.roleId, name: editingUser.roleName }, ...assignableRoles.map((r) => ({ id: r.id, name: r.name }))]
+                : assignableRoles.map((r) => ({ id: r.id, name: r.name }))
+            }
+            isLocked={isLocked(editingUser)}
+            canDelete={editingUser.id !== currentUserId && !isLocked(editingUser)}
             onSuccess={() => setEditingUserId(null)}
           />
         )}

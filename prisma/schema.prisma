@@ -127,6 +127,7 @@ model User {
   passwordHash    String
   avatarUrl       String?
   isActive        Boolean   @default(true)
+  isOwner         Boolean   @default(false)
   emailVerifiedAt DateTime?
   lastLoginAt     DateTime?
   createdAt       DateTime  @default(now())

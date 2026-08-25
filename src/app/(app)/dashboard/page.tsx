@@ -167,29 +167,31 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Saúde da Lumi</CardTitle>
-          </CardHeader>
-          <div className="flex flex-col items-center gap-2 py-2">
-            <span className="text-5xl font-semibold text-accent-light">{health.overall}</span>
-            <span className="text-xs text-text-tertiary">de 100</span>
-          </div>
-          <div className="mt-4 flex flex-col gap-2">
-            {Object.entries(health.breakdown).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-3">
-                <span className="w-28 shrink-0 text-xs capitalize text-text-tertiary">{key}</span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-elevated">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} />
+      <div className={`grid grid-cols-1 gap-4 ${canViewFinance || canViewCRM || canViewProjects ? "lg:grid-cols-3" : ""}`}>
+        {(canViewFinance || canViewCRM || canViewProjects) && (
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle>Saúde da Lumi</CardTitle>
+            </CardHeader>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <span className="text-5xl font-semibold text-accent-light">{health.overall}</span>
+              <span className="text-xs text-text-tertiary">de 100</span>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              {Object.entries(health.breakdown).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-xs capitalize text-text-tertiary">{key}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-elevated">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} />
+                  </div>
+                  <span className="w-8 text-right text-xs text-text-secondary">{value}</span>
                 </div>
-                <span className="w-8 text-right text-xs text-text-secondary">{value}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        )}
 
-        <Card className="lg:col-span-2">
+        <Card className={canViewFinance || canViewCRM || canViewProjects ? "lg:col-span-2" : undefined}>
           <CardHeader>
             <CardTitle>Próximos compromissos</CardTitle>
           </CardHeader>

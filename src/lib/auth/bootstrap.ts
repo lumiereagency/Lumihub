@@ -87,6 +87,7 @@ export async function createOrganizationWithAdmin(input: CreateOrgInput) {
         email: input.adminEmail.toLowerCase().trim(),
         passwordHash,
         emailVerifiedAt: new Date(),
+        isOwner: true,
       },
     });
 

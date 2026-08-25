@@ -24,12 +24,14 @@ export function UserEditForm({
   defaultValues,
   roles,
   canDelete,
+  isLocked = false,
   onSuccess,
 }: {
   userId: string;
   defaultValues: UserEditValues;
   roles: { id: string; name: string }[];
   canDelete: boolean;
+  isLocked?: boolean;
   onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(updateUserAction.bind(null, userId), initialState);
@@ -45,6 +47,19 @@ export function UserEditForm({
     successRef.current = state.success;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.success]);
+
+  if (isLocked) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="rounded-[10px] border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-secondary">
+          Esta conta é protegida — só o próprio proprietário da organização pode alterá-la, ou só o proprietário pode
+          alterar outro administrador.
+        </p>
+        <Input label="Nome" value={defaultValues.name} disabled />
+        <Input label="E-mail" value={defaultValues.email} disabled />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

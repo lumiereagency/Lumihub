@@ -57,6 +57,7 @@ export type CurrentUser = {
   role: { id: string; key: string; name: string };
   permissions: Set<string>;
   sessionId: string;
+  isOwner: boolean;
 };
 
 // Valida a sessão a partir do cookie e retorna o usuário autenticado com suas
@@ -106,6 +107,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     role: { id: session.user.role.id, key: session.user.role.key, name: session.user.role.name },
     permissions: new Set(session.user.role.permissions.map((rp) => rp.permission.key)),
     sessionId: session.id,
+    isOwner: session.user.isOwner,
   };
 }
 

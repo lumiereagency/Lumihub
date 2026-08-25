@@ -45,6 +45,13 @@ export async function createUserAction(_prev: ActionState, formData: FormData): 
   const role = await db.role.findFirst({ where: { id: parsed.data.roleId, organizationId: admin.organizationId } });
   if (!role) return { error: "Perfil inválido." };
 
+  // Trava de segurança (Fase 46): só o proprietário da organização (quem
+  // criou a conta) pode conceder o perfil de Administrador — evita que um
+  // admin "comum" fique livre pra criar outros admins à vontade.
+  if (role.key === "ADMIN" && !admin.isOwner) {
+    return { error: "Só o proprietário da organização pode criar outro administrador." };
+  }
+
   const existing = await db.user.findFirst({ where: { email: parsed.data.email } });
   if (existing) return { error: "Já existe uma conta com este e-mail no sistema." };
 
@@ -95,6 +102,21 @@ export async function updateUserAction(userId: string, _prev: ActionState, formD
 
   const role = await db.role.findFirst({ where: { id: parsed.data.roleId, organizationId: admin.organizationId } });
   if (!role) return { error: "Perfil inválido." };
+
+  // Trava de segurança (Fase 46): a conta do proprietário só pode ser
+  // alterada por ele mesmo, e só o proprietário mexe em outros
+  // administradores ou promove alguém a Administrador — sem isso, qualquer
+  // admin "comum" poderia rebaixar/desativar o dono da organização ou
+  // criar outros admins à vontade.
+  if (user.isOwner && admin.id !== user.id) {
+    return { error: "A conta do proprietário da organização só pode ser alterada por ele mesmo." };
+  }
+  if (role.key === "ADMIN" && user.role.key !== "ADMIN" && !admin.isOwner) {
+    return { error: "Só o proprietário da organização pode conceder o perfil de Administrador." };
+  }
+  if (user.role.key === "ADMIN" && admin.id !== user.id && !admin.isOwner) {
+    return { error: "Só o proprietário da organização pode alterar outro administrador." };
+  }
 
   const losesAdmin = user.role.key === "ADMIN" && (role.key !== "ADMIN" || !parsed.data.isActive);
   if (losesAdmin) {
@@ -148,6 +170,11 @@ export async function deleteUserAction(userId: string): Promise<void> {
 
   const user = await db.user.findFirst({ where: { id: userId, organizationId: admin.organizationId, deletedAt: null }, include: { role: true } });
   if (!user) return;
+
+  // Trava de segurança (Fase 46): ninguém exclui o proprietário da
+  // organização, e só o próprio proprietário exclui outro administrador.
+  if (user.isOwner) return;
+  if (user.role.key === "ADMIN" && admin.id !== user.id && !admin.isOwner) return;
 
   if (user.role.key === "ADMIN") {
     const otherActiveAdmins = await db.user.count({

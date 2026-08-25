@@ -11,7 +11,7 @@ export default async function UsersPage() {
     db.user.findMany({
       where: { organizationId: user.organizationId, deletedAt: null },
       orderBy: { name: "asc" },
-      include: { role: { select: { id: true, name: true } } },
+      include: { role: { select: { id: true, name: true, key: true } } },
     }),
     db.role.findMany({
       where: { organizationId: user.organizationId },
@@ -30,17 +30,21 @@ export default async function UsersPage() {
           email: u.email,
           roleId: u.role.id,
           roleName: u.role.name,
+          roleKey: u.role.key,
+          isOwner: u.isOwner,
           isActive: u.isActive,
           lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
         }))}
         roles={roles.map((r) => ({
           id: r.id,
           name: r.name,
+          key: r.key,
           isSystem: r.isSystem,
           userCount: r._count.users,
           permissionKeys: r.permissions.map((p) => p.permission.key),
         }))}
         currentUserId={user.id}
+        currentUserIsOwner={user.isOwner}
       />
     </div>
   );
