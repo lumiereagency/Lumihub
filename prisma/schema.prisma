@@ -70,6 +70,7 @@ model Organization {
   mediaSchedules                MediaSchedule[]
   mediaSwapRequests             MediaSwapRequest[]
   mediaOperationsSettings       MediaOperationsSettings?
+  mediaAIGenerationRuns         MediaAIGenerationRun[]
 
   @@map("organizations")
 }
@@ -167,6 +168,7 @@ model User {
   mediaAssignmentsAssigned  MediaScheduleAssignment[] @relation("MediaAssignmentAssignedBy")
   mediaSwapRequestsAsLeader MediaSwapRequest[]        @relation("MediaSwapLeader")
   mediaAttendanceMarked     MediaAttendance[]         @relation("MediaAttendanceMarkedBy")
+  mediaAIGenerationRuns     MediaAIGenerationRun[]    @relation("MediaAIGenerationRequestedBy")
 
   @@index([organizationId])
   @@map("users")
@@ -1035,6 +1037,7 @@ enum AlertCategory {
   CLIENTES
   CONTRATOS
   EQUIPE
+  MIDIA_ADESF
 }
 
 enum AlertSeverity {
@@ -1356,6 +1359,7 @@ model MediaMember {
   swapRequestsSent       MediaSwapRequest[]           @relation("MediaSwapRequestedBy")
   swapRequestsReceived   MediaSwapRequest[]           @relation("MediaSwapTarget")
   attendances            MediaAttendance[]            @relation("MediaMemberAttendance")
+  aiSuggestionsAsTarget  MediaAISuggestion[]          @relation("MediaAISuggestedMember")
 
   @@index([organizationId, status])
   @@map("media_members")
@@ -1376,6 +1380,7 @@ model MediaFunction {
   eventRequirements   MediaEventRequirement[]
   defaultRequirements MediaEventDefaultRequirement[]
   scheduleAssignments MediaScheduleAssignment[]
+  aiSuggestions       MediaAISuggestion[]
 
   @@unique([organizationId, name])
   @@map("media_functions")
@@ -1553,6 +1558,7 @@ model MediaEvent {
   requirements  MediaEventRequirement[]
   assignments   MediaScheduleAssignment[]
   calendarEvent CalendarEvent?
+  aiSuggestions MediaAISuggestion[]
 
   @@index([organizationId, startAt])
   @@index([recurrenceId])
@@ -1616,10 +1622,11 @@ model MediaSchedule {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
-  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User?                     @relation("MediaScheduleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  publishedBy  User?                     @relation("MediaSchedulePublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
-  assignments  MediaScheduleAssignment[]
+  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy        User?                     @relation("MediaScheduleCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedBy      User?                     @relation("MediaSchedulePublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+  assignments      MediaScheduleAssignment[]
+  aiGenerationRuns MediaAIGenerationRun[]
 
   @@unique([organizationId, month, year])
   @@map("media_schedules")
@@ -1644,17 +1651,19 @@ model MediaScheduleAssignment {
   status           MediaAssignmentStatus @default(UNASSIGNED)
   assignedByUserId String?
   assignedAt       DateTime?
+  aiGenerated      Boolean               @default(false)
   notes            String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
-  schedule     MediaSchedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  event        MediaEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  function     MediaFunction      @relation(fields: [functionId], references: [id], onDelete: Cascade)
-  member       MediaMember?       @relation("MediaMemberAssignments", fields: [memberId], references: [id], onDelete: SetNull)
-  assignedBy   User?              @relation("MediaAssignmentAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
-  swapRequests MediaSwapRequest[]
-  attendance   MediaAttendance?
+  schedule      MediaSchedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  event         MediaEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  function      MediaFunction       @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  member        MediaMember?        @relation("MediaMemberAssignments", fields: [memberId], references: [id], onDelete: SetNull)
+  assignedBy    User?               @relation("MediaAssignmentAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  swapRequests  MediaSwapRequest[]
+  attendance    MediaAttendance?
+  aiSuggestions MediaAISuggestion[]
 
   @@unique([scheduleId, eventId, functionId, slotIndex])
   @@index([memberId])
@@ -1744,10 +1753,63 @@ model MediaOperationsSettings {
   confirmationLeadHours Int      @default(72)
   reminderLeadHours     Int      @default(24)
   leaderAlertLeadHours  Int      @default(48)
+  // Pesos da IA de escala (§8) — disponibilidade/habilitação/conflito são
+  // sempre obrigatórios (nunca configuráveis); só os critérios
+  // preferenciais têm peso ajustável pelo líder.
+  aiWeightWorkload      Int      @default(100)
+  aiWeightRecency       Int      @default(50)
+  aiWeightPreference    Int      @default(20)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("media_operations_settings")
+}
+
+model MediaAIGenerationRun {
+  id                String    @id @default(cuid())
+  organizationId    String
+  scheduleId        String
+  requestedByUserId String
+  startedAt         DateTime  @default(now())
+  finishedAt        DateTime?
+  durationMs        Int?
+  suggestionsCount  Int       @default(0)
+  filledCount       Int       @default(0)
+  weightsSnapshot   Json
+  createdAt         DateTime  @default(now())
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  schedule     MediaSchedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  requestedBy  User                @relation("MediaAIGenerationRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  suggestions  MediaAISuggestion[]
+
+  @@index([organizationId, scheduleId])
+  @@map("media_ai_generation_runs")
+}
+
+// Registro imutável do que a IA propôs num momento — permanece mesmo que o
+// líder altere a atribuição depois, para permitir comparar "sugerido vs
+// publicado" (§14) sem depender do estado atual (mutável) da atribuição.
+model MediaAISuggestion {
+  id                String   @id @default(cuid())
+  runId             String
+  eventId           String
+  functionId        String
+  slotIndex         Int
+  assignmentId      String?
+  suggestedMemberId String?
+  score             Float?
+  justification     String
+  createdAt         DateTime @default(now())
+
+  run             MediaAIGenerationRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  event           MediaEvent               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  function        MediaFunction            @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  assignment      MediaScheduleAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  suggestedMember MediaMember?             @relation("MediaAISuggestedMember", fields: [suggestedMemberId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@map("media_ai_suggestions")
 }

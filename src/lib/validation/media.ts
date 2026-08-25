@@ -72,3 +72,12 @@ export const myMediaProfileSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome."),
   phone: z.string().trim().optional().default(""),
 });
+
+// Pesos da IA de escala (Fase 03, §8) — só os critérios preferenciais são
+// configuráveis; disponibilidade/habilitação/conflito continuam
+// obrigatórios e nunca aparecem aqui. 0 desliga o critério por completo.
+export const mediaAIWeightsSchema = z.object({
+  aiWeightWorkload: z.coerce.number().int().min(0).max(100),
+  aiWeightRecency: z.coerce.number().int().min(0).max(100),
+  aiWeightPreference: z.coerce.number().int().min(0).max(100),
+});

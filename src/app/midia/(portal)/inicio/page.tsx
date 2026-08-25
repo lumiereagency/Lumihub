@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send } from "lucide-react";
+import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
@@ -50,6 +50,24 @@ export default async function MediaPortalHomePage() {
     }),
     db.notification.findMany({ where: { userId: user.id, readAt: null }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
+
+  // "Meu desempenho" (Fase 03, §22): sempre um recorte individual — nunca
+  // compara com outros membros nem expõe a posição do membro num ranking.
+  const [pastAttendances, recentHistory] = await Promise.all([
+    db.mediaAttendance.findMany({
+      where: { memberId: member.id, assignment: { event: { startAt: { lt: now } } } },
+      select: { confirmationStatus: true, checkinStatus: true },
+    }),
+    db.mediaScheduleAssignment.findMany({
+      where: { memberId: member.id, event: { startAt: { lt: now } } },
+      include: { event: true, function: true },
+      orderBy: { event: { startAt: "desc" } },
+      take: 5,
+    }),
+  ]);
+  const confirmedCount = pastAttendances.filter((a) => a.confirmationStatus === "CONFIRMED").length;
+  const noShowCount = pastAttendances.filter((a) => a.checkinStatus === "NO_SHOW").length;
+  const attendanceRate = pastAttendances.length > 0 ? Math.round((confirmedCount / pastAttendances.length) * 100) : null;
 
   const nextCard: AssignmentCardData | null = nextAssignment
     ? {
@@ -129,6 +147,31 @@ export default async function MediaPortalHomePage() {
                 <p className="text-sm font-medium text-text-primary">{n.title}</p>
                 <p className="text-sm text-text-secondary">{n.body}</p>
                 <p className="mt-1 text-xs text-text-tertiary">{formatDateTime(n.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Meu desempenho</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <MetricCard label="Participações no mês" value={String(assignmentsThisMonth)} icon={<CalendarClock size={18} />} />
+          <MetricCard
+            label="Índice de presença"
+            value={attendanceRate !== null ? `${attendanceRate}%` : "—"}
+            icon={<Percent size={18} />}
+          />
+          <MetricCard label="Ausências registradas" value={String(noShowCount)} icon={<History size={18} />} />
+        </div>
+        {recentHistory.length > 0 && (
+          <div className="mt-4 flex flex-col gap-1.5">
+            {recentHistory.map((h) => (
+              <div key={h.id} className="flex items-center justify-between rounded-[8px] border border-border px-3 py-2 text-sm">
+                <span className="text-text-primary">
+                  {h.function.name} — {h.event.name}
+                </span>
+                <span className="text-text-tertiary">{formatDateTime(h.event.startAt)}</span>
               </div>
             ))}
           </div>

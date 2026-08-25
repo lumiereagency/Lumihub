@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requirePermission } from "@/lib/auth/guard";
+import { hasPermission, requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { getEventCoverage, validateScheduleForPublication } from "@/lib/media/schedule/schedule-service";
@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CalendarClock } from "lucide-react";
 import { ScheduleFillView, type ScheduleEventData } from "./schedule-fill-view";
 import { PublishSchedulePanel } from "./publish-panel";
+import { GenerateAIScheduleButton } from "./generate-ai-button";
 
 export default async function MediaAdesfScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -49,6 +50,7 @@ export default async function MediaAdesfScheduleDetailPage({ params }: { params:
             memberName: assignment?.member?.user.name ?? null,
             memberAvatarUrl: assignment?.member?.user.avatarUrl ?? null,
             assignmentStatus: assignment?.status ?? "UNASSIGNED",
+            aiGenerated: assignment?.aiGenerated ?? false,
           };
         }),
       ),
@@ -56,6 +58,7 @@ export default async function MediaAdesfScheduleDetailPage({ params }: { params:
   }
 
   const validation = schedule.status === "DRAFT" || schedule.status === "REVIEW" ? await validateScheduleForPublication(id) : null;
+  const canManage = hasPermission(user, permKey("MEDIA_ADESF", "MANAGE"));
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,6 +67,8 @@ export default async function MediaAdesfScheduleDetailPage({ params }: { params:
         description={`${formatDateTime(schedule.periodStart)} — ${formatDateTime(schedule.periodEnd)}`}
         actions={<Badge tone={MEDIA_SCHEDULE_STATUS_TONE[schedule.status]}>{MEDIA_SCHEDULE_STATUS_LABELS[schedule.status]}</Badge>}
       />
+
+      {canManage && schedule.status !== "ARCHIVED" && <GenerateAIScheduleButton scheduleId={schedule.id} />}
 
       {validation && <PublishSchedulePanel scheduleId={schedule.id} validation={validation} />}
 

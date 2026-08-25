@@ -5,6 +5,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { ensureMediaAdesfDefaults } from "@/lib/media/bootstrap";
 import { validateScheduleForPublication } from "@/lib/media/schedule/schedule-service";
+import { getWorkloadInsights } from "@/lib/media/ai/insights";
 import { MEDIA_ROLE_LABELS, MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { formatDateTime } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
@@ -58,26 +59,27 @@ export default async function MediaAdesfDashboardPage() {
   let coverageLabel = "—";
   let uncoveredMandatory = 0;
   let distribution: { memberId: string; name: string; count: number }[] = [];
+  let averageLoad = 0;
+  let mostScheduled: { name: string; count: number } | null = null;
+  let leastScheduled: { name: string; count: number } | null = null;
+  let absencesCount = 0;
   if (currentSchedule) {
-    const validation = await validateScheduleForPublication(currentSchedule.id);
+    const [validation, workload, absences] = await Promise.all([
+      validateScheduleForPublication(currentSchedule.id),
+      getWorkloadInsights(user.organizationId, currentSchedule.periodStart, currentSchedule.periodEnd),
+      db.mediaAttendance.count({ where: { checkinStatus: "NO_SHOW", assignment: { scheduleId: currentSchedule.id } } }),
+    ]);
     uncoveredMandatory = validation.uncoveredMandatory;
     const total = validation.totalAssignments + validation.uncoveredMandatory;
     coverageLabel = total > 0 ? `${Math.round((validation.totalAssignments / total) * 100)}%` : "—";
+    absencesCount = absences;
 
-    const assignments = await db.mediaScheduleAssignment.findMany({
-      where: { scheduleId: currentSchedule.id, memberId: { not: null } },
-      include: { member: { include: { user: { select: { name: true } } } } },
-    });
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const a of assignments) {
-      const key = a.memberId!;
-      const entry = counts.get(key) ?? { name: a.member!.user.name, count: 0 };
-      entry.count++;
-      counts.set(key, entry);
+    distribution = workload.filter((w) => w.assignmentsCount > 0).map((w) => ({ memberId: w.memberId, name: w.name, count: w.assignmentsCount }));
+    if (workload.length > 0) {
+      averageLoad = Math.round((workload.reduce((sum, w) => sum + w.assignmentsCount, 0) / workload.length) * 10) / 10;
+      mostScheduled = { name: workload[0].name, count: workload[0].assignmentsCount };
+      leastScheduled = { name: workload[workload.length - 1].name, count: workload[workload.length - 1].assignmentsCount };
     }
-    distribution = Array.from(counts.entries())
-      .map(([memberId, v]) => ({ memberId, ...v }))
-      .sort((a, b) => b.count - a.count);
   }
 
   return (
@@ -150,6 +152,10 @@ export default async function MediaAdesfDashboardPage() {
           <MetricCard label="Trocas pendentes" value={String(pendingSwaps)} icon={<Send size={18} />} />
           <MetricCard label="Confirmações pendentes" value={String(pendingConfirmations)} icon={<ClipboardCheck size={18} />} />
           <MetricCard label="Cobertura do mês" value={coverageLabel} icon={<PieChart size={18} />} />
+          <MetricCard label="Carga média por membro" value={averageLoad > 0 ? averageLoad.toString() : "—"} icon={<PieChart size={18} />} />
+          <MetricCard label="Mais escalado" value={mostScheduled ? `${mostScheduled.name} (${mostScheduled.count})` : "—"} icon={<Users2 size={18} />} />
+          <MetricCard label="Menos escalado" value={leastScheduled ? `${leastScheduled.name} (${leastScheduled.count})` : "—"} icon={<Users2 size={18} />} />
+          <MetricCard label="Ausências no mês" value={String(absencesCount)} icon={<AlertTriangle size={18} />} />
         </div>
 
         {distribution.length > 0 && (

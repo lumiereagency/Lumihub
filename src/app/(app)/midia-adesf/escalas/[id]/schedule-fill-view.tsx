@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, RefreshCcw, Plus } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, RefreshCcw, Plus, Sparkles } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ export interface ScheduleSlotData {
   memberName: string | null;
   memberAvatarUrl: string | null;
   assignmentStatus: string;
+  aiGenerated: boolean;
 }
 
 export interface ScheduleEventData {
@@ -73,6 +74,11 @@ export function ScheduleFillView({ scheduleId, events, editable }: { scheduleId:
                       <div className="flex flex-1 items-center gap-2">
                         <Avatar name={slot.memberName ?? "?"} src={slot.memberAvatarUrl} size="sm" />
                         <span className="text-sm text-text-primary">{slot.memberName}</span>
+                        {slot.aiGenerated && (
+                          <Badge tone="accent">
+                            <Sparkles size={10} /> IA
+                          </Badge>
+                        )}
                       </div>
                     ) : (
                       <span className="flex-1 text-sm text-text-tertiary">Vaga aberta</span>

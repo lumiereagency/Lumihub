@@ -11,7 +11,12 @@ import { requestSwapSchema, swapDecisionSchema } from "@/lib/validation/media-sc
 import type { ActionState } from "@/lib/actions/auth-actions";
 
 // Candidatos elegíveis para uma troca (§46) — o próprio solicitante nunca
-// aparece na lista (excludeMemberId).
+// aparece na lista (excludeMemberId). Deliberadamente NÃO usa o ranking de
+// IA (rankEligibleMembers): essa pontuação é derivada de carga/recência de
+// TODOS os candidatos, e expô-la a um MEMBRO comum aqui vazaria comparação
+// entre colegas pela própria resposta da server action — o ranking por IA
+// fica restrito às telas de liderança (slot-assign-drawer), que já exigem
+// MEDIA_ADESF_EDIT/MANAGE.
 export async function getEligibleMembersForSwapAction(assignmentId: string): Promise<EligibleMemberCandidate[]> {
   const user = await requireMediaMember();
   const member = await db.mediaMember.findUniqueOrThrow({ where: { userId: user.id } });

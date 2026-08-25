@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { AlertTriangle, Clock, X } from "lucide-react";
+import { AlertTriangle, Clock, Sparkles, X } from "lucide-react";
 import { getEligibleMembersForSlotAction, assignScheduleSlotAction, clearScheduleSlotAction } from "@/lib/actions/media-schedule-actions";
-import type { EligibleMemberCandidate } from "@/lib/media/schedule/conflict-service";
+import type { RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
 import { Drawer } from "@/components/ui/drawer";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,14 +19,18 @@ interface ActiveSlot {
 }
 
 export function SlotAssignDrawer({ scheduleId, slot, onClose }: { scheduleId: string; slot: ActiveSlot | null; onClose: () => void }) {
-  const [candidates, setCandidates] = useState<EligibleMemberCandidate[] | null>(null);
+  const [candidates, setCandidates] = useState<RankedEligibleMember[] | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slot) return;
-    getEligibleMembersForSlotAction(slot.eventId, slot.functionId).then(setCandidates);
-  }, [slot]);
+    getEligibleMembersForSlotAction(scheduleId, slot.eventId, slot.functionId).then((result) => {
+      // Melhores sugestões da IA primeiro; quem ficou fora do ranking
+      // (aiScore null) vai para o fim, mantendo-se visível com o motivo.
+      setCandidates([...result].sort((a, b) => (b.aiScore ?? -1) - (a.aiScore ?? -1)));
+    });
+  }, [scheduleId, slot]);
 
   function assign(memberId: string) {
     if (!slot) return;
@@ -65,7 +69,14 @@ export function SlotAssignDrawer({ scheduleId, slot, onClose }: { scheduleId: st
             >
               <Avatar name={c.name} src={c.avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-text-primary">{c.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm text-text-primary">{c.name}</p>
+                  {c.aiScore !== null && (
+                    <Badge tone="accent">
+                      <Sparkles size={10} /> {c.aiScore.toFixed(0)}
+                    </Badge>
+                  )}
+                </div>
                 <div className="mt-0.5 flex flex-wrap gap-1">
                   {c.availability === "AVAILABLE" && <Badge tone="success">Disponível</Badge>}
                   {c.availability === "UNAVAILABLE" && (
@@ -81,6 +92,7 @@ export function SlotAssignDrawer({ scheduleId, slot, onClose }: { scheduleId: st
                   )}
                   {c.sameEventOtherFunction && <Badge tone="warning">Já escalado neste culto ({c.sameEventOtherFunction})</Badge>}
                 </div>
+                {c.aiJustification && <p className="mt-1 text-xs text-text-tertiary">{c.aiJustification}</p>}
               </div>
             </button>
           ))}

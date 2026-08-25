@@ -20,6 +20,7 @@ import {
   mediaFunctionSchema,
   memberFunctionAssignSchema,
   mediaBrandSettingsSchema,
+  mediaAIWeightsSchema,
 } from "@/lib/validation/media";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -573,6 +574,37 @@ export async function updateMediaBrandSettingsAction(
   revalidatePath("/midia/configuracoes");
   revalidatePath("/midia/login");
   return { success: "Identidade visual atualizada." };
+}
+
+// Pesos da IA de escala (§8) — nunca mexe nas restrições obrigatórias
+// (ativo/habilitado/disponível/sem conflito), só na ordem de preferência
+// entre quem já passou nelas.
+export async function updateMediaAIWeightsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await requirePermission(MANAGE);
+
+  const parsed = mediaAIWeightsSchema.safeParse({
+    aiWeightWorkload: formData.get("aiWeightWorkload"),
+    aiWeightRecency: formData.get("aiWeightRecency"),
+    aiWeightPreference: formData.get("aiWeightPreference"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+
+  await db.mediaOperationsSettings.upsert({
+    where: { organizationId: admin.organizationId },
+    create: { organizationId: admin.organizationId, ...parsed.data },
+    update: parsed.data,
+  });
+
+  await audit({
+    organizationId: admin.organizationId,
+    userId: admin.id,
+    action: "MEDIA_AI_WEIGHTS_UPDATED",
+    entityType: "MediaOperationsSettings",
+    metadata: parsed.data,
+  });
+
+  revalidatePath("/midia-adesf/configuracoes");
+  return { success: "Pesos da IA atualizados." };
 }
 
 export async function uploadMediaBrandImageAction(

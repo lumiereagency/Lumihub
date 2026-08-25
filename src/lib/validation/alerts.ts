@@ -1,4 +1,4 @@
-export const ALERT_CATEGORIES = ["FINANCEIRO", "COMERCIAL", "OPERACAO", "CLIENTES", "CONTRATOS", "EQUIPE"] as const;
+export const ALERT_CATEGORIES = ["FINANCEIRO", "COMERCIAL", "OPERACAO", "CLIENTES", "CONTRATOS", "EQUIPE", "MIDIA_ADESF"] as const;
 
 export const ALERT_CATEGORY_LABELS: Record<(typeof ALERT_CATEGORIES)[number], string> = {
   FINANCEIRO: "Financeiro",
@@ -7,6 +7,7 @@ export const ALERT_CATEGORY_LABELS: Record<(typeof ALERT_CATEGORIES)[number], st
   CLIENTES: "Clientes",
   CONTRATOS: "Contratos",
   EQUIPE: "Equipe",
+  MIDIA_ADESF: "Mídia ADESF",
 };
 
 export const ALERT_SEVERITIES = ["URGENTE", "ATENCAO", "INFORMATIVO", "OPORTUNIDADE"] as const;

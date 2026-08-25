@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getMemberAvailabilityState } from "@/lib/media/schedule/conflict-service";
 import type { AlertCategory, AlertSeverity } from "@/generated/prisma/enums";
 
 interface DetectedAlert {
@@ -141,6 +142,130 @@ async function detectAlerts(organizationId: string): Promise<DetectedAlert[]> {
       relatedEntityType: "Project",
       relatedEntityId: proj.id,
     });
+  }
+
+  // Regras do Mídia ADESF (§17-20 da Fase 03) — reaproveitam o mesmo motor
+  // detectAlerts/syncAlerts do restante da LUMIBASE em vez de um sistema de
+  // notificação próprio. Só rodam para organizações que já ativaram o
+  // módulo (têm MediaOperationsSettings); nas demais, nem consultam as
+  // tabelas de mídia.
+  const mediaSettings = await db.mediaOperationsSettings.findUnique({ where: { organizationId } });
+  if (mediaSettings) {
+    const leaderWindowEnd = new Date(now.getTime() + mediaSettings.leaderAlertLeadHours * 60 * 60 * 1000);
+    const confirmationWindowEnd = new Date(now.getTime() + mediaSettings.confirmationLeadHours * 60 * 60 * 1000);
+    const tomorrowEnd = new Date(now.getTime() + DAY_MS);
+
+    // 1 e 2: cobertura de eventos futuros dentro da janela de alerta do líder.
+    const upcomingEvents = await db.mediaEvent.findMany({
+      where: { organizationId, startAt: { gte: now, lte: leaderWindowEnd }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
+      include: { requirements: true, assignments: true },
+    });
+    for (const event of upcomingEvents) {
+      const mandatoryRequirements = event.requirements.filter((r) => r.mandatory);
+      const requiredMandatoryTotal = mandatoryRequirements.reduce((sum, r) => sum + r.requiredQuantity, 0);
+      if (requiredMandatoryTotal === 0) continue;
+
+      const filledTotal = event.assignments.filter((a) => a.memberId).length;
+      let mandatoryUnfilled = 0;
+      for (const req of mandatoryRequirements) {
+        const filledForFn = event.assignments.filter((a) => a.functionId === req.functionId && a.memberId).length;
+        if (filledForFn < req.requiredQuantity) mandatoryUnfilled += req.requiredQuantity - filledForFn;
+      }
+      if (mandatoryUnfilled === 0) continue;
+
+      if (filledTotal === 0) {
+        detected.push({
+          category: "MIDIA_ADESF",
+          severity: "URGENTE",
+          title: `Evento sem nenhuma cobertura: ${event.name}`,
+          message: `Nenhuma vaga preenchida para o evento de ${formatDate(event.startAt)}.`,
+          relatedEntityType: "MediaEventCoverage",
+          relatedEntityId: event.id,
+        });
+      } else {
+        detected.push({
+          category: "MIDIA_ADESF",
+          severity: "ATENCAO",
+          title: `Escala incompleta: ${event.name}`,
+          message: `${mandatoryUnfilled} vaga(s) obrigatória(s) sem preenchimento antes de ${formatDate(event.startAt)}.`,
+          relatedEntityType: "MediaEventCoverage",
+          relatedEntityId: event.id,
+        });
+      }
+    }
+
+    // 3: trocas aguardando decisão da liderança.
+    const pendingSwaps = await db.mediaSwapRequest.findMany({
+      where: { organizationId, status: "PENDING_LEADER" },
+      include: { assignment: { include: { event: true, function: true } } },
+    });
+    for (const swap of pendingSwaps) {
+      detected.push({
+        category: "MIDIA_ADESF",
+        severity: "ATENCAO",
+        title: `Troca aguardando aprovação: ${swap.assignment.function.name}`,
+        message: `Solicitação de troca para ${swap.assignment.event.name} (${formatDate(swap.assignment.event.startAt)}) aguarda decisão da liderança.`,
+        relatedEntityType: "MediaSwapRequest",
+        relatedEntityId: swap.id,
+      });
+    }
+
+    // 4: confirmações pendentes dentro do prazo configurado em Operações.
+    const pendingConfirmations = await db.mediaAttendance.findMany({
+      where: {
+        confirmationStatus: "PENDING",
+        assignment: { memberId: { not: null }, event: { organizationId, startAt: { gte: now, lte: confirmationWindowEnd } } },
+      },
+      include: { assignment: { include: { event: true, function: true, member: { include: { user: { select: { name: true } } } } } } },
+    });
+    for (const att of pendingConfirmations) {
+      detected.push({
+        category: "MIDIA_ADESF",
+        severity: "ATENCAO",
+        title: `Confirmação pendente: ${att.assignment.member?.user.name ?? "Membro"}`,
+        message: `${att.assignment.function.name} em ${att.assignment.event.name} (${formatDate(att.assignment.event.startAt)}) ainda sem confirmação.`,
+        relatedEntityType: "MediaAttendanceConfirmation",
+        relatedEntityId: att.id,
+      });
+    }
+
+    // 5: pessoa escalada que depois declarou indisponibilidade no mesmo horário.
+    const activeAssignments = await db.mediaScheduleAssignment.findMany({
+      where: { memberId: { not: null }, status: { in: ["ASSIGNED", "CONFIRMED"] }, event: { organizationId, startAt: { gte: now } } },
+      include: { event: true, function: true, member: { include: { user: { select: { name: true } } } } },
+    });
+    for (const a of activeAssignments) {
+      const availability = await getMemberAvailabilityState(a.memberId!, a.event.startAt, a.event.endAt);
+      if (availability === "UNAVAILABLE") {
+        detected.push({
+          category: "MIDIA_ADESF",
+          severity: "URGENTE",
+          title: `Pessoa indisponível escalada: ${a.member?.user.name ?? "Membro"}`,
+          message: `${a.function.name} em ${a.event.name} (${formatDate(a.event.startAt)}) — o membro informou indisponibilidade nesse horário.`,
+          relatedEntityType: "MediaScheduleAssignment",
+          relatedEntityId: a.id,
+        });
+      }
+    }
+
+    // 6: evento nas próximas 24h com algum responsável ainda sem confirmar.
+    const eventsTomorrow = await db.mediaEvent.findMany({
+      where: { organizationId, startAt: { gte: now, lte: tomorrowEnd }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
+      include: { assignments: { include: { attendance: true } } },
+    });
+    for (const event of eventsTomorrow) {
+      const hasPending = event.assignments.some((a) => a.memberId && (!a.attendance || a.attendance.confirmationStatus === "PENDING"));
+      if (hasPending) {
+        detected.push({
+          category: "MIDIA_ADESF",
+          severity: "URGENTE",
+          title: `Evento em breve sem confirmação: ${event.name}`,
+          message: `${formatDate(event.startAt)} — ainda há responsáveis sem confirmar presença.`,
+          relatedEntityType: "MediaEventTomorrow",
+          relatedEntityId: event.id,
+        });
+      }
+    }
   }
 
   return detected;

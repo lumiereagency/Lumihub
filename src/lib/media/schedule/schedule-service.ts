@@ -123,13 +123,14 @@ export async function assignScheduleSlot(
   memberId: string,
   actorUserId: string,
   organizationId: string,
+  options?: { aiGenerated?: boolean },
 ): Promise<void> {
   const assignment = await db.mediaScheduleAssignment.upsert({
     where: { scheduleId_eventId_functionId_slotIndex: { scheduleId, eventId, functionId, slotIndex } },
     create: { scheduleId, eventId, functionId, slotIndex },
     update: {},
   });
-  await setAssignmentMember(assignment.id, memberId, actorUserId, organizationId);
+  await setAssignmentMember(assignment.id, memberId, actorUserId, organizationId, options);
 }
 
 export async function clearScheduleSlot(
@@ -262,17 +263,22 @@ export async function setAssignmentMember(
   memberId: string,
   actorUserId: string,
   organizationId: string,
+  options?: { aiGenerated?: boolean },
 ): Promise<void> {
   const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({
     where: { id: assignmentId },
     include: { event: true, function: true, schedule: true },
   });
   const previousMemberId = assignment.memberId;
+  // Qualquer preenchimento manual (options ausente) sempre limpa o marcador
+  // de IA — a partir do momento em que o líder mexe na vaga, ela deixa de
+  // ser "sugestão automática" mesmo que o membro escolhido seja o mesmo.
+  const aiGenerated = options?.aiGenerated ?? false;
 
   await db.$transaction(async (tx) => {
     await tx.mediaScheduleAssignment.update({
       where: { id: assignmentId },
-      data: { memberId, status: "ASSIGNED", assignedByUserId: actorUserId, assignedAt: new Date() },
+      data: { memberId, status: "ASSIGNED", assignedByUserId: actorUserId, assignedAt: new Date(), aiGenerated },
     });
     await tx.mediaAttendance.upsert({
       where: { assignmentId },
@@ -287,7 +293,7 @@ export async function setAssignmentMember(
     action: previousMemberId ? "MEDIA_ASSIGNMENT_MEMBER_REPLACED" : "MEDIA_ASSIGNMENT_FILLED",
     entityType: "MediaScheduleAssignment",
     entityId: assignmentId,
-    metadata: { eventId: assignment.eventId, functionId: assignment.functionId, previousMemberId, memberId },
+    metadata: { eventId: assignment.eventId, functionId: assignment.functionId, previousMemberId, memberId, aiGenerated },
   });
 
   const isPublished = assignment.schedule.status === "PUBLISHED";
@@ -339,4 +345,39 @@ export async function clearAssignmentMember(assignmentId: string, actorUserId: s
     entityId: assignmentId,
     metadata: { previousMemberId: assignment.memberId },
   });
+}
+
+// Carga de trabalho no período (§7 — critério "carga de trabalho" da IA, e
+// reaproveitado pelos dashboards da Fase 03 §22/§24). Conta qualquer
+// atribuição que de fato ocupou o membro (inclui SWAP_PENDING/ABSENT — só
+// UNASSIGNED não conta), nunca apenas as publicadas, para balancear também
+// dentro de uma escala ainda em rascunho.
+export async function countMemberAssignmentsInPeriod(memberId: string, periodStart: Date, periodEnd: Date): Promise<number> {
+  return db.mediaScheduleAssignment.count({
+    where: {
+      memberId,
+      status: { not: "UNASSIGNED" },
+      event: { startAt: { gte: periodStart, lte: periodEnd } },
+    },
+  });
+}
+
+// Recência (§7): dias desde a última vez em que o membro foi de fato
+// escalado, olhando para TODO o histórico (não só o período da escala
+// atual) e sempre para eventos anteriores a `beforeDate`. Retorna null
+// quando o membro nunca foi escalado — a IA trata isso como "prioridade
+// máxima de recência" (nunca escalado é sempre pelo menos tão urgente
+// quanto o caso mais antigo encontrado).
+export async function daysSinceLastAssignment(memberId: string, beforeDate: Date): Promise<number | null> {
+  const last = await db.mediaScheduleAssignment.findFirst({
+    where: {
+      memberId,
+      status: { not: "UNASSIGNED" },
+      event: { startAt: { lt: beforeDate } },
+    },
+    include: { event: true },
+    orderBy: { event: { startAt: "desc" } },
+  });
+  if (!last) return null;
+  return Math.floor((beforeDate.getTime() - last.event.startAt.getTime()) / (24 * 60 * 60 * 1000));
 }

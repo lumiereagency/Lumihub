@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { createMonthlySchedule, assignScheduleSlot, clearScheduleSlot, publishSchedule } from "@/lib/media/schedule/schedule-service";
-import { findEligibleMembers, type EligibleMemberCandidate } from "@/lib/media/schedule/conflict-service";
+import { findEligibleMembers } from "@/lib/media/schedule/conflict-service";
+import { rankEligibleMembers, type RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
 import { createMonthlyScheduleSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -31,13 +32,17 @@ export async function createMonthlyScheduleAction(_prev: ActionState, formData: 
   return { success: "Escala mensal criada." };
 }
 
-export async function getEligibleMembersForSlotAction(eventId: string, functionId: string): Promise<EligibleMemberCandidate[]> {
+export async function getEligibleMembersForSlotAction(scheduleId: string, eventId: string, functionId: string): Promise<RankedEligibleMember[]> {
   const user = await requirePermission(EDIT);
 
-  const event = await db.mediaEvent.findFirst({ where: { id: eventId, organizationId: user.organizationId } });
-  if (!event) return [];
+  const [schedule, event] = await Promise.all([
+    db.mediaSchedule.findFirst({ where: { id: scheduleId, organizationId: user.organizationId } }),
+    db.mediaEvent.findFirst({ where: { id: eventId, organizationId: user.organizationId } }),
+  ]);
+  if (!schedule || !event) return [];
 
-  return findEligibleMembers(user.organizationId, functionId, event.startAt, event.endAt, eventId);
+  const candidates = await findEligibleMembers(user.organizationId, functionId, event.startAt, event.endAt, eventId);
+  return rankEligibleMembers(user.organizationId, candidates, functionId, schedule.periodStart, schedule.periodEnd, event.startAt);
 }
 
 export async function assignScheduleSlotAction(

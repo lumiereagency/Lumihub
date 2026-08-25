@@ -133,6 +133,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Equipe", href: "/midia-adesf/equipe", icon: Users, permission: permKey("MEDIA_ADESF", "VIEW") },
       { label: "Solicitações", href: "/midia-adesf/solicitacoes", icon: Send, permission: permKey("MEDIA_ADESF", "VIEW") },
       { label: "Histórico", href: "/midia-adesf/historico", icon: FileText, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Relatórios", href: "/midia-adesf/relatorios", icon: BarChart3, permission: permKey("MEDIA_ADESF", "MANAGE") },
       { label: "Configurações", href: "/midia-adesf/configuracoes", icon: Settings, permission: permKey("MEDIA_ADESF", "MANAGE") },
     ],
   },
