@@ -48,19 +48,6 @@ async function verifySmtp(creds: Record<string, string>): Promise<VerifyResult> 
   }
 }
 
-async function verifyWhatsApp(creds: Record<string, string>): Promise<VerifyResult> {
-  try {
-    const res = await fetchWithTimeout(
-      `https://graph.facebook.com/v19.0/${creds.phoneNumberId}?fields=id&access_token=${encodeURIComponent(creds.accessToken)}`,
-    );
-    if (res.ok) return { ok: true, message: "Número validado na WhatsApp Cloud API." };
-    const body = await res.text();
-    return { ok: false, message: `WhatsApp Cloud API recusou o token (HTTP ${res.status}): ${body.slice(0, 200)}` };
-  } catch (err) {
-    return { ok: false, message: `Falha ao contatar a WhatsApp Cloud API: ${(err as Error).message}` };
-  }
-}
-
 async function verifyBearer(url: string, token: string, providerLabel: string): Promise<VerifyResult> {
   try {
     const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -73,7 +60,6 @@ async function verifyBearer(url: string, token: string, providerLabel: string): 
 
 const VERIFIERS: Partial<Record<IntegrationProviderKey, Verifier>> = {
   EMAIL_SMTP: verifySmtp,
-  WHATSAPP_BUSINESS: verifyWhatsApp,
   OPENAI: (creds) => verifyBearer("https://api.openai.com/v1/models", creds.apiKey, "OpenAI"),
   ANTHROPIC: async (creds) => {
     try {

@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { getProviderDefinition } from "@/lib/integrations/providers";
+import { disconnectWhatsAppSession } from "@/lib/integrations/whatsapp-baileys";
 import { verifyIntegration } from "@/lib/integrations/verifiers";
 import { encryptSecret, maskSecret } from "@/lib/integrations/vault";
 import type { ActionState } from "@/lib/actions/auth-actions";
@@ -109,6 +110,10 @@ export async function disconnectIntegrationAction(integrationId: string): Promis
 
   const integration = await db.integration.findFirst({ where: { id: integrationId, organizationId: user.organizationId } });
   if (!integration) return;
+
+  if (integration.provider === "WHATSAPP_BUSINESS") {
+    await disconnectWhatsAppSession(user.organizationId);
+  }
 
   await db.integrationCredential.deleteMany({ where: { integrationId } });
   await db.integration.update({

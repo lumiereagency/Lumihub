@@ -19,6 +19,9 @@ export interface ProviderDefinition {
   // não podem ser verificados só com os campos salvos aqui — a conexão fica
   // sempre PENDENTE até uma fase futura implementar o fluxo de OAuth completo.
   oauthOnly?: boolean;
+  // Conexão via QR code (Baileys/WhatsApp Web) — não tem campos de
+  // formulário, a UI mostra o pareamento em vez do IntegrationForm genérico.
+  qrOnly?: boolean;
 }
 
 export const PROVIDER_CATALOG: ProviderDefinition[] = [
@@ -47,12 +50,10 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
   {
     key: "WHATSAPP_BUSINESS",
     category: "COMUNICACAO",
-    label: "WhatsApp Business",
-    description: "Envio de lembretes e mensagens via WhatsApp Cloud API.",
-    fields: [
-      { key: "phoneNumberId", label: "Phone Number ID", type: "text", secret: false, required: true },
-      { key: "accessToken", label: "Access Token", type: "password", secret: true, required: true },
-    ],
+    label: "WhatsApp",
+    description: "Envio de lembretes e mensagens via WhatsApp Web (pareado por QR code).",
+    qrOnly: true,
+    fields: [],
   },
   {
     key: "EMAIL_SMTP",

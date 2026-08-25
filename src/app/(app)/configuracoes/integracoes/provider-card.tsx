@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import type { ProviderDefinition } from "@/lib/integrations/providers";
 import { IntegrationForm } from "./integration-form";
+import { WhatsAppQrPairing } from "./whatsapp-qr-pairing";
 
 export interface IntegrationState {
   id: string;
@@ -81,13 +82,17 @@ export function ProviderCard({
       )}
 
       <Drawer open={open} onClose={() => setOpen(false)} title={provider.label} description={provider.description}>
-        <IntegrationForm
-          provider={provider}
-          currentConfig={state?.config ?? {}}
-          credentialPreviews={state?.credentialPreviews ?? {}}
-          oauthRedirectUri={oauthRedirectUri}
-          onSuccess={() => setOpen(false)}
-        />
+        {provider.qrOnly ? (
+          <WhatsAppQrPairing />
+        ) : (
+          <IntegrationForm
+            provider={provider}
+            currentConfig={state?.config ?? {}}
+            credentialPreviews={state?.credentialPreviews ?? {}}
+            oauthRedirectUri={oauthRedirectUri}
+            onSuccess={() => setOpen(false)}
+          />
+        )}
       </Drawer>
     </Card>
   );
