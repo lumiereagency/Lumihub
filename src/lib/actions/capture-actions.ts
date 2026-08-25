@@ -110,7 +110,7 @@ async function syncCaptureAssignments(
         organizationId,
         userId: wanted.userId,
         title: "Nova captação para aceitar",
-        body: `Você foi escalado como ${CAPTURE_CREW_ROLE_LABELS[role]} para a captação de ${capture.date.toLocaleDateString("pt-BR")} às ${capture.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${capture.location ? ` — ${capture.location}` : ""}. Aceite ou recuse na sua tela inicial.`,
+        body: `Você foi escalado como ${CAPTURE_CREW_ROLE_LABELS[role]} para a captação de ${capture.date.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} às ${capture.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}${capture.location ? ` — ${capture.location}` : ""}. Aceite ou recuse na sua tela inicial.`,
         link: "/dashboard",
       },
     });

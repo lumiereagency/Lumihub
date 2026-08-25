@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseLocalDateTime } from "@/lib/datetime";
 
 export const CALENDAR_EVENT_TYPES = [
   "CAPTACAO",
@@ -32,8 +33,8 @@ const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v
 export const calendarEventSchema = z.object({
   title: z.string().trim().min(1, "Informe o título do evento."),
   type: z.enum(MANUALLY_CREATABLE_TYPES).default("REUNIAO"),
-  startAt: z.coerce.date({ error: "Informe a data e horário do evento." }),
-  endAt: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+  startAt: z.preprocess(parseLocalDateTime, z.coerce.date({ error: "Informe a data e horário do evento." })),
+  endAt: z.preprocess((v) => parseLocalDateTime(emptyToUndefined(v)), z.coerce.date().optional()),
   allDay: z.boolean().default(false),
   clientId: z.preprocess(emptyToUndefined, z.string().optional()),
   projectId: z.preprocess(emptyToUndefined, z.string().optional()),

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { CAPTURE_STATUSES, CAPTURE_STATUS_LABELS } from "@/lib/validation/captures";
+import { toBrazilDateTimeInputValue } from "@/lib/datetime";
 import {
   CAPTURE_CREW_ROLES,
   CAPTURE_CREW_ROLE_LABELS,
@@ -35,11 +36,6 @@ export interface CaptureFormValues {
 }
 
 const initialState: ActionState = {};
-
-function toDateTimeInputValue(iso: string | null): string {
-  if (!iso) return "";
-  return iso.slice(0, 16);
-}
 
 export function CaptureForm({
   action,
@@ -95,7 +91,7 @@ export function CaptureForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Data e horário" name="date" type="datetime-local" required defaultValue={toDateTimeInputValue(defaultValues?.date ?? null)} />
+        <Input label="Data e horário" name="date" type="datetime-local" required defaultValue={toBrazilDateTimeInputValue(defaultValues?.date ?? null)} />
         <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "PLANEJADA"}>
           {CAPTURE_STATUSES.map((s) => (
             <option key={s} value={s}>

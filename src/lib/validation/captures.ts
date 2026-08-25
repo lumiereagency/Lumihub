@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseLocalDateTime } from "@/lib/datetime";
 
 export const CAPTURE_STATUSES = ["PLANEJADA", "CONFIRMADA", "REALIZADA", "EM_EDICAO", "ENTREGUE"] as const;
 
@@ -15,7 +16,7 @@ const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v
 export const captureSchema = z.object({
   clientId: z.string().min(1, "Selecione um cliente."),
   projectId: z.preprocess(emptyToUndefined, z.string().optional()),
-  date: z.coerce.date({ error: "Informe a data da captação." }),
+  date: z.preprocess(parseLocalDateTime, z.coerce.date({ error: "Informe a data da captação." })),
   location: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   status: z.enum(CAPTURE_STATUSES).default("PLANEJADA"),
   videomaker: z.preprocess(emptyToUndefined, z.string().trim().optional()),

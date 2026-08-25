@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { MANUALLY_CREATABLE_TYPES, CALENDAR_EVENT_TYPE_LABELS } from "@/lib/validation/calendar";
+import { toBrazilDateTimeInputValue } from "@/lib/datetime";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,10 +25,6 @@ export interface EventFormValues {
 
 const initialState: ActionState = {};
 
-function toDateTimeInputValue(iso: string | null): string {
-  if (!iso) return "";
-  return iso.slice(0, 16);
-}
 
 export function EventForm({
   action,
@@ -82,8 +79,8 @@ export function EventForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Início" name="startAt" type="datetime-local" required defaultValue={toDateTimeInputValue(defaultValues?.startAt ?? null)} />
-        <Input label="Término (opcional)" name="endAt" type="datetime-local" defaultValue={toDateTimeInputValue(defaultValues?.endAt ?? null)} />
+        <Input label="Início" name="startAt" type="datetime-local" required defaultValue={toBrazilDateTimeInputValue(defaultValues?.startAt ?? null)} />
+        <Input label="Término (opcional)" name="endAt" type="datetime-local" defaultValue={toBrazilDateTimeInputValue(defaultValues?.endAt ?? null)} />
       </div>
 
       <label className="flex items-center gap-2 text-sm text-text-secondary">
