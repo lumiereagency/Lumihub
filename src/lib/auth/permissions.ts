@@ -25,6 +25,7 @@ export const MODULES = [
   "INTEGRATIONS",
   "USERS",
   "SETTINGS",
+  "MEDIA_ADESF",
 ] as const;
 
 export type Module = (typeof MODULES)[number];
@@ -59,6 +60,7 @@ export const MODULE_LABELS: Record<Module, string> = {
   INTEGRATIONS: "Integrações",
   USERS: "Usuários",
   SETTINGS: "Configurações",
+  MEDIA_ADESF: "Mídia ADESF",
 };
 
 export const ACTION_LABELS: Record<Action, string> = {
@@ -161,6 +163,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM">, string
     ...grant("DOCUMENTS", RO),
     ...grant("AI", RO),
   ],
+};
+
+// Acesso ao Portal Mídia ADESF (equipe de mídia da igreja) NÃO passa pelo
+// catálogo de Role/RolePermission acima — esse catálogo continua reservado
+// ao acesso administrativo/gerencial do LUMIBASE (módulo MEDIA_ADESF, para
+// quem gerencia o time). O acesso do próprio membro de mídia ao seu portal
+// (`/midia/*`) é aditivo: derivado do registro `MediaMember` do usuário e
+// unido ao conjunto de permissões da sessão em `getCurrentUser()`, sem
+// sobrepor o `roleId` (Fase 46 do módulo — ver ARCHITECTURE.md / spec).
+export const MEDIA_PORTAL_ACCESS = "MEDIA_PORTAL_ACCESS";
+export const MEDIA_PORTAL_TEAM_VIEW = "MEDIA_PORTAL_TEAM_VIEW";
+
+export const MEDIA_MEMBER_PORTAL_PERMISSIONS: Record<"MEMBRO" | "LIDER", string[]> = {
+  MEMBRO: [MEDIA_PORTAL_ACCESS],
+  LIDER: [MEDIA_PORTAL_ACCESS, MEDIA_PORTAL_TEAM_VIEW],
 };
 
 export const ROLE_LABELS: Record<RoleKey, string> = {

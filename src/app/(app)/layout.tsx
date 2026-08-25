@@ -1,4 +1,6 @@
-import { requireUser } from "@/lib/auth/guard";
+import { redirect } from "next/navigation";
+import { requireUser, hasPermission } from "@/lib/auth/guard";
+import { permKey } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 
@@ -8,6 +10,16 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+
+  // Usuário sem NENHUM acesso ao LUMIBASE (ex: voluntário de mídia puro,
+  // convidado só para o Portal Mídia ADESF) não deve conseguir navegar pelas
+  // rotas do LUMIBASE mesmo entrando pelo /login normal — enforced aqui, no
+  // layout, e não só no redirect pós-login, para cobrir qualquer rota deste
+  // grupo diretamente por URL.
+  if (!hasPermission(user, permKey("DASHBOARD", "VIEW")) && user.media) {
+    redirect("/midia/inicio");
+  }
+
   const permissions = Array.from(user.permissions);
 
   return (

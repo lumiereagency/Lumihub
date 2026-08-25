@@ -27,6 +27,8 @@ import {
   Shield,
   Settings,
   UserCircle,
+  Clapperboard,
+  CalendarClock,
 } from "lucide-react";
 import { permKey } from "@/lib/auth/permissions";
 
@@ -119,6 +121,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Metas", href: "/metas", icon: Flag, permission: permKey("GOALS", "VIEW") },
       { label: "Relatórios", href: "/relatorios", icon: BarChart3, permission: permKey("REPORTS", "VIEW") },
       { label: "Documentos", href: "/documentos", icon: FolderOpen, permission: permKey("DOCUMENTS", "VIEW") },
+    ],
+  },
+  {
+    label: "Mídia ADESF",
+    items: [
+      { label: "Dashboard", href: "/midia-adesf", icon: Clapperboard, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Equipe", href: "/midia-adesf/equipe", icon: Users, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Escalas", href: "/midia-adesf/escalas", icon: CalendarClock, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Cultos", href: "/midia-adesf/cultos", icon: Calendar, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Calendário", href: "/midia-adesf/calendario", icon: Calendar, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Solicitações", href: "/midia-adesf/solicitacoes", icon: Send, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Histórico", href: "/midia-adesf/historico", icon: FileText, permission: permKey("MEDIA_ADESF", "VIEW") },
+      { label: "Configurações", href: "/midia-adesf/configuracoes", icon: Settings, permission: permKey("MEDIA_ADESF", "MANAGE") },
     ],
   },
   {

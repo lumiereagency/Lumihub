@@ -9,7 +9,7 @@ import { FormMessage } from "@/components/ui/form-message";
 
 const initialState: ActionState = {};
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({ token, loginHref = "/login" }: { token: string; loginHref?: string }) {
   const [state, formAction, pending] = useActionState(resetPasswordAction, initialState);
 
   return (
@@ -38,7 +38,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </Button>
         </>
       )}
-      <Link href="/login" className="text-center text-sm text-accent-light hover:underline">
+      <Link href={loginHref} className="text-center text-sm text-accent-light hover:underline">
         Voltar para o login
       </Link>
     </form>

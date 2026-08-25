@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
-import { createSession, destroyCurrentSession, getRequestMeta, getCurrentUser } from "@/lib/auth/session";
+import { createSession, destroyCurrentSession, getRequestMeta, getCurrentUser, getPostLoginRedirect } from "@/lib/auth/session";
 import { isLoginRateLimited, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { audit } from "@/lib/audit";
 import { sendEmail } from "@/lib/integrations/email";
@@ -73,7 +73,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     entityId: user.id,
   });
 
-  redirect("/dashboard");
+  redirect(await getPostLoginRedirect(user.id));
 }
 
 export async function logoutAction() {
@@ -150,7 +150,7 @@ export async function resetPasswordAction(
 
   const resetToken = await db.passwordResetToken.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    include: { user: { include: { mediaMember: true } } },
   });
 
   if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
@@ -158,6 +158,7 @@ export async function resetPasswordAction(
   }
 
   const passwordHash = await hashPassword(password);
+  const mediaMember = resetToken.user.mediaMember;
 
   await db.$transaction([
     db.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
@@ -166,6 +167,19 @@ export async function resetPasswordAction(
       where: { userId: resetToken.userId, revokedAt: null },
       data: { revokedAt: new Date() },
     }),
+    // Primeira definição de senha de um convite do Mídia ADESF: ativa o
+    // acesso ao portal neste mesmo passo (sem isso o vínculo ficaria
+    // eternamente em INVITED, já que não há uma etapa de "aceitar convite"
+    // separada — definir a senha JÁ é o aceite).
+    ...(mediaMember && mediaMember.status === "INVITED"
+      ? [
+          db.mediaMember.update({ where: { id: mediaMember.id }, data: { status: "ACTIVE" as const, joinedAt: new Date() } }),
+          db.mediaInvitation.updateMany({
+            where: { organizationId: resetToken.user.organizationId, email: resetToken.user.email, status: "INVITED" },
+            data: { status: "ACCEPTED" as const, acceptedAt: new Date() },
+          }),
+        ]
+      : []),
   ]);
 
   await audit({

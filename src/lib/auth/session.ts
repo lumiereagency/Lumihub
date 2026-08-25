@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session-cookie";
+import { MEDIA_MEMBER_PORTAL_PERMISSIONS } from "@/lib/auth/permissions";
+import type { MediaMemberRole, MediaMemberStatus } from "@/generated/prisma/enums";
 
 export { SESSION_COOKIE_NAME };
 const DEFAULT_SESSION_HOURS = 12;
@@ -58,6 +60,7 @@ export type CurrentUser = {
   permissions: Set<string>;
   sessionId: string;
   isOwner: boolean;
+  media: { id: string; role: MediaMemberRole; status: MediaMemberStatus } | null;
 };
 
 // Valida a sessão a partir do cookie e retorna o usuário autenticado com suas
@@ -77,6 +80,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
           role: {
             include: { permissions: { include: { permission: true } } },
           },
+          mediaMember: { select: { id: true, role: true, status: true } },
         },
       },
     },
@@ -98,6 +102,19 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     });
   }
 
+  const permissions = new Set(session.user.role.permissions.map((rp) => rp.permission.key));
+
+  // Acesso ao portal Mídia ADESF é aditivo: só é unido ao conjunto de
+  // permissões da sessão quando o vínculo está ACTIVE — um membro
+  // INACTIVE/SUSPENDED perde o acesso ao portal mesmo que a conta LUMIBASE
+  // continue ativa (ex: usuário também é da equipe comercial).
+  const mediaMember = session.user.mediaMember;
+  if (mediaMember && mediaMember.status === "ACTIVE") {
+    for (const key of MEDIA_MEMBER_PORTAL_PERMISSIONS[mediaMember.role]) {
+      permissions.add(key);
+    }
+  }
+
   return {
     id: session.user.id,
     organizationId: session.user.organizationId,
@@ -105,10 +122,33 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: session.user.email,
     avatarUrl: session.user.avatarUrl,
     role: { id: session.user.role.id, key: session.user.role.key, name: session.user.role.name },
-    permissions: new Set(session.user.role.permissions.map((rp) => rp.permission.key)),
+    permissions,
     sessionId: session.id,
     isOwner: session.user.isOwner,
+    media: mediaMember ? { id: mediaMember.id, role: mediaMember.role, status: mediaMember.status } : null,
   };
+}
+
+// Determina o destino pós-login sem depender de reler o cookie recém-emitido
+// dentro da mesma Server Action (evita depender de comportamento implícito
+// do Next quanto a cookies mutáveis). Usuário com acesso normal ao LUMIBASE
+// (DASHBOARD_VIEW) sempre vai para o dashboard, mesmo que também seja membro
+// de mídia — o portal fica acessível pela navegação/():/midia/login separado.
+// Só quem NÃO tem acesso ao LUMIBASE mas tem vínculo ativo de mídia vai
+// direto para o portal.
+export async function getPostLoginRedirect(userId: string): Promise<string> {
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: userId },
+    include: {
+      role: { include: { permissions: { include: { permission: true } } } },
+      mediaMember: { select: { status: true } },
+    },
+  });
+
+  const hasDashboardAccess = user.role.permissions.some((rp) => rp.permission.key === "DASHBOARD_VIEW");
+  if (hasDashboardAccess) return "/dashboard";
+  if (user.mediaMember?.status === "ACTIVE") return "/midia/inicio";
+  return "/dashboard";
 }
 
 export async function destroyCurrentSession() {

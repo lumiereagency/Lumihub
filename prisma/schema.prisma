@@ -60,6 +60,10 @@ model Organization {
   aiConversations     AiConversation[]
   aiInsights          AiInsight[]
   captureAssignments  CaptureAssignment[]
+  mediaMembers        MediaMember[]
+  mediaFunctions      MediaFunction[]
+  mediaInvitations    MediaInvitation[]
+  mediaBrandSettings  MediaBrandSettings?
 
   @@map("organizations")
 }
@@ -149,6 +153,8 @@ model User {
   aiConversations       AiConversation[]
   connectedIntegrations Integration[]
   captureAssignments    CaptureAssignment[]
+  mediaMember           MediaMember?
+  mediaInvitationsSent  MediaInvitation[]    @relation("MediaInvitationInviter")
 
   @@index([organizationId])
   @@map("users")
@@ -1291,4 +1297,166 @@ model AiInsight {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("ai_insights")
+}
+
+// =========================================================================
+// MÍDIA ADESF (Fase 01) — módulo dentro da mesma organização/autenticação
+// da LUMIBASE. Um usuário existente ganha acesso à Mídia ADESF via
+// MediaMember (união de permissões em @/lib/auth/session), sem precisar
+// trocar o Role principal dele — evita o anti-padrão de um único
+// "is_media_member = true" e permite múltiplos contextos no futuro.
+// =========================================================================
+
+enum MediaMemberRole {
+  LIDER
+  MEMBRO
+}
+
+enum MediaMemberStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model MediaMember {
+  id                  String            @id @default(cuid())
+  organizationId      String
+  userId              String            @unique
+  role                MediaMemberRole   @default(MEMBRO)
+  status              MediaMemberStatus @default(INVITED)
+  phone               String?
+  administrativeNotes String?
+  invitedByUserId     String?
+  joinedAt            DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  functions    MediaMemberFunction[]
+  availabilityRecurring MediaAvailabilityRecurring[]
+  availabilityExceptions MediaAvailabilityException[]
+
+  @@index([organizationId, status])
+  @@map("media_members")
+}
+
+model MediaFunction {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  active         Boolean  @default(true)
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberFunctions MediaMemberFunction[]
+
+  @@unique([organizationId, name])
+  @@map("media_functions")
+}
+
+enum MediaFunctionAssignmentStatus {
+  EM_TREINAMENTO
+  HABILITADO
+  AVANCADO
+}
+
+model MediaMemberFunction {
+  id         String                        @id @default(cuid())
+  memberId   String
+  functionId String
+  isPrimary  Boolean                       @default(false)
+  status     MediaFunctionAssignmentStatus @default(HABILITADO)
+  createdAt  DateTime                      @default(now())
+  updatedAt  DateTime                      @updatedAt
+
+  member   MediaMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  function MediaFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, functionId])
+  @@map("media_member_functions")
+}
+
+// Disponibilidade recorrente semanal — alimenta a futura IA de escala.
+model MediaAvailabilityRecurring {
+  id        String   @id @default(cuid())
+  memberId  String
+  dayOfWeek Int // 0 = domingo ... 6 = sábado
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+  available Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member MediaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@map("media_availability_recurring")
+}
+
+// Exceções pontuais (uma data específica), sem afetar a recorrência.
+model MediaAvailabilityException {
+  id        String   @id @default(cuid())
+  memberId  String
+  date      DateTime @db.Date
+  startTime String
+  endTime   String
+  available Boolean  @default(true)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member MediaMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, date])
+  @@map("media_availability_exceptions")
+}
+
+model MediaBrandSettings {
+  id              String   @id @default(cuid())
+  organizationId  String   @unique
+  environmentName String   @default("MÍDIA ADESF")
+  logoUrl         String?
+  logoLightUrl    String?
+  logoDarkUrl     String?
+  faviconUrl      String?
+  primaryColor    String   @default("#16A34A")
+  secondaryColor  String   @default("#0F766E")
+  gradientStart   String   @default("#16A34A")
+  gradientEnd     String   @default("#22D3A8")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("media_brand_settings")
+}
+
+enum MediaInvitationStatus {
+  INVITED
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model MediaInvitation {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  email           String
+  role            MediaMemberRole        @default(MEMBRO)
+  invitedByUserId String
+  status          MediaInvitationStatus  @default(INVITED)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime               @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("MediaInvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email])
+  @@map("media_invitations")
 }
