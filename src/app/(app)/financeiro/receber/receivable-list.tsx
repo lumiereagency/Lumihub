@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus, ArrowDownCircle, ExternalLink } from "lucide-react";
-import { createReceivableAction, updateReceivableAction, cancelReceivableAction } from "@/lib/actions/receivable-actions";
+import { createReceivableAction, updateReceivableAction, cancelReceivableAction, undoPaymentAction } from "@/lib/actions/receivable-actions";
 import { RECEIVABLE_STATUS_LABELS } from "@/lib/validation/receivables";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Drawer } from "@/components/ui/drawer";
@@ -177,14 +177,30 @@ export function ReceivableList({
               <ConfirmPaymentForm receivableId={editing.id} defaultPaymentMethod={editing.paymentMethod} />
             )}
             {editing.status === "PAGO" && (
-              <div className="flex flex-col gap-1 rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
-                <span>Pago em {editing.paidAt ? formatDate(new Date(editing.paidAt)) : "—"}</span>
-                {editing.proofUrl && (
-                  <a href={editing.proofUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline">
-                    <ExternalLink size={12} /> Ver comprovante
-                  </a>
+              <>
+                <div className="flex flex-col gap-1 rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
+                  <span>Pago em {editing.paidAt ? formatDate(new Date(editing.paidAt)) : "—"}</span>
+                  {editing.proofUrl && (
+                    <a href={editing.proofUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline">
+                      <ExternalLink size={12} /> Ver comprovante
+                    </a>
+                  )}
+                </div>
+                {permissions.canEdit && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      if (confirm("Desfazer o pagamento? A cobrança volta para pendente e sai do Saldo atual.")) {
+                        startTransition(async () => {
+                          await undoPaymentAction(editing.id);
+                        });
+                      }
+                    }}
+                  >
+                    Desfazer pagamento
+                  </Button>
                 )}
-              </div>
+              </>
             )}
 
             {(editing.status === "PENDENTE" || editing.status === "ATRASADO") && (

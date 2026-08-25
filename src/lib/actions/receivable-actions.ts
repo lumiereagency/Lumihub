@@ -186,6 +186,44 @@ export async function confirmPaymentAction(
   return { success: "Pagamento confirmado." };
 }
 
+// Desfazer pagamento (Fase 46): corrige lançamentos marcados como Pago por
+// engano — volta pra Pendente, tira do Saldo atual (que só soma o que está
+// Pago) e reabre a régua de lembretes.
+export async function undoPaymentAction(receivableId: string) {
+  const user = await requirePermission(permKey("RECEIVABLES", "EDIT"));
+
+  const existing = await db.accountReceivable.findFirst({ where: { id: receivableId, organizationId: user.organizationId } });
+  if (!existing || existing.status !== "PAGO") return;
+
+  await db.$transaction(async (tx) => {
+    await tx.accountReceivable.update({
+      where: { id: receivableId },
+      data: { status: "PENDENTE", paidAt: null, proofUrl: null },
+    });
+    if (existing.movementId) {
+      await tx.financialMovement.update({
+        where: { id: existing.movementId },
+        data: { status: "PENDENTE", paidAt: null },
+      });
+    }
+    await tx.paymentReminder.deleteMany({ where: { receivableId } });
+    await generateRemindersForReceivable(tx, receivableId);
+  });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "RECEIVABLE_PAYMENT_UNDONE",
+    entityType: "AccountReceivable",
+    entityId: receivableId,
+  });
+
+  revalidatePath("/financeiro/receber");
+  revalidatePath("/financeiro/cobrancas");
+  revalidatePath("/financeiro");
+  revalidatePath("/dashboard");
+}
+
 export async function cancelReceivableAction(receivableId: string) {
   const user = await requirePermission(permKey("RECEIVABLES", "DELETE"));
 
