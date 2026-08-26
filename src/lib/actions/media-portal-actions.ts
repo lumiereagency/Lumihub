@@ -147,3 +147,41 @@ export async function deleteMyAvailabilityExceptionAction(exceptionId: string): 
 
   revalidatePath("/midia/disponibilidade");
 }
+
+// Resposta a um culto/evento avulso (festividade, congresso) listado como
+// pendente no portal — grava como uma exceção pontual normal, mesmo destino
+// de dado que o link de WhatsApp já usava, só que sem precisar de token nem
+// de o líder disparar nada: o evento aparece sozinho assim que é criado.
+export async function respondPendingSpecialEventAction(eventId: string, available: boolean): Promise<ActionState> {
+  const user = await requireMediaMember();
+
+  const event = await db.mediaEvent.findFirst({ where: { id: eventId, organizationId: user.organizationId, recurrenceId: null } });
+  if (!event) return { error: "Evento não encontrado." };
+
+  const dateOnly = new Date(Date.UTC(event.startAt.getFullYear(), event.startAt.getMonth(), event.startAt.getDate()));
+  const endAt = event.endAt ?? new Date(event.startAt.getTime() + 60 * 60 * 1000);
+  const toUTCHHMM = (d: Date) => `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+
+  await db.mediaAvailabilityException.create({
+    data: {
+      memberId: user.media!.id,
+      date: dateOnly,
+      startTime: toUTCHHMM(event.startAt),
+      endTime: toUTCHHMM(endAt),
+      available,
+      reason: `Resposta para ${event.name}`,
+    },
+  });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: available ? "MEDIA_AVAILABILITY_SPECIAL_EVENT_YES" : "MEDIA_AVAILABILITY_SPECIAL_EVENT_NO",
+    entityType: "MediaEvent",
+    entityId: eventId,
+  });
+
+  revalidatePath("/midia/disponibilidade");
+  revalidatePath("/midia/inicio");
+  return { success: available ? "Obrigado! Disponibilidade registrada." : "Obrigado! Indisponibilidade registrada." };
+}

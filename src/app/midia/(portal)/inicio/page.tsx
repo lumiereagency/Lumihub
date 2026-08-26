@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent } from "lucide-react";
+import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent, AlertTriangle, ArrowRight } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { AssignmentCard, type AssignmentCardData } from "@/components/media/assignment-card";
+import { getWeekdayCoverageStatus, getPendingSpecialEvents } from "@/lib/media/schedule/availability-service";
 import { formatDateTime } from "@/lib/format";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -28,6 +29,11 @@ export default async function MediaPortalHomePage() {
 
   const primaryFunction = member.functions.find((f) => f.isPrimary)?.function.name ?? null;
   const enabledFunctions = member.functions.filter((f) => !f.isPrimary).map((f) => f.function.name);
+
+  const [coverage, pendingSpecialEvents] = await Promise.all([
+    getWeekdayCoverageStatus(member.id),
+    getPendingSpecialEvents(user.organizationId, member.id),
+  ]);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -85,6 +91,26 @@ export default async function MediaPortalHomePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={`Olá, ${user.name.split(" ")[0]}.`} description="Bem-vindo à Mídia ADESF." />
+
+      {(!coverage.satisfied || pendingSpecialEvents.length > 0) && (
+        <Link
+          href="/midia/disponibilidade"
+          className="flex items-center gap-3 rounded-2xl p-4 text-sm text-[var(--lh-accent-on)] transition hover:brightness-105"
+          style={{ background: "var(--lh-accent-gradient)" }}
+        >
+          <AlertTriangle size={20} className="shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold">Complete sua disponibilidade de {coverage.monthLabel}</p>
+            <p className="opacity-90">
+              {!coverage.satisfied && "Falta marcar pelo menos 1 quarta ou sexta-feira disponível este mês"}
+              {!coverage.satisfied && pendingSpecialEvents.length > 0 && " · "}
+              {pendingSpecialEvents.length > 0 &&
+                `${pendingSpecialEvents.length} culto${pendingSpecialEvents.length > 1 ? "s" : ""} especial${pendingSpecialEvents.length > 1 ? "is" : ""} aguardando sua resposta`}
+            </p>
+          </div>
+          <ArrowRight size={18} className="shrink-0" />
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard label="Escalas do mês" value={String(assignmentsThisMonth)} icon={<CalendarClock size={18} />} />

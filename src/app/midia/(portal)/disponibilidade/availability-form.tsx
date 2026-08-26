@@ -1,15 +1,47 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { updateMyAvailabilityAction, addMyAvailabilityExceptionAction, deleteMyAvailabilityExceptionAction } from "@/lib/actions/media-portal-actions";
+import { useActionState, useRef, useState, useTransition } from "react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  updateMyAvailabilityAction,
+  addMyAvailabilityExceptionAction,
+  deleteMyAvailabilityExceptionAction,
+  respondPendingSpecialEventAction,
+} from "@/lib/actions/media-portal-actions";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Badge } from "@/components/ui/badge";
+import { formatDateTime } from "@/lib/format";
 
 const initialState: ActionState = {};
 const DAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+// Mesmos dias de src/lib/media/schedule/availability-service.ts — mantidos
+// como literal aqui porque este arquivo é "use client" e não pode importar
+// código server-only.
+const WEEKDAY_COVERAGE_DAYS = [3, 5];
+
+export function WeekdayCoverageBanner({ satisfied, monthLabel }: { satisfied: boolean; monthLabel: string }) {
+  if (satisfied) {
+    return (
+      <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-text-primary">
+        <CheckCircle2 size={18} className="shrink-0 text-success" />
+        <span>Você já tem disponibilidade de meio de semana registrada para {monthLabel}. Obrigado!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-text-primary">
+      <AlertTriangle size={18} className="mt-0.5 shrink-0 text-warning" />
+      <span>
+        Falta marcar pelo menos <strong>uma quarta ou sexta-feira</strong> disponível em {monthLabel}. Pode ser um único dia específico —
+        o resto da semana continua livre para você decidir.
+      </span>
+    </div>
+  );
+}
 
 interface Slot {
   dayOfWeek: number;
@@ -51,8 +83,18 @@ export function WeeklyAvailabilityForm({ initialSlots }: { initialSlots: Slot[] 
           </thead>
           <tbody>
             {slots.map((slot) => (
-              <tr key={slot.dayOfWeek} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 text-text-primary">{DAY_LABELS[slot.dayOfWeek]}</td>
+              <tr
+                key={slot.dayOfWeek}
+                className={`border-b border-border last:border-0 ${WEEKDAY_COVERAGE_DAYS.includes(slot.dayOfWeek) ? "bg-warning/5" : ""}`}
+              >
+                <td className="px-4 py-3 text-text-primary">
+                  {DAY_LABELS[slot.dayOfWeek]}
+                  {WEEKDAY_COVERAGE_DAYS.includes(slot.dayOfWeek) && (
+                    <Badge tone="warning" className="ml-2 align-middle text-[10px] uppercase tracking-wide">
+                      meio de semana
+                    </Badge>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
@@ -143,6 +185,67 @@ export function AvailabilityExceptionsPanel({ exceptions }: { exceptions: Except
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface SpecialEvent {
+  eventId: string;
+  name: string;
+  startAt: string;
+  location: string | null;
+}
+
+export function PendingSpecialEventsPanel({ events }: { events: SpecialEvent[] }) {
+  const [pending, startTransition] = useTransition();
+  const [respondedIds, setRespondedIds] = useState<Set<string>>(new Set());
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+
+  function respond(eventId: string, available: boolean) {
+    setPendingEventId(eventId);
+    startTransition(async () => {
+      await respondPendingSpecialEventAction(eventId, available);
+      setRespondedIds((prev) => new Set(prev).add(eventId));
+      setPendingEventId(null);
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {events.map((event) => {
+        const answered = respondedIds.has(event.eventId);
+        return (
+          <div key={event.eventId} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3 text-sm">
+            <div>
+              <span className="font-medium text-text-primary">{event.name}</span>{" "}
+              <span className="text-text-tertiary">
+                {formatDateTime(new Date(event.startAt))}
+                {event.location ? ` · ${event.location}` : ""}
+              </span>
+            </div>
+            {answered ? (
+              <Badge tone="success">
+                <CheckCircle2 size={12} /> Respondido
+              </Badge>
+            ) : (
+              <div className="flex gap-2">
+                <Button type="button" size="sm" disabled={pending && pendingEventId === event.eventId} onClick={() => respond(event.eventId, true)}>
+                  Disponível
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={pending && pendingEventId === event.eventId}
+                  onClick={() => respond(event.eventId, false)}
+                >
+                  Não vou poder
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
