@@ -34,11 +34,18 @@ function appUrl(): string {
   return process.env.APP_URL ?? "http://localhost:3000";
 }
 
-async function sendMediaInviteEmail(
-  organizationId: string,
-  name: string,
-  email: string,
-) {
+interface InviteDeliveryResult {
+  emailDelivered: boolean;
+  whatsappDelivered: boolean;
+  inviteUrl: string;
+}
+
+// Convite/reenvio por e-mail E WhatsApp (§ pedido do usuário: "alguns
+// membros não estão recebendo por e-mail") — dispara os dois sempre que
+// possível em vez de escolher um; cada envio já é gracioso sozinho (só
+// registra no log quando não há provedor conectado), então tentar os dois
+// nunca piora nada, só aumenta a chance de chegar.
+async function sendMediaInvite(organizationId: string, name: string, email: string, phone: string | null): Promise<InviteDeliveryResult> {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const user = await db.user.findFirstOrThrow({
@@ -54,12 +61,18 @@ async function sendMediaInviteEmail(
   });
 
   const inviteUrl = `${appUrl()}/redefinir-senha/${token}`;
-  return sendEmail({
-    organizationId,
-    to: email,
-    subject: "Bem-vindo(a) ao Mídia ADESF — defina sua senha",
-    text: `Olá, ${name}. Você foi convidado(a) para a equipe de mídia (Mídia ADESF). Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}\n\nDepois de definir sua senha, acesse o portal em: ${appUrl()}/midia/login`,
-  });
+  const text = `Olá, ${name}! Você foi convidado(a) para a equipe de mídia (Mídia ADESF). Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}\n\nDepois de definir sua senha, acesse o portal em: ${appUrl()}/midia/login`;
+
+  const emailResult = await sendEmail({ organizationId, to: email, subject: "Bem-vindo(a) ao Mídia ADESF — defina sua senha", text });
+  const whatsappResult = phone ? await sendWhatsApp({ organizationId, to: phone, message: text }) : null;
+
+  return { emailDelivered: emailResult.delivered, whatsappDelivered: whatsappResult?.delivered ?? false, inviteUrl };
+}
+
+function describeInviteDelivery(result: InviteDeliveryResult, hasPhone: boolean): string {
+  const channels = [result.emailDelivered && "e-mail", result.whatsappDelivered && "WhatsApp"].filter(Boolean).join(" e ");
+  if (channels) return `Convite enviado por ${channels}.`;
+  return `Nenhum provedor de e-mail ou WhatsApp conectado${hasPhone ? "" : " (e não há telefone cadastrado)"}. Copie e envie manualmente: ${result.inviteUrl}`;
 }
 
 // Convida um membro para o Mídia ADESF. Cobre os dois casos exigidos pela
@@ -148,12 +161,9 @@ export async function inviteMediaMemberAction(
       return created;
     });
 
-    await sendEmail({
-      organizationId: admin.organizationId,
-      to: email,
-      subject: "Você agora tem acesso ao Mídia ADESF",
-      text: `Olá, ${existingUser.name}. Sua conta já cadastrada no LUMIBASE agora também tem acesso ao Portal Mídia ADESF. Acesse com seu e-mail e senha atuais em: ${appUrl()}/midia/login`,
-    });
+    const accessMessage = `Olá, ${existingUser.name}. Sua conta já cadastrada no LUMIBASE agora também tem acesso ao Portal Mídia ADESF. Acesse com seu e-mail e senha atuais em: ${appUrl()}/midia/login`;
+    await sendEmail({ organizationId: admin.organizationId, to: email, subject: "Você agora tem acesso ao Mídia ADESF", text: accessMessage });
+    if (phone) await sendWhatsApp({ organizationId: admin.organizationId, to: phone, message: accessMessage });
 
     await audit({
       organizationId: admin.organizationId,
@@ -214,11 +224,7 @@ export async function inviteMediaMemberAction(
     return created;
   });
 
-  const inviteResult = await sendMediaInviteEmail(
-    admin.organizationId,
-    name,
-    email,
-  );
+  const inviteResult = await sendMediaInvite(admin.organizationId, name, email, phone || null);
 
   await audit({
     organizationId: admin.organizationId,
@@ -231,13 +237,7 @@ export async function inviteMediaMemberAction(
 
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
-  if (inviteResult.pending) {
-    return {
-      success:
-        "Membro criado. Nenhum provedor de e-mail conectado — envie o link de acesso manualmente.",
-    };
-  }
-  return { success: "Convite enviado por e-mail." };
+  return { success: describeInviteDelivery(inviteResult, !!phone) };
 }
 
 export async function updateMediaMemberAction(
@@ -331,21 +331,7 @@ export async function resendMediaInvitationAction(memberId: string): Promise<Act
   });
   if (!member) return { error: "Convite não encontrado." };
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  await db.passwordResetToken.create({
-    data: { userId: member.userId, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
-  });
-  const inviteUrl = `${appUrl()}/redefinir-senha/${token}`;
-  const message = `Olá, ${member.user.name}! Convite para a equipe de Mídia ADESF. Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}\n\nDepois, acesse o portal em: ${appUrl()}/midia/login`;
-
-  const emailResult = await sendEmail({
-    organizationId: admin.organizationId,
-    to: member.user.email,
-    subject: "Bem-vindo(a) ao Mídia ADESF — defina sua senha",
-    text: message,
-  });
-  const whatsappResult = member.phone ? await sendWhatsApp({ organizationId: admin.organizationId, to: member.phone, message }) : null;
+  const inviteResult = await sendMediaInvite(admin.organizationId, member.user.name, member.user.email, member.phone);
 
   await audit({
     organizationId: admin.organizationId,
@@ -357,12 +343,7 @@ export async function resendMediaInvitationAction(memberId: string): Promise<Act
 
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
-
-  const channels = [emailResult.delivered && "e-mail", whatsappResult?.delivered && "WhatsApp"].filter(Boolean).join(" e ");
-  if (channels) return { success: `Convite reenviado por ${channels}.` };
-  return {
-    error: `Nenhum provedor de e-mail ou WhatsApp conectado${member.phone ? "" : " (e este membro não tem telefone cadastrado)"}. Copie e envie manualmente: ${inviteUrl}`,
-  };
+  return { success: describeInviteDelivery(inviteResult, !!member.phone) };
 }
 
 // Exclui de vez um convite ainda não aceito (§ pedido do usuário: "não
