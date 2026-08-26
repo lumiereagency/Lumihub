@@ -2,17 +2,19 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { ensureMediaAdesfDefaults } from "@/lib/media/bootstrap";
+import { ensurePublicScheduleLink } from "@/lib/media/schedule/public-schedule-link-service";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { BrandSettingsForm, BrandImagesPanel } from "@/components/media/brand-settings-form";
 import { FunctionsPanel } from "@/components/media/functions-panel";
 import { AIWeightsForm } from "@/components/media/ai-weights-form";
+import { PublicScheduleLinkPanel } from "@/components/media/public-schedule-link-panel";
 
 export default async function MediaAdesfSettingsPage() {
   const user = await requirePermission(permKey("MEDIA_ADESF", "MANAGE"));
   await ensureMediaAdesfDefaults(user.organizationId);
 
-  const [brand, functions, rolesWithAccess, operationsSettings] = await Promise.all([
+  const [brand, functions, rolesWithAccess, operationsSettings, publicLink] = await Promise.all([
     db.mediaBrandSettings.findUniqueOrThrow({ where: { organizationId: user.organizationId } }),
     db.mediaFunction.findMany({
       where: { organizationId: user.organizationId },
@@ -27,6 +29,7 @@ export default async function MediaAdesfSettingsPage() {
       include: { _count: { select: { users: true } } },
     }),
     db.mediaOperationsSettings.upsert({ where: { organizationId: user.organizationId }, create: { organizationId: user.organizationId }, update: {} }),
+    ensurePublicScheduleLink(user.organizationId),
   ]);
 
   return (
@@ -75,6 +78,11 @@ export default async function MediaAdesfSettingsPage() {
           aiWeightPreference={operationsSettings.aiWeightPreference}
           aiMinRestDays={operationsSettings.aiMinRestDays}
         />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-semibold text-text-primary">Link público da escala</h2>
+        <PublicScheduleLinkPanel token={publicLink.token} />
       </section>
 
       <section>

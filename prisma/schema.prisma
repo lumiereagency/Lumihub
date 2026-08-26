@@ -72,6 +72,7 @@ model Organization {
   mediaOperationsSettings       MediaOperationsSettings?
   mediaAIGenerationRuns         MediaAIGenerationRun[]
   mediaActionTokens             MediaActionToken[]
+  mediaPublicScheduleLink       MediaPublicScheduleLink?
 
   @@map("organizations")
 }
@@ -1514,6 +1515,25 @@ model MediaBrandSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("media_brand_settings")
+}
+
+// Link público de "quem está escalado" (§ pedido do usuário: compartilhar
+// com o gestor/obreiros sem exigir login) — um único link por organização,
+// guardado em texto puro (diferente de MediaActionToken) porque precisa ser
+// reexibido e copiado pelo admin sempre que ele visita Configurações; não é
+// um segredo de uso único, é um "link com capacidade" como o de um Google
+// Doc compartilhado. "Regenerar" sobrescreve o token: o link anterior para
+// de funcionar na hora, sem precisar revogar nada à parte.
+model MediaPublicScheduleLink {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  rotatedAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("media_public_schedule_links")
 }
 
 enum MediaInvitationStatus {
