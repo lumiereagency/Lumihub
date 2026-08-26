@@ -333,7 +333,12 @@ export async function removeMediaMemberAction(memberId: string): Promise<void> {
 // sendEmail só registra no log e nada chega a ninguém. Agora tenta e-mail
 // E WhatsApp (se o membro tiver telefone) e sempre diz o que de fato
 // aconteceu, com o link pronto pra copiar manualmente se os dois falharem.
-export async function resendMediaInvitationAction(memberId: string): Promise<ActionState> {
+// phoneOverride (§ pedido do usuário: "enviar por WhatsApp pra quem eu já
+// cadastrei" sem telefone) — muitos convites foram criados antes de o
+// telefone virar prático de preencher, então ficam presos só no e-mail.
+// Se vier um telefone novo aqui, grava no cadastro do membro (não é só
+// pra este envio) e já usa pra disparar o WhatsApp desta vez também.
+export async function resendMediaInvitationAction(memberId: string, phoneOverride?: string): Promise<ActionState> {
   const admin = await requirePermission(EDIT);
 
   const member = await db.mediaMember.findFirst({
@@ -342,7 +347,12 @@ export async function resendMediaInvitationAction(memberId: string): Promise<Act
   });
   if (!member) return { error: "Convite não encontrado." };
 
-  const inviteResult = await sendMediaInvite(admin.organizationId, member.user.name, member.user.email, member.phone);
+  const phone = phoneOverride?.trim() || member.phone;
+  if (phoneOverride?.trim() && phoneOverride.trim() !== member.phone) {
+    await db.mediaMember.update({ where: { id: memberId }, data: { phone: phoneOverride.trim() } });
+  }
+
+  const inviteResult = await sendMediaInvite(admin.organizationId, member.user.name, member.user.email, phone);
 
   await audit({
     organizationId: admin.organizationId,
@@ -354,7 +364,7 @@ export async function resendMediaInvitationAction(memberId: string): Promise<Act
 
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
-  return { success: describeInviteDelivery(inviteResult, !!member.phone) };
+  return { success: describeInviteDelivery(inviteResult, !!phone) };
 }
 
 // Exclui de vez um convite ainda não aceito (§ pedido do usuário: "não

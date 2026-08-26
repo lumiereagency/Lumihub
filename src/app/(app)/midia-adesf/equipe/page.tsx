@@ -34,6 +34,7 @@ export default async function MediaAdesfTeamPage() {
           avatarUrl: m.user.avatarUrl,
           role: m.role,
           status: m.status,
+          phone: m.phone,
           primaryFunction: m.functions.find((f) => f.isPrimary)?.function.name ?? null,
           enabledFunctions: m.functions.filter((f) => !f.isPrimary).map((f) => f.function.name),
           functionIds: m.functions.map((f) => f.functionId),

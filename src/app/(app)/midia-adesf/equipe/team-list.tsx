@@ -21,6 +21,7 @@ interface MemberRow {
   avatarUrl: string | null;
   role: string;
   status: string;
+  phone: string | null;
   primaryFunction: string | null;
   enabledFunctions: string[];
   functionIds: string[];
@@ -45,10 +46,19 @@ export function MediaTeamList({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  function resend(memberId: string) {
-    setPendingId(memberId);
+  function resend(member: MemberRow) {
+    // Muitos convites foram criados antes do telefone virar prático de
+    // preencher — sem telefone, o reenvio só consegue tentar e-mail.
+    // Pergunta aqui em vez de mandar o admin editar o membro à parte.
+    let phoneOverride: string | undefined;
+    if (!member.phone) {
+      const input = prompt(`${member.name} ainda não tem telefone cadastrado. Informe o telefone com DDD para reenviar também por WhatsApp (ou cancele para reenviar só por e-mail):`);
+      if (input === null) return;
+      phoneOverride = input.trim() || undefined;
+    }
+    setPendingId(member.id);
     startTransition(async () => {
-      const result = await resendMediaInvitationAction(memberId);
+      const result = await resendMediaInvitationAction(member.id, phoneOverride);
       setPendingId(null);
       alert(result.success ?? result.error);
     });
@@ -160,7 +170,7 @@ export function MediaTeamList({
                           <button
                             type="button"
                             disabled={pendingId === m.id}
-                            onClick={() => resend(m.id)}
+                            onClick={() => resend(m)}
                             className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary disabled:opacity-50"
                           >
                             {pendingId === m.id ? "Reenviando..." : "Reenviar convite"}
