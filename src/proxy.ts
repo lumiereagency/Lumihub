@@ -4,7 +4,23 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/session-cookie";
 // Checagem leve (sem acesso a banco) para redirecionar rápido usuários sem
 // cookie de sessão. A validação completa (sessão válida + RBAC) acontece no
 // layout autenticado, que roda em runtime Node.js com acesso ao Postgres.
-const PUBLIC_PATHS = ["/login", "/esqueci-senha", "/redefinir-senha", "/setup", "/acesso-negado"];
+//
+// /midia/login, /midia/acao e /midia/publico precisam funcionar para quem
+// NUNCA logou no LUMIBASE (convite novo, link de WhatsApp, link público
+// compartilhado com quem nem tem conta) — sem cookie nenhum. Só essas três
+// entram aqui; o resto de /midia (dashboard, escala, disponibilidade...)
+// continua exigindo cookie normalmente, a checagem de sessão real desses
+// três também acontece dentro de cada página/action, não é "sem proteção".
+const PUBLIC_PATHS = [
+  "/login",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  "/setup",
+  "/acesso-negado",
+  "/midia/login",
+  "/midia/acao",
+  "/midia/publico",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
