@@ -8,6 +8,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { hashPassword } from "@/lib/auth/password";
 import { audit } from "@/lib/audit";
 import { sendEmail } from "@/lib/integrations/email";
+import { sendWhatsApp } from "@/lib/integrations/whatsapp";
 import { ensureMediaOnlyRole } from "@/lib/media/bootstrap";
 import {
   isAllowedMediaImageType,
@@ -314,26 +315,37 @@ export async function removeMediaMemberAction(memberId: string): Promise<void> {
   revalidatePath("/midia/equipe");
 }
 
-export async function resendMediaInvitationAction(
-  memberId: string,
-): Promise<void> {
+// Reenvia o convite (§ pedido do usuário: "não está funcionando") — o bug
+// real era duplo: a ação não devolvia nenhum resultado pro admin ver (por
+// isso "não funcionava" mesmo quando na verdade tinha enviado), e ia só por
+// e-mail — se a organização nunca conectou um provedor SMTP (Integrações),
+// sendEmail só registra no log e nada chega a ninguém. Agora tenta e-mail
+// E WhatsApp (se o membro tiver telefone) e sempre diz o que de fato
+// aconteceu, com o link pronto pra copiar manualmente se os dois falharem.
+export async function resendMediaInvitationAction(memberId: string): Promise<ActionState> {
   const admin = await requirePermission(EDIT);
 
   const member = await db.mediaMember.findFirst({
-    where: {
-      id: memberId,
-      organizationId: admin.organizationId,
-      status: "INVITED",
-    },
+    where: { id: memberId, organizationId: admin.organizationId, status: "INVITED" },
     include: { user: true },
   });
-  if (!member) return;
+  if (!member) return { error: "Convite não encontrado." };
 
-  await sendMediaInviteEmail(
-    admin.organizationId,
-    member.user.name,
-    member.user.email,
-  );
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  await db.passwordResetToken.create({
+    data: { userId: member.userId, tokenHash, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+  });
+  const inviteUrl = `${appUrl()}/redefinir-senha/${token}`;
+  const message = `Olá, ${member.user.name}! Convite para a equipe de Mídia ADESF. Defina sua senha de acesso (link válido por 7 dias): ${inviteUrl}\n\nDepois, acesse o portal em: ${appUrl()}/midia/login`;
+
+  const emailResult = await sendEmail({
+    organizationId: admin.organizationId,
+    to: member.user.email,
+    subject: "Bem-vindo(a) ao Mídia ADESF — defina sua senha",
+    text: message,
+  });
+  const whatsappResult = member.phone ? await sendWhatsApp({ organizationId: admin.organizationId, to: member.phone, message }) : null;
 
   await audit({
     organizationId: admin.organizationId,
@@ -345,6 +357,12 @@ export async function resendMediaInvitationAction(
 
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
+
+  const channels = [emailResult.delivered && "e-mail", whatsappResult?.delivered && "WhatsApp"].filter(Boolean).join(" e ");
+  if (channels) return { success: `Convite reenviado por ${channels}.` };
+  return {
+    error: `Nenhum provedor de e-mail ou WhatsApp conectado${member.phone ? "" : " (e este membro não tem telefone cadastrado)"}. Copie e envie manualmente: ${inviteUrl}`,
+  };
 }
 
 // Exclui de vez um convite ainda não aceito (§ pedido do usuário: "não
@@ -355,27 +373,39 @@ export async function resendMediaInvitationAction(
 // que já era um usuário do LUMIBASE, mantém o User (a conta é dele, não
 // foi criada pra isso); só apaga o User-casca criado especificamente para
 // este convite (role MEDIA_ONLY, nunca logou em lugar nenhum).
-export async function deletePendingMediaInviteAction(memberId: string): Promise<void> {
+//
+// Também cobre membros INACTIVE (§ pedido do usuário: "conta inativa não
+// tem a opção de ser apagada") — mas só quando nunca tiveram uma escala de
+// verdade: apagar um membro com histórico de presença/escala cascatearia
+// (MediaAttendance.memberId não é opcional) e apagaria dados reais de
+// participação passada, não só o cadastro. Nesse caso, a única opção
+// continua sendo manter desativado.
+export async function deleteMediaMemberAction(memberId: string): Promise<ActionState> {
   const admin = await requirePermission(DELETE);
 
   const member = await db.mediaMember.findFirst({
-    where: { id: memberId, organizationId: admin.organizationId, status: "INVITED" },
+    where: { id: memberId, organizationId: admin.organizationId, status: { in: ["INVITED", "INACTIVE"] } },
     include: { user: { include: { role: true } } },
   });
-  if (!member) return;
+  if (!member) return { error: "Membro não encontrado ou não pode ser excluído neste status." };
+
+  const assignmentsCount = await db.mediaScheduleAssignment.count({ where: { memberId } });
+  if (assignmentsCount > 0) {
+    return { error: "Este membro já teve escalas/presenças registradas — não pode ser excluído, apenas mantido desativado." };
+  }
 
   const isShellUser = member.user.role.key === "MEDIA_ONLY" && !member.user.lastLoginAt;
 
   await db.$transaction(async (tx) => {
     await tx.mediaMember.delete({ where: { id: memberId } });
-    await tx.mediaInvitation.deleteMany({ where: { organizationId: admin.organizationId, email: member.user.email, status: "INVITED" } });
+    await tx.mediaInvitation.deleteMany({ where: { organizationId: admin.organizationId, email: member.user.email } });
     if (isShellUser) await tx.user.delete({ where: { id: member.userId } });
   });
 
   await audit({
     organizationId: admin.organizationId,
     userId: admin.id,
-    action: "MEDIA_INVITATION_DELETED",
+    action: "MEDIA_MEMBER_DELETED",
     entityType: "MediaMember",
     entityId: memberId,
     metadata: { email: member.user.email },
@@ -383,6 +413,7 @@ export async function deletePendingMediaInviteAction(memberId: string): Promise<
 
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
+  return { success: "Membro excluído." };
 }
 
 // Funções (ex: Data Show, Fotógrafo) — catálogo configurável por organização.

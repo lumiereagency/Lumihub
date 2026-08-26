@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Search, Users2, Trash2 } from "lucide-react";
-import { resendMediaInvitationAction, removeMediaMemberAction, deletePendingMediaInviteAction } from "@/lib/actions/media-actions";
+import { resendMediaInvitationAction, removeMediaMemberAction, deleteMediaMemberAction } from "@/lib/actions/media-actions";
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,27 @@ export function MediaTeamList({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [functionFilter, setFunctionFilter] = useState("");
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  function resend(memberId: string) {
+    setPendingId(memberId);
+    startTransition(async () => {
+      const result = await resendMediaInvitationAction(memberId);
+      setPendingId(null);
+      alert(result.success ?? result.error);
+    });
+  }
+
+  function deleteMember(memberId: string, name: string) {
+    if (!confirm(`Excluir ${name}? Essa ação não pode ser desfeita.`)) return;
+    setPendingId(memberId);
+    startTransition(async () => {
+      const result = await deleteMediaMemberAction(memberId);
+      setPendingId(null);
+      if (result.error) alert(result.error);
+    });
+  }
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -136,27 +157,14 @@ export function MediaTeamList({
                     {canEdit && (
                       <div className="flex items-center justify-end gap-1">
                         {m.status === "INVITED" && (
-                          <>
-                            <form action={resendMediaInvitationAction.bind(null, m.id)}>
-                              <button type="submit" className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary">
-                                Reenviar convite
-                              </button>
-                            </form>
-                            <form
-                              action={deletePendingMediaInviteAction.bind(null, m.id)}
-                              onSubmit={(e) => {
-                                if (!confirm(`Excluir o convite de ${m.name}? Essa ação não pode ser desfeita.`)) e.preventDefault();
-                              }}
-                            >
-                              <button
-                                type="submit"
-                                title="Excluir convite"
-                                className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </form>
-                          </>
+                          <button
+                            type="button"
+                            disabled={pendingId === m.id}
+                            onClick={() => resend(m.id)}
+                            className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary disabled:opacity-50"
+                          >
+                            {pendingId === m.id ? "Reenviando..." : "Reenviar convite"}
+                          </button>
                         )}
                         {m.status !== "INACTIVE" && (
                           <form action={removeMediaMemberAction.bind(null, m.id)}>
@@ -168,6 +176,17 @@ export function MediaTeamList({
                               Desativar
                             </button>
                           </form>
+                        )}
+                        {(m.status === "INVITED" || m.status === "INACTIVE") && (
+                          <button
+                            type="button"
+                            disabled={pendingId === m.id}
+                            title="Excluir"
+                            onClick={() => deleteMember(m.id, m.name)}
+                            className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         )}
                       </div>
                     )}
