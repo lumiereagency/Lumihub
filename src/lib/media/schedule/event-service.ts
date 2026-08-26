@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { combineBrazilDateAndTime, brazilDateKey } from "@/lib/datetime";
 
 // Mantém o CalendarEvent (infraestrutura já existente da LUMIBASE, Fase 7)
 // sincronizado com o MediaEvent — evita duplicar um calendário próprio
@@ -129,9 +130,6 @@ export async function generateRecurringEventOccurrences(recurrenceId: string, th
   });
   const existingDates = new Set(existing.map((e) => e.startAt.toISOString().slice(0, 10)));
 
-  const [startHour, startMinute] = recurrence.startTime.split(":").map(Number);
-  const [endHour, endMinute] = recurrence.endTime ? recurrence.endTime.split(":").map(Number) : [null, null];
-
   let cursor = new Date(recurrence.startDate);
   while (cursor.getDay() !== recurrence.dayOfWeek) cursor = addDays(cursor, 1);
 
@@ -140,10 +138,13 @@ export async function generateRecurringEventOccurrences(recurrenceId: string, th
   while (cursor <= limit && guard < 520) {
     const dateKey = cursor.toISOString().slice(0, 10);
     if (!existingDates.has(dateKey)) {
-      const startAt = new Date(cursor);
-      startAt.setHours(startHour, startMinute, 0, 0);
-      const endAt = endHour != null && endMinute != null ? new Date(cursor) : null;
-      if (endAt && endHour != null && endMinute != null) endAt.setHours(endHour, endMinute, 0, 0);
+      // Nunca usar `.setHours()` aqui: o servidor roda em UTC, então
+      // "19:00" virava 19:00 UTC (= 16:00 em Brasília) em vez de 19:00 em
+      // Brasília — mesma classe de bug já corrigida uma vez em
+      // Captações/Agenda (ver @/lib/datetime), reintroduzida aqui porque a
+      // geração de recorrência nunca passava por aquele mesmo caminho.
+      const startAt = combineBrazilDateAndTime(dateKey, recurrence.startTime);
+      const endAt = recurrence.endTime ? combineBrazilDateAndTime(dateKey, recurrence.endTime) : null;
 
       const event = await db.mediaEvent.create({
         data: {
@@ -197,14 +198,14 @@ export async function syncRecurrenceScheduleToFutureOccurrences(
     where: { recurrenceId, startAt: { gte: new Date() }, status: { notIn: ["CANCELLED", "ARCHIVED", "COMPLETED"] } },
   });
 
-  const [startHour, startMinute] = fields.startTime.split(":").map(Number);
-  const [endHour, endMinute] = fields.endTime ? fields.endTime.split(":").map(Number) : [null, null];
-
   for (const event of futureEvents) {
-    const startAt = new Date(event.startAt);
-    startAt.setHours(startHour, startMinute, 0, 0);
-    const endAt = endHour != null && endMinute != null ? new Date(event.startAt) : null;
-    if (endAt && endHour != null && endMinute != null) endAt.setHours(endHour, endMinute, 0, 0);
+    // brazilDateKey (não toISOString) porque event.startAt pode já estar
+    // errado (o próprio bug de fuso que este método corrige) — precisamos
+    // do dia como o calendário de Brasília entende, não como o instante
+    // UTC salvo errado sugere.
+    const dateKey = brazilDateKey(event.startAt);
+    const startAt = combineBrazilDateAndTime(dateKey, fields.startTime);
+    const endAt = fields.endTime ? combineBrazilDateAndTime(dateKey, fields.endTime) : null;
 
     await db.mediaEvent.update({
       where: { id: event.id },
