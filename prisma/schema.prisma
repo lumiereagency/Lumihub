@@ -1384,12 +1384,13 @@ model MediaFunction {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization        Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberFunctions     MediaMemberFunction[]
-  eventRequirements   MediaEventRequirement[]
-  defaultRequirements MediaEventDefaultRequirement[]
-  scheduleAssignments MediaScheduleAssignment[]
-  aiSuggestions       MediaAISuggestion[]
+  organization           Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberFunctions        MediaMemberFunction[]
+  eventRequirements      MediaEventRequirement[]
+  defaultRequirements    MediaEventDefaultRequirement[]
+  recurrenceRequirements MediaEventRecurrenceRequirement[]
+  scheduleAssignments    MediaScheduleAssignment[]
+  aiSuggestions          MediaAISuggestion[]
 
   @@unique([organizationId, name])
   @@map("media_functions")
@@ -1561,11 +1562,37 @@ model MediaEventRecurrence {
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   events       MediaEvent[]
+  requirements MediaEventRecurrenceRequirement[]
 
   @@index([organizationId, active])
   @@map("media_event_recurrences")
+}
+
+// "Template de série" (funções necessárias de UMA série recorrente
+// específica, ex: "Culto de Domingo" sempre precisa de Data Show + 2
+// Câmeras). Escopo por recurrenceId, nunca por organizationId como
+// MediaEventDefaultRequirement (o padrão genérico da organização inteira)
+// — cada série recorrente pode exigir um conjunto de funções diferente.
+// Aplicado a toda ocorrência nova gerada pela série (ver
+// applyDefaultRequirementsToEvent) e reaplicado às ocorrências futuras já
+// existentes quando o líder edita uma delas e escolhe propagar (§ pedido
+// do usuário: "editar as funções de 01 também altera todo o resto").
+model MediaEventRecurrenceRequirement {
+  id               String   @id @default(cuid())
+  recurrenceId     String
+  functionId       String
+  requiredQuantity Int      @default(1)
+  mandatory        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  recurrence MediaEventRecurrence @relation(fields: [recurrenceId], references: [id], onDelete: Cascade)
+  function   MediaFunction        @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([recurrenceId, functionId])
+  @@map("media_event_recurrence_requirements")
 }
 
 model MediaEvent {

@@ -5,7 +5,12 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
-import { applyDefaultRequirementsToEvent, syncCalendarEventForMediaEvent, generateRecurringEventOccurrences } from "@/lib/media/schedule/event-service";
+import {
+  applyDefaultRequirementsToEvent,
+  syncCalendarEventForMediaEvent,
+  generateRecurringEventOccurrences,
+  setRecurrenceRequirementsTemplate,
+} from "@/lib/media/schedule/event-service";
 import { mediaEventSchema, mediaEventRecurrenceSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -198,6 +203,7 @@ export async function createRecurrenceAction(_prev: ActionState, formData: FormD
     location: formData.get("location"),
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
+    requirements: parseRequirements(formData),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
 
@@ -214,6 +220,10 @@ export async function createRecurrenceAction(_prev: ActionState, formData: FormD
       endDate: parsed.data.endDate ? new Date(`${parsed.data.endDate}T00:00:00Z`) : null,
     },
   });
+
+  if (parsed.data.requirements.length > 0) {
+    await setRecurrenceRequirementsTemplate(recurrence.id, parsed.data.requirements, false);
+  }
 
   const created = await generateRecurringEventOccurrences(recurrence.id, new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
 
@@ -249,4 +259,35 @@ export async function toggleRecurrenceActiveAction(recurrenceId: string, active:
   });
 
   revalidatePath("/midia-adesf/cultos");
+}
+
+// "Editar as funções de UM culto também altera todo o resto da série"
+// (pedido do usuário): grava as funções atuais deste evento como o
+// template da série inteira e reescreve todas as ocorrências futuras
+// (nunca passadas/canceladas/arquivadas) para o mesmo conjunto.
+export async function applyEventRequirementsToRecurrenceAction(eventId: string): Promise<ActionState> {
+  const user = await requirePermission(EDIT);
+
+  const event = await db.mediaEvent.findFirst({
+    where: { id: eventId, organizationId: user.organizationId },
+    include: { requirements: true },
+  });
+  if (!event) return { error: "Evento não encontrado." };
+  if (!event.recurrenceId) return { error: "Este culto não pertence a uma série recorrente." };
+
+  const requirements = event.requirements.map((r) => ({ functionId: r.functionId, requiredQuantity: r.requiredQuantity, mandatory: r.mandatory }));
+  const updatedCount = await setRecurrenceRequirementsTemplate(event.recurrenceId, requirements, true);
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "MEDIA_EVENT_RECURRENCE_REQUIREMENTS_PROPAGATED",
+    entityType: "MediaEventRecurrence",
+    entityId: event.recurrenceId,
+    metadata: { sourceEventId: eventId, updatedCount },
+  });
+
+  revalidatePath("/midia-adesf/cultos");
+  revalidatePath(`/midia-adesf/cultos/${eventId}`);
+  return { success: `Funções aplicadas a toda a série — ${updatedCount} ocorrência(s) futura(s) atualizada(s).` };
 }

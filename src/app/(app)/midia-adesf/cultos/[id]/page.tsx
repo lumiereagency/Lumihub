@@ -10,6 +10,7 @@ import { AuditHistoryList } from "@/components/media/audit-history-list";
 import { cancelEventAction, saveEventRequirementsAsDefaultAction, updateEventAction } from "@/lib/actions/media-event-actions";
 import { EventForm } from "../event-form";
 import { RequestAvailabilityButton } from "./request-availability-button";
+import { ApplyToRecurrenceButton } from "./apply-to-recurrence-button";
 
 export default async function MediaAdesfEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -73,6 +74,7 @@ export default async function MediaAdesfEventDetailPage({ params }: { params: Pr
             Salvar estas funções como padrão para novos cultos
           </button>
         </form>
+        {event.recurrenceId && <ApplyToRecurrenceButton eventId={event.id} />}
       </section>
 
       <section>

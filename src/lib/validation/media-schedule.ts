@@ -30,6 +30,7 @@ export const mediaEventRecurrenceSchema = z
     location: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     startDate: z.string().trim().min(1, "Informe a data inicial."),
     endDate: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+    requirements: z.array(mediaEventRequirementInputSchema).default([]),
   })
   .refine((v) => !v.endTime || v.startTime < v.endTime, { message: "O horário final deve ser depois do inicial.", path: ["endTime"] });
 

@@ -89,7 +89,7 @@ export function EventList({ events, allFunctions }: { events: EventRow[]; allFun
       </Drawer>
 
       <Drawer open={creatingRecurrence} onClose={() => setCreatingRecurrence(false)} title="Nova série recorrente">
-        <RecurrenceForm onSuccess={() => setCreatingRecurrence(false)} />
+        <RecurrenceForm allFunctions={allFunctions} onSuccess={() => setCreatingRecurrence(false)} />
       </Drawer>
     </div>
   );

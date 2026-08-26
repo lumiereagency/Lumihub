@@ -37,15 +37,30 @@ export async function syncCalendarEventForMediaEvent(mediaEvent: {
   });
 }
 
-// Aplica o "Template de Culto" (§88) a um evento recém-criado, copiando o
-// conjunto padrão de funções necessárias da organização. Idempotente: não
+// Aplica o template de funções a um evento recém-criado. Idempotente: não
 // sobrescreve requisitos já existentes (não faz nada se o evento já tiver
-// alguma configuração customizada).
+// alguma configuração customizada). Se o evento pertence a uma série
+// recorrente com seu próprio template (MediaEventRecurrenceRequirement),
+// esse template tem prioridade — cada série pode exigir um conjunto de
+// funções diferente; só cai no "Template de Culto" genérico da organização
+// (MediaEventDefaultRequirement) para eventos avulsos ou séries sem
+// template próprio configurado.
 export async function applyDefaultRequirementsToEvent(eventId: string): Promise<void> {
   const existing = await db.mediaEventRequirement.count({ where: { eventId } });
   if (existing > 0) return;
 
-  const event = await db.mediaEvent.findUniqueOrThrow({ where: { id: eventId }, select: { organizationId: true } });
+  const event = await db.mediaEvent.findUniqueOrThrow({ where: { id: eventId }, select: { organizationId: true, recurrenceId: true } });
+
+  if (event.recurrenceId) {
+    const recurrenceTemplate = await db.mediaEventRecurrenceRequirement.findMany({ where: { recurrenceId: event.recurrenceId } });
+    if (recurrenceTemplate.length > 0) {
+      await db.mediaEventRequirement.createMany({
+        data: recurrenceTemplate.map((r) => ({ eventId, functionId: r.functionId, requiredQuantity: r.requiredQuantity, mandatory: r.mandatory })),
+      });
+      return;
+    }
+  }
+
   const defaults = await db.mediaEventDefaultRequirement.findMany({ where: { organizationId: event.organizationId } });
   if (defaults.length === 0) return;
 
@@ -57,6 +72,42 @@ export async function applyDefaultRequirementsToEvent(eventId: string): Promise<
       mandatory: d.mandatory,
     })),
   });
+}
+
+// Grava/atualiza o template de funções de UMA série recorrente e, quando
+// pedido, propaga imediatamente para as ocorrências futuras já geradas
+// (§ "editar as funções de 01 também altera todo o resto que foi
+// replicado"). Nunca toca ocorrências passadas/canceladas/arquivadas —
+// só o que ainda vai acontecer é reescrito.
+export async function setRecurrenceRequirementsTemplate(
+  recurrenceId: string,
+  requirements: { functionId: string; requiredQuantity: number; mandatory: boolean }[],
+  propagateToFutureOccurrences: boolean,
+): Promise<number> {
+  await db.$transaction([
+    db.mediaEventRecurrenceRequirement.deleteMany({ where: { recurrenceId } }),
+    ...(requirements.length > 0
+      ? [db.mediaEventRecurrenceRequirement.createMany({ data: requirements.map((r) => ({ recurrenceId, ...r })) })]
+      : []),
+  ]);
+
+  if (!propagateToFutureOccurrences) return 0;
+
+  const futureEvents = await db.mediaEvent.findMany({
+    where: { recurrenceId, startAt: { gte: new Date() }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
+    select: { id: true },
+  });
+
+  for (const e of futureEvents) {
+    await db.$transaction([
+      db.mediaEventRequirement.deleteMany({ where: { eventId: e.id } }),
+      ...(requirements.length > 0
+        ? [db.mediaEventRequirement.createMany({ data: requirements.map((r) => ({ eventId: e.id, ...r })) })]
+        : []),
+    ]);
+  }
+
+  return futureEvents.length;
 }
 
 function addDays(date: Date, days: number): Date {
