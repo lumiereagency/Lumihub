@@ -37,6 +37,7 @@ function appUrl(): string {
 interface InviteDeliveryResult {
   emailDelivered: boolean;
   whatsappDelivered: boolean;
+  whatsappError: string | null;
   inviteUrl: string;
 }
 
@@ -66,12 +67,22 @@ async function sendMediaInvite(organizationId: string, name: string, email: stri
   const emailResult = await sendEmail({ organizationId, to: email, subject: "Bem-vindo(a) ao Mídia ADESF — defina sua senha", text });
   const whatsappResult = phone ? await sendWhatsApp({ organizationId, to: phone, message: text }) : null;
 
-  return { emailDelivered: emailResult.delivered, whatsappDelivered: whatsappResult?.delivered ?? false, inviteUrl };
+  return {
+    emailDelivered: emailResult.delivered,
+    whatsappDelivered: whatsappResult?.delivered ?? false,
+    whatsappError: whatsappResult?.error ?? null,
+    inviteUrl,
+  };
 }
 
 function describeInviteDelivery(result: InviteDeliveryResult, hasPhone: boolean): string {
   const channels = [result.emailDelivered && "e-mail", result.whatsappDelivered && "WhatsApp"].filter(Boolean).join(" e ");
   if (channels) return `Convite enviado por ${channels}.`;
+  // Erro específico do WhatsApp (ex: número não registrado) é mais útil
+  // pro admin do que o aviso genérico de "nenhum provedor conectado" —
+  // aqui o WhatsApp está conectado, só não conseguiu entregar pra este
+  // número específico.
+  if (result.whatsappError) return `${result.whatsappError} Copie e envie manualmente: ${result.inviteUrl}`;
   return `Nenhum provedor de e-mail ou WhatsApp conectado${hasPhone ? "" : " (e não há telefone cadastrado)"}. Copie e envie manualmente: ${result.inviteUrl}`;
 }
 

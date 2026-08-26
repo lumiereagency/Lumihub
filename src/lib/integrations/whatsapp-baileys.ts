@@ -142,11 +142,34 @@ export async function sendWhatsAppBaileysMessage(
   }
 
   try {
-    const jid = `${to.replace(/\D/g, "")}@s.whatsapp.net`;
-    await session.sock.sendMessage(jid, { text: message });
+    const digits = normalizeBrazilPhoneDigits(to);
+    // onWhatsApp confirma que o número existe de verdade no WhatsApp E
+    // devolve o JID canônico — sem isso, um número sem o "55" na frente
+    // (bug real encontrado: telefones aqui são salvos no formato local,
+    // "11987654321", não internacional) monta um JID que nunca corresponde
+    // a nenhuma conta, e sendMessage "funciona" (não lança erro) sem a
+    // mensagem chegar a lugar nenhum — daí parecer que o disparo "não
+    // funciona" mesmo sem nenhum erro no log.
+    const [check] = (await session.sock.onWhatsApp(digits)) ?? [];
+    if (!check?.exists) {
+      return { delivered: false, pending: false, error: `Número ${digits} não está registrado no WhatsApp (confira o DDD e o dígito 9).` };
+    }
+    await session.sock.sendMessage(check.jid, { text: message });
     return { delivered: true, pending: false };
   } catch (err) {
     console.error("[LUMIBASE][whatsapp:erro] Falha ao enviar mensagem via Baileys.", err);
     return { delivered: false, pending: false, error: (err as Error).message };
   }
+}
+
+// Números de membros são digitados em formato local brasileiro
+// ("11987654321" ou com máscara "(11) 98765-4321"), sem código do país —
+// o JID do WhatsApp exige o "55" na frente. DDD + número local sempre tem
+// 10 (fixo) ou 11 (celular) dígitos no Brasil, então o código do país nunca
+// é ambíguo com um número que já veio completo (12/13 dígitos).
+function normalizeBrazilPhoneDigits(phone: string): string {
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("0")) digits = digits.slice(1);
+  if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+  return digits;
 }
