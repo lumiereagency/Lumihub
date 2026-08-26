@@ -18,6 +18,7 @@ export async function requestSwap(
   requestedByMemberId: string,
   targetMemberId: string,
   reason: string | null,
+  autoSuggested: boolean = false,
 ): Promise<ServiceResult> {
   const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({
     where: { id: assignmentId },
@@ -46,7 +47,7 @@ export async function requestSwap(
 
   await db.$transaction(async (tx) => {
     await tx.mediaSwapRequest.create({
-      data: { organizationId, assignmentId, requestedByMemberId, targetMemberId, reason },
+      data: { organizationId, assignmentId, requestedByMemberId, targetMemberId, reason, autoSuggested },
     });
     await tx.mediaScheduleAssignment.update({ where: { id: assignmentId }, data: { status: "SWAP_PENDING" } });
   });

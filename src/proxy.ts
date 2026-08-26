@@ -33,7 +33,14 @@ export function proxy(request: NextRequest) {
     // aparecer em /midia/login e /midia/publico antes de existir sessão;
     // sem esta linha o proxy intercepta a requisição da <img> antes dela
     // chegar na rota e devolve o HTML de /login no lugar da imagem.
-    pathname.startsWith("/api/midia/arquivos/");
+    pathname.startsWith("/api/midia/arquivos/") ||
+    // Rotas de cron (§ mesmo bug de novo, achado ao adicionar o cron de
+    // escalonamento de trocas): chamadas por curl do crontab do servidor,
+    // sem cookie nenhum — sem esta linha, o proxy redireciona a chamada
+    // pra /login antes dela chegar na checagem de CRON_SECRET da própria
+    // rota, e o job nunca roda de verdade (nem generate-receivables, que
+    // já existia, nem o de escalonamento novo).
+    pathname.startsWith("/api/cron/");
 
   if (isPublic) {
     return NextResponse.next();

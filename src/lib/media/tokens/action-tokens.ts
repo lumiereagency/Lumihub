@@ -247,14 +247,83 @@ export async function respondAssignmentViaToken(token: string, assignmentId: str
   }
 
   await declineAttendance(row.organizationId, member.userId, assignmentId, row.memberId);
-  return suggestSubstituteForAssignment(row.organizationId, assignmentId, row.memberId);
+  const result = await findAndInviteNextCandidate(row.organizationId, assignmentId, row.memberId, []);
+  return result.error ? result : { success: `Indisponibilidade registrada. ${result.success}` };
 }
 
-// Recusa dispara a busca automática de substituto (§ pedido do usuário) —
-// mesmo motor de pontuação da geração por IA, e a troca segue o MESMO
-// fluxo de aprovação de sempre (aceite do substituto + aprovação da
-// liderança). A IA só poupa o trabalho de descobrir quem perguntar.
-async function suggestSubstituteForAssignment(organizationId: string, assignmentId: string, decliningMemberId: string): Promise<ServiceResult> {
+// Convida UM candidato específico e cuida do envio por WhatsApp — usada
+// tanto pela cascata automática (findAndInviteNextCandidate) quanto pela
+// reatribuição manual do admin (manuallyReassignSwapTarget), já que as
+// duas fazem exatamente a mesma coisa, só escolhendo o candidato de jeitos
+// diferentes (IA rankeada vs. escolha manual).
+async function inviteCandidateForSwap(
+  organizationId: string,
+  assignmentId: string,
+  requestedByUserId: string,
+  decliningMemberId: string,
+  candidateMemberId: string,
+  candidateName: string,
+  previousMemberName: string,
+  functionName: string,
+  eventName: string,
+  eventStartAt: Date,
+): Promise<ServiceResult & { delivered?: boolean }> {
+  const swapResult = await requestSwap(
+    organizationId,
+    requestedByUserId,
+    assignmentId,
+    decliningMemberId,
+    candidateMemberId,
+    "Sugerido automaticamente pela IA — o membro original não está disponível.",
+    true,
+  );
+  if (swapResult.error) return swapResult;
+
+  const swap = await db.mediaSwapRequest.findFirst({
+    where: { assignmentId, targetMemberId: candidateMemberId, status: "PENDING_TARGET" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!swap) return { success: `${candidateName} foi convidado(a) para cobrir a vaga.` };
+
+  const targetMember = await db.mediaMember.findUnique({ where: { id: candidateMemberId } });
+  if (!targetMember?.phone) {
+    await notifyMediaLeaders(
+      organizationId,
+      "Substituto sugerido sem telefone",
+      `${candidateName} foi sugerido(a) automaticamente para cobrir ${functionName} em ${eventName}, mas não tem telefone cadastrado — avise manualmente e peça para responder em Solicitações.`,
+      `/midia-adesf/solicitacoes`,
+    );
+    return { success: `${candidateName} foi convidado(a), mas não tem telefone cadastrado.`, delivered: false };
+  }
+
+  const swapToken = await createSwapAcceptToken(organizationId, candidateMemberId, swap.id);
+  const message = swapAcceptMessage(candidateName, previousMemberName, functionName, eventName, eventStartAt, swapToken);
+  // sendWhatsApp nunca lança erro quando falha (WhatsApp desconectado,
+  // número inválido) — só devolve delivered:false. Sem checar isso, a
+  // troca fica presa em PENDING_TARGET pra sempre, sem ninguém nunca
+  // saber que o convite nunca chegou ao substituto (§ pedido do usuário:
+  // "consta alteração pendente" sem andamento).
+  const sendResult = await sendWhatsApp({ organizationId, to: targetMember.phone, message });
+  if (!sendResult.delivered) {
+    return { success: `${candidateName} foi convidado(a), mas o WhatsApp não entregou o convite.`, delivered: false };
+  }
+  return { success: `${candidateName} foi convidado(a) automaticamente para cobrir a vaga.`, delivered: true };
+}
+
+// Recusa (ou timeout de resposta) dispara a busca automática de
+// substituto (§ pedido do usuário: "fazer o disparo automático para esses
+// membros... até que algum deles aceite") — mesmo motor de pontuação da
+// geração por IA, e a troca segue o MESMO fluxo de aprovação de sempre
+// (aceite do substituto + aprovação da liderança). Quando a entrega por
+// WhatsApp falha (não quando a pessoa só ainda não respondeu), tenta o
+// próximo candidato na hora — não faz sentido esperar resposta de uma
+// mensagem que nunca chegou a sair.
+async function findAndInviteNextCandidate(
+  organizationId: string,
+  assignmentId: string,
+  decliningMemberId: string,
+  excludeMemberIds: string[],
+): Promise<ServiceResult> {
   const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({
     where: { id: assignmentId },
     include: { event: true, function: true, schedule: true, member: { include: { user: { select: { name: true } } } } },
@@ -268,9 +337,10 @@ async function suggestSubstituteForAssignment(organizationId: string, assignment
     assignment.eventId,
     decliningMemberId,
   );
+  const eligible = candidates.filter((c) => !excludeMemberIds.includes(c.memberId));
   const ranked = await rankEligibleMembers(
     organizationId,
-    candidates,
+    eligible,
     assignment.functionId,
     assignment.schedule.periodStart,
     assignment.schedule.periodEnd,
@@ -282,62 +352,130 @@ async function suggestSubstituteForAssignment(organizationId: string, assignment
     await notifyMediaLeaders(
       organizationId,
       "Vaga sem substituto automático",
-      `${assignment.member?.user.name ?? "Um membro"} não poderá servir como ${assignment.function.name} em ${assignment.event.name} (${formatDate(assignment.event.startAt)}) e a IA não encontrou ninguém disponível — revise manualmente.`,
+      excludeMemberIds.length > 0
+        ? `${assignment.member?.user.name ?? "Um membro"} não poderá servir como ${assignment.function.name} em ${assignment.event.name} (${formatDate(assignment.event.startAt)}). ${excludeMemberIds.length} pessoa(s) já foram convidadas automaticamente e ninguém respondeu a tempo — revise manualmente.`
+        : `${assignment.member?.user.name ?? "Um membro"} não poderá servir como ${assignment.function.name} em ${assignment.event.name} (${formatDate(assignment.event.startAt)}) e a IA não encontrou ninguém disponível — revise manualmente.`,
       `/midia-adesf/escalas/${assignment.scheduleId}`,
     );
-    return { success: "Indisponibilidade registrada. Nenhum substituto disponível foi encontrado automaticamente — a liderança foi avisada." };
+    return { success: "Nenhum substituto disponível foi encontrado automaticamente — a liderança foi avisada." };
   }
 
-  const swapResult = await requestSwap(
+  const invite = await inviteCandidateForSwap(
     organizationId,
-    assignment.member!.userId,
     assignmentId,
+    assignment.member!.userId,
     decliningMemberId,
     best.memberId,
-    "Sugerido automaticamente pela IA — o membro original não está disponível.",
+    best.name,
+    assignment.member?.user.name ?? "Um colega",
+    assignment.function.name,
+    assignment.event.name,
+    assignment.event.startAt,
   );
-  if (swapResult.error) {
-    // Já existe uma troca em andamento para esta vaga — não é uma falha
-    // real, só não há nada novo a fazer.
-    return { success: "Indisponibilidade registrada." };
+  if (invite.error) return invite;
+  if (invite.delivered === false) {
+    return findAndInviteNextCandidate(organizationId, assignmentId, decliningMemberId, [...excludeMemberIds, best.memberId]);
   }
+  return invite;
+}
 
-  const swap = await db.mediaSwapRequest.findFirst({
-    where: { assignmentId, targetMemberId: best.memberId, status: "PENDING_TARGET" },
-    orderBy: { createdAt: "desc" },
+const SWAP_ESCALATION_TIMEOUT_MS = 60 * 60 * 1000; // 1h — decisão do usuário
+
+// Chamada periodicamente por um cron externo (não há infraestrutura de
+// cron dentro do processo Next.js self-hosted — mesmo padrão de
+// /api/cron/generate-receivables) para avançar trocas sugeridas pela IA
+// que ninguém respondeu dentro do prazo, passando para o próximo
+// candidato automaticamente.
+export async function escalateStaleAutoSuggestedSwaps(): Promise<{ escalated: number }> {
+  const cutoff = new Date(Date.now() - SWAP_ESCALATION_TIMEOUT_MS);
+  const stale = await db.mediaSwapRequest.findMany({
+    where: { status: "PENDING_TARGET", autoSuggested: true, requestedAt: { lt: cutoff } },
   });
-  if (swap) {
-    const targetMember = await db.mediaMember.findUnique({ where: { id: best.memberId } });
-    const previousName = assignment.member?.user.name ?? "Um colega";
 
-    if (!targetMember?.phone) {
-      await notifyMediaLeaders(
-        organizationId,
-        "Substituto sugerido sem telefone",
-        `${best.name} foi sugerido(a) automaticamente para cobrir ${assignment.function.name} em ${assignment.event.name}, mas não tem telefone cadastrado — avise manualmente e peça para responder em Solicitações.`,
-        `/midia-adesf/solicitacoes`,
-      );
-    } else {
-      const swapToken = await createSwapAcceptToken(organizationId, best.memberId, swap.id);
-      const message = swapAcceptMessage(best.name, previousName, assignment.function.name, assignment.event.name, assignment.event.startAt, swapToken);
-      const sendResult = await sendWhatsApp({ organizationId, to: targetMember.phone, message });
-      // sendWhatsApp nunca lança erro quando falha (WhatsApp desconectado,
-      // número inválido) — só devolve delivered:false. Sem checar isso
-      // aqui, a troca fica presa em PENDING_TARGET pra sempre, sem
-      // ninguém nunca saber que o convite nunca chegou ao substituto
-      // (§ pedido do usuário: "consta alteração pendente" sem andamento).
-      if (!sendResult.delivered) {
-        await notifyMediaLeaders(
-          organizationId,
-          "Substituto sugerido, mas não notificado",
-          `${best.name} foi sugerido(a) automaticamente para cobrir ${assignment.function.name} em ${assignment.event.name}, mas o convite por WhatsApp não pôde ser enviado (${sendResult.error ?? (sendResult.pending ? "WhatsApp desconectado" : "erro desconhecido")}). Reenvie manualmente em Solicitações assim que o WhatsApp estiver reconectado.`,
-          `/midia-adesf/solicitacoes`,
-        );
-      }
-    }
+  let escalated = 0;
+  for (const swap of stale) {
+    await db.mediaSwapRequest.update({
+      where: { id: swap.id },
+      data: { status: "EXPIRED", targetRespondedAt: new Date(), decisionNotes: "Sem resposta dentro do prazo — escalado automaticamente para o próximo candidato." },
+    });
+
+    const priorAttempts = await db.mediaSwapRequest.findMany({
+      where: { assignmentId: swap.assignmentId, requestedByMemberId: swap.requestedByMemberId },
+      select: { targetMemberId: true },
+    });
+    await findAndInviteNextCandidate(swap.organizationId, swap.assignmentId, swap.requestedByMemberId, priorAttempts.map((p) => p.targetMemberId));
+    escalated++;
   }
+  return { escalated };
+}
 
-  return { success: `Indisponibilidade registrada. ${best.name} foi convidado(a) automaticamente para cobrir a vaga.` };
+// Candidatos ainda não tentados para esta vaga (§ pedido do usuário: opção
+// do admin escolher outra pessoa manualmente em vez de esperar a cascata
+// automática) — mesma lista/ranking da IA, só exclui quem já foi
+// convidado para esta MESMA vaga.
+export async function getSwapReassignCandidates(organizationId: string, swapId: string) {
+  const swap = await db.mediaSwapRequest.findFirst({
+    where: { id: swapId, organizationId },
+    include: { assignment: { include: { event: true, schedule: true } } },
+  });
+  if (!swap) return [];
+
+  const priorAttempts = await db.mediaSwapRequest.findMany({
+    where: { assignmentId: swap.assignmentId, requestedByMemberId: swap.requestedByMemberId },
+    select: { targetMemberId: true },
+  });
+  const excludeIds = new Set(priorAttempts.map((p) => p.targetMemberId));
+
+  const candidates = await findEligibleMembers(
+    organizationId,
+    swap.assignment.functionId,
+    swap.assignment.event.startAt,
+    swap.assignment.event.endAt,
+    swap.assignment.eventId,
+    swap.requestedByMemberId,
+  );
+  const eligible = candidates.filter((c) => !excludeIds.has(c.memberId));
+  return rankEligibleMembers(organizationId, eligible, swap.assignment.functionId, swap.assignment.schedule.periodStart, swap.assignment.schedule.periodEnd, swap.assignment.event.startAt);
+}
+
+// Admin escolhe manualmente outro membro pra convidar em vez do atual
+// (§ pedido do usuário: "deixe a opção para que o adm escolha fazer o
+// disparo para outro de dentro da plataforma") — expira o convite pendente
+// atual e convida o novo, reaproveitando a mesma lógica de envio da
+// cascata automática.
+export async function manuallyReassignSwapTarget(organizationId: string, swapId: string, newTargetMemberId: string): Promise<ServiceResult> {
+  const swap = await db.mediaSwapRequest.findFirst({
+    where: { id: swapId, organizationId, status: "PENDING_TARGET" },
+    include: { assignment: { include: { event: true, function: true, member: { include: { user: { select: { name: true } } } } } } },
+  });
+  if (!swap) return { error: "Solicitação não encontrada ou já respondida." };
+  if (newTargetMemberId === swap.targetMemberId) return { error: "Selecione um membro diferente do atual." };
+
+  const newTarget = await db.mediaMember.findFirst({
+    where: { id: newTargetMemberId, organizationId, status: "ACTIVE" },
+    include: { user: { select: { name: true } } },
+  });
+  if (!newTarget) return { error: "Membro não encontrado ou inativo." };
+  const hasFunction = await db.mediaMemberFunction.findFirst({ where: { memberId: newTargetMemberId, functionId: swap.assignment.functionId } });
+  if (!hasFunction) return { error: "Este membro não está habilitado para esta função." };
+
+  await db.mediaSwapRequest.update({
+    where: { id: swap.id },
+    data: { status: "EXPIRED", targetRespondedAt: new Date(), decisionNotes: "Substituído manualmente pela liderança por outro convite." },
+  });
+
+  return inviteCandidateForSwap(
+    organizationId,
+    swap.assignmentId,
+    swap.assignment.member!.userId,
+    swap.requestedByMemberId,
+    newTargetMemberId,
+    newTarget.user.name,
+    swap.assignment.member?.user.name ?? "Um colega",
+    swap.assignment.function.name,
+    swap.assignment.event.name,
+    swap.assignment.event.startAt,
+  );
 }
 
 // Reenvio manual (§ pedido do usuário: troca ficou "pendente" sem avançar

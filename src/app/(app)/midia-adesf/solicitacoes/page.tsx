@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SwapDecisionForm } from "./swap-decision-form";
-import { ResendSwapNotificationButton } from "./resend-swap-notification-button";
+import { ResendSwapNotificationButton, ReassignSwapTargetPicker } from "./resend-swap-notification-button";
 
 export default async function MediaAdesfSwapRequestsPage() {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -69,20 +69,31 @@ export default async function MediaAdesfSwapRequestsPage() {
           <div className="flex flex-col gap-3">
             {pendingTarget.map((s) => (
               <div key={s.id} className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-sm text-text-primary">
-                  <strong>{s.requestedBy.user.name}</strong> → <strong>{s.targetMember.user.name}</strong>
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-text-primary">
+                    <strong>{s.requestedBy.user.name}</strong> → <strong>{s.targetMember.user.name}</strong>
+                  </p>
+                  {s.autoSuggested && <Badge tone="accent">Sugerido pela IA</Badge>}
+                </div>
                 <p className="text-xs text-text-tertiary">
                   {s.assignment.function.name} em {s.assignment.event.name} · {s.assignment.event.startAt.toLocaleString("pt-BR")}
                 </p>
                 {s.reason && <p className="mt-1 text-xs text-text-tertiary">Motivo: {s.reason}</p>}
-                <p className="mt-1 text-xs text-text-tertiary">
-                  {s.targetMember.phone ? "Convite enviado por WhatsApp — se não chegou, reenvie abaixo." : "Este membro não tem telefone cadastrado — avise manualmente."}
-                </p>
-                {s.targetMember.phone && (
-                  <div className="mt-3">
-                    <ResendSwapNotificationButton swapId={s.id} />
-                  </div>
+
+                {s.autoSuggested ? (
+                  <>
+                    <p className="mt-1 text-xs text-text-tertiary">
+                      {s.targetMember.phone
+                        ? "Convite enviado por WhatsApp — se não chegou, reenvie abaixo. Sem resposta em 1h, o sistema tenta o próximo candidato sozinho."
+                        : "Este membro não tem telefone cadastrado — avise manualmente ou escolha outra pessoa abaixo."}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-3">
+                      {s.targetMember.phone && <ResendSwapNotificationButton swapId={s.id} />}
+                      <ReassignSwapTargetPicker swapId={s.id} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-text-tertiary">Troca solicitada diretamente pelo membro — aguardando resposta dele(a) no portal.</p>
                 )}
               </div>
             ))}

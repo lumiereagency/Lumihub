@@ -7,7 +7,8 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { requestSwap, respondToSwapAsTarget, cancelSwap, approveSwapAsLeader } from "@/lib/media/schedule/swap-service";
 import { findEligibleMembers, type EligibleMemberCandidate } from "@/lib/media/schedule/conflict-service";
-import { resendSwapAcceptNotification } from "@/lib/media/tokens/action-tokens";
+import type { RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
+import { resendSwapAcceptNotification, getSwapReassignCandidates, manuallyReassignSwapTarget } from "@/lib/media/tokens/action-tokens";
 import { requestSwapSchema, swapDecisionSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -96,4 +97,22 @@ export async function decideSwapAction(swapId: string, approve: boolean, _prev: 
 export async function resendSwapNotificationAction(swapId: string): Promise<ActionState> {
   const admin = await requirePermission(permKey("MEDIA_ADESF", "EDIT"));
   return resendSwapAcceptNotification(admin.organizationId, swapId);
+}
+
+// Candidatos ainda não tentados para esta vaga (§ pedido do usuário: opção
+// do admin escolher outra pessoa manualmente em vez de esperar a cascata
+// automática de 1h). Mesma exposição de ranking de IA que o seletor manual
+// de escalas já usa — restrita a quem tem MEDIA_ADESF_EDIT.
+export async function getSwapReassignCandidatesAction(swapId: string): Promise<RankedEligibleMember[]> {
+  const admin = await requirePermission(permKey("MEDIA_ADESF", "EDIT"));
+  return getSwapReassignCandidates(admin.organizationId, swapId);
+}
+
+export async function reassignSwapTargetAction(swapId: string, newTargetMemberId: string): Promise<ActionState> {
+  const admin = await requirePermission(permKey("MEDIA_ADESF", "EDIT"));
+  const result = await manuallyReassignSwapTarget(admin.organizationId, swapId, newTargetMemberId);
+
+  revalidatePath("/midia-adesf/solicitacoes");
+  revalidatePath("/midia/solicitacoes");
+  return result;
 }
