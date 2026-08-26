@@ -7,6 +7,24 @@ interface ServiceResult {
   success?: string;
 }
 
+// Recusa ("não vou poder", pedido do usuário para a confirmação mensal por
+// WhatsApp) — símetrico a confirmAttendance, mas nunca move o status da
+// atribuição sozinho: quem decide se libera a vaga e busca substituto é a
+// camada que chama isto (hoje: o link de confirmação), nunca esta função.
+export async function declineAttendance(organizationId: string, actorUserId: string, assignmentId: string, memberId: string): Promise<ServiceResult> {
+  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({ where: { id: assignmentId } });
+  if (assignment.memberId !== memberId) return { error: "Esta atribuição não pertence a você." };
+
+  await db.mediaAttendance.upsert({
+    where: { assignmentId },
+    create: { assignmentId, memberId, confirmationStatus: "DECLINED" },
+    update: { confirmationStatus: "DECLINED", confirmedAt: null },
+  });
+
+  await audit({ organizationId, userId: actorUserId, action: "MEDIA_ATTENDANCE_DECLINED", entityType: "MediaScheduleAssignment", entityId: assignmentId });
+  return { success: "Indisponibilidade registrada." };
+}
+
 // Confirmação (§40-41): "eu pretendo comparecer" — diferente de check-in.
 export async function confirmAttendance(organizationId: string, actorUserId: string, assignmentId: string, memberId: string): Promise<ServiceResult> {
   const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({ where: { id: assignmentId } });

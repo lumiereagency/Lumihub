@@ -8,6 +8,7 @@ import { audit } from "@/lib/audit";
 import { createMonthlySchedule, assignScheduleSlot, clearScheduleSlot, publishSchedule } from "@/lib/media/schedule/schedule-service";
 import { findEligibleMembers } from "@/lib/media/schedule/conflict-service";
 import { rankEligibleMembers, type RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
+import { sendScheduleConfirmationRequests } from "@/lib/media/tokens/action-tokens";
 import { createMonthlyScheduleSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -95,6 +96,14 @@ export async function publishScheduleAction(scheduleId: string, force: boolean):
   revalidatePath("/midia-adesf/escalas");
   revalidatePath("/midia/escala");
   revalidatePath("/midia/minha-escala");
+
+  // Disparo automático (§ pedido do usuário: publicar já deve avisar todo
+  // mundo, sem passo manual extra) — um WhatsApp por membro, nunca um por
+  // culto. Falha de envio nunca deve desfazer a publicação já efetivada.
+  const dispatch = await sendScheduleConfirmationRequests(scheduleId, user.organizationId).catch(() => null);
+  if (dispatch && dispatch.sent > 0) {
+    return { success: `Escala publicada. Confirmação enviada por WhatsApp para ${dispatch.sent} membro(s).` };
+  }
   return { success: "Escala publicada." };
 }
 

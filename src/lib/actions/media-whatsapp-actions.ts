@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { sendWhatsApp } from "@/lib/integrations/whatsapp";
-import { createAvailabilityRequestToken } from "@/lib/media/tokens/action-tokens";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { createAvailabilityRequestToken, sendScheduleConfirmationRequests } from "@/lib/media/tokens/action-tokens";
+import { formatDate } from "@/lib/format";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
 const MANAGE = permKey("MEDIA_ADESF", "MANAGE");
@@ -20,38 +20,17 @@ function appUrl(): string {
 // Configurações → Integrações, cai no mesmo fallback "pendente" (loga e
 // segue) que os outros módulos já têm, sem quebrar o fluxo.
 
-// Envia o resumo das atribuições do mês por WhatsApp (§ "enviar escala do
-// mês" pedido pelo usuário) — texto simples, sem link: é só informativo.
+// Envia o disparo único de confirmação da escala do mês (§ pedido do
+// usuário: um link só por membro, listando todos os dias, para minimizar
+// custo de disparos) — usada tanto pelo botão manual quanto automaticamente
+// logo após publicar a escala.
 export async function sendScheduleWhatsAppAction(scheduleId: string): Promise<ActionState> {
   const admin = await requirePermission(MANAGE);
 
   const schedule = await db.mediaSchedule.findFirst({ where: { id: scheduleId, organizationId: admin.organizationId } });
   if (!schedule) return { error: "Escala não encontrada." };
 
-  const assignments = await db.mediaScheduleAssignment.findMany({
-    where: { scheduleId, memberId: { not: null } },
-    include: { event: true, function: true, member: { include: { user: { select: { name: true } } } } },
-    orderBy: { event: { startAt: "asc" } },
-  });
-
-  const byMember = new Map<string, { name: string; phone: string | null; lines: string[] }>();
-  for (const a of assignments) {
-    const entry = byMember.get(a.memberId!) ?? { name: a.member!.user.name, phone: a.member!.phone, lines: [] };
-    entry.lines.push(`• ${a.function.name} em ${a.event.name} — ${formatDateTime(a.event.startAt)}`);
-    byMember.set(a.memberId!, entry);
-  }
-
-  let sent = 0;
-  let withoutPhone = 0;
-  for (const entry of byMember.values()) {
-    if (!entry.phone) {
-      withoutPhone++;
-      continue;
-    }
-    const message = `Olá, ${entry.name}! Sua escala em ${schedule.name}:\n${entry.lines.join("\n")}\n\nDetalhes no portal: ${appUrl()}/midia/minha-escala`;
-    await sendWhatsApp({ organizationId: admin.organizationId, to: entry.phone, message });
-    sent++;
-  }
+  const { sent, withoutPhone } = await sendScheduleConfirmationRequests(scheduleId, admin.organizationId);
 
   if (sent === 0 && withoutPhone === 0) return { error: "Nenhum membro com atribuição nesta escala." };
   return {

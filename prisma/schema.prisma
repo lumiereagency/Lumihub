@@ -1458,21 +1458,41 @@ model MediaAvailabilityException {
 // modelo de confiança do PasswordResetToken). Guarda só o hash do token,
 // nunca o valor puro; expira e é de uso único (usedAt) para não permitir
 // reabrir e trocar a resposta depois de já respondido.
+// AVAILABILITY_REQUEST: pergunta de disponibilidade pontual (eventId),
+// antes de existir escala — uso único, grava MediaAvailabilityException.
+// SCHEDULE_CONFIRMATION: disparo único por escala publicada (scheduleId)
+// — nunca expira no primeiro clique, porque a mesma página lista TODOS os
+// cultos do membro naquele mês e cada um é respondido de forma
+// independente; só expira pelo prazo (fim do período + folga).
+// SWAP_ACCEPT: convite de um clique pro substituto sugerido pela IA
+// aceitar/recusar uma troca (swapRequestId) — uso único.
+enum MediaActionTokenType {
+  AVAILABILITY_REQUEST
+  SCHEDULE_CONFIRMATION
+  SWAP_ACCEPT
+}
+
 model MediaActionToken {
-  id             String    @id @default(cuid())
+  id             String               @id @default(cuid())
   organizationId String
   memberId       String
-  eventId        String
-  tokenHash      String    @unique
+  type           MediaActionTokenType @default(AVAILABILITY_REQUEST)
+  eventId        String?
+  scheduleId     String?
+  swapRequestId  String?
+  tokenHash      String               @unique
   expiresAt      DateTime
   usedAt         DateTime?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime             @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  member       MediaMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  event        MediaEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       MediaMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  event        MediaEvent?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  schedule     MediaSchedule?    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  swapRequest  MediaSwapRequest? @relation(fields: [swapRequestId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, memberId])
+  @@index([scheduleId, memberId])
   @@map("media_action_tokens")
 }
 
@@ -1687,6 +1707,7 @@ model MediaSchedule {
   publishedBy      User?                     @relation("MediaSchedulePublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
   assignments      MediaScheduleAssignment[]
   aiGenerationRuns MediaAIGenerationRun[]
+  actionTokens     MediaActionToken[]
 
   @@unique([organizationId, month, year])
   @@map("media_schedules")
@@ -1764,6 +1785,7 @@ model MediaSwapRequest {
   requestedBy  MediaMember             @relation("MediaSwapRequestedBy", fields: [requestedByMemberId], references: [id], onDelete: Cascade)
   targetMember MediaMember             @relation("MediaSwapTarget", fields: [targetMemberId], references: [id], onDelete: Cascade)
   leader       User?                   @relation("MediaSwapLeader", fields: [leaderUserId], references: [id], onDelete: SetNull)
+  actionTokens MediaActionToken[]
 
   @@index([assignmentId])
   @@index([organizationId, status])
