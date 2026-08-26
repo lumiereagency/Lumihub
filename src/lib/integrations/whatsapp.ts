@@ -12,6 +12,10 @@ interface SendResult {
   delivered: boolean;
   pending: boolean;
   error?: string;
+  // Número exatamente usado na tentativa (com "55" já normalizado) — dá
+  // pra conferir na hora se bate com o número real do membro quando "diz
+  // que enviou" mas a mensagem não chega (§ pedido do usuário).
+  to?: string;
 }
 
 // Abstração de envio de WhatsApp (MessagingProvider). Só envia de verdade

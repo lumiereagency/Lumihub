@@ -146,7 +146,14 @@ export async function sendWhatsAppBaileysMessage(
   organizationId: string,
   to: string,
   message: string,
-): Promise<{ delivered: boolean; pending: boolean; error?: string }> {
+): Promise<{ delivered: boolean; pending: boolean; error?: string; to: string }> {
+  // Devolvido em todo caminho (§ pedido do usuário: "diz que foi mas não
+  // chegou") — o número exato pro qual o sistema tentou mandar é a
+  // primeira coisa a conferir quando "diz que enviou" mas não chega: um
+  // dígito errado no cadastro do membro passa despercebido pelo
+  // onWhatsApp() se, por coincidência, corresponder a OUTRA conta real.
+  const digits = normalizeBrazilPhoneDigits(to);
+
   const session = sessions.get(organizationId);
   if (!session || session.status === "disconnected") {
     // Sem sessão em memória (ex: logo após um restart do servidor) mas com
@@ -154,15 +161,14 @@ export async function sendWhatsAppBaileysMessage(
     // segundo plano, sem pedir QR de novo. Não bloqueia este envio.
     void startWhatsAppSession(organizationId);
     console.info(`[LUMIBASE][whatsapp:pendente] WhatsApp reconectando (Baileys). Mensagem não enviada.\nPara: ${to}\n${message}`);
-    return { delivered: false, pending: true };
+    return { delivered: false, pending: true, to: digits };
   }
   if (!session.sock || session.status !== "connected") {
     console.info(`[LUMIBASE][whatsapp:pendente] WhatsApp não conectado (Baileys). Mensagem não enviada.\nPara: ${to}\n${message}`);
-    return { delivered: false, pending: true };
+    return { delivered: false, pending: true, to: digits };
   }
 
   try {
-    const digits = normalizeBrazilPhoneDigits(to);
     // onWhatsApp confirma que o número existe de verdade no WhatsApp E
     // devolve o JID canônico — sem isso, um número sem o "55" na frente
     // (bug real encontrado: telefones aqui são salvos no formato local,
@@ -172,13 +178,13 @@ export async function sendWhatsAppBaileysMessage(
     // funciona" mesmo sem nenhum erro no log.
     const [check] = (await session.sock.onWhatsApp(digits)) ?? [];
     if (!check?.exists) {
-      return { delivered: false, pending: false, error: `Número ${digits} não está registrado no WhatsApp (confira o DDD e o dígito 9).` };
+      return { delivered: false, pending: false, to: digits, error: `Número ${digits} não está registrado no WhatsApp (confira o DDD e o dígito 9).` };
     }
     await session.sock.sendMessage(check.jid, { text: message });
-    return { delivered: true, pending: false };
+    return { delivered: true, pending: false, to: digits };
   } catch (err) {
     console.error("[LUMIBASE][whatsapp:erro] Falha ao enviar mensagem via Baileys.", err);
-    return { delivered: false, pending: false, error: (err as Error).message };
+    return { delivered: false, pending: false, to: digits, error: (err as Error).message };
   }
 }
 

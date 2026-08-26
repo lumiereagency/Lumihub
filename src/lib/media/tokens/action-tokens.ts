@@ -369,7 +369,12 @@ export async function resendSwapAcceptNotification(organizationId: string, swapR
   if (!sendResult.delivered) {
     return { error: sendResult.error ?? "WhatsApp não está conectado no momento — verifique em Configurações → Integrações." };
   }
-  return { success: "Convite de troca reenviado por WhatsApp." };
+  // Mostra o número exato usado (§ pedido do usuário: "diz que foi mas não
+  // chegou") — o jeito mais rápido de descartar (ou confirmar) um número
+  // cadastrado errado é comparar esse dígito a dígito com o WhatsApp real
+  // do membro, já que o WhatsApp confirmou que ESSE número existe — só não
+  // necessariamente é o do membro certo.
+  return { success: `Convite de troca reenviado por WhatsApp para +${sendResult.to}. Confira se esse é o número correto de ${swap.targetMember.user.name}.` };
 }
 
 // Substituto sugerido aceita/recusa pelo link — reaproveita 100% do
