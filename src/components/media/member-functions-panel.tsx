@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-import { assignMemberFunctionAction, removeMemberFunctionAction } from "@/lib/actions/media-actions";
+import { useActionState, useRef, useState } from "react";
+import { syncMemberFunctionsAction } from "@/lib/actions/media-actions";
 import type { ActionState } from "@/lib/actions/auth-actions";
-import { MEDIA_FUNCTION_ASSIGNMENT_LABELS } from "@/lib/media/labels";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
@@ -13,74 +12,145 @@ const initialState: ActionState = {};
 
 interface Assignment {
   functionId: string;
-  functionName: string;
   isPrimary: boolean;
   status: string;
+  mentorMemberId: string | null;
 }
 
+interface Row {
+  checked: boolean;
+  status: "EM_TREINAMENTO" | "HABILITADO" | "AVANCADO";
+  isPrimary: boolean;
+  mentorMemberId: string;
+}
+
+// Grade com TODAS as funções de uma vez (§ pedido do usuário: "deveria ter
+// todas as funções ali") em vez de escolher uma por uma num select e clicar
+// "vincular" repetidamente. Quem está "Em treinamento" ganha um select de
+// mentor — o titular responsável por acompanhar aquela pessoa na função.
 export function MemberFunctionsPanel({
   memberId,
   assignments,
   availableFunctions,
+  mentorsByFunction,
 }: {
   memberId: string;
   assignments: Assignment[];
   availableFunctions: { id: string; name: string }[];
+  mentorsByFunction: Record<string, { id: string; name: string }[]>;
 }) {
-  const [state, formAction, pending] = useActionState(assignMemberFunctionAction.bind(null, memberId), initialState);
-  const assignedIds = new Set(assignments.map((a) => a.functionId));
-  const remaining = availableFunctions.filter((f) => !assignedIds.has(f.id));
+  const [state, formAction, pending] = useActionState(syncMemberFunctionsAction.bind(null, memberId), initialState);
+  const hiddenRef = useRef<HTMLInputElement>(null);
+
+  const [rows, setRows] = useState<Record<string, Row>>(() => {
+    const map: Record<string, Row> = {};
+    for (const fn of availableFunctions) {
+      const existing = assignments.find((a) => a.functionId === fn.id);
+      map[fn.id] = existing
+        ? { checked: true, status: existing.status as Row["status"], isPrimary: existing.isPrimary, mentorMemberId: existing.mentorMemberId ?? "" }
+        : { checked: false, status: "HABILITADO", isPrimary: false, mentorMemberId: "" };
+    }
+    return map;
+  });
+
+  function update(functionId: string, patch: Partial<Row>) {
+    setRows((prev) => ({ ...prev, [functionId]: { ...prev[functionId], ...patch } }));
+  }
+
+  function setPrimary(functionId: string) {
+    setRows((prev) => {
+      const next = { ...prev };
+      for (const id of Object.keys(next)) next[id] = { ...next[id], isPrimary: id === functionId };
+      return next;
+    });
+  }
+
+  function buildPayload() {
+    return Object.entries(rows)
+      .filter(([, r]) => r.checked)
+      .map(([functionId, r]) => ({
+        functionId,
+        status: r.status,
+        isPrimary: r.isPrimary,
+        mentorMemberId: r.status === "EM_TREINAMENTO" && r.mentorMemberId ? r.mentorMemberId : null,
+      }));
+  }
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-      {assignments.length === 0 ? (
-        <p className="text-sm text-text-tertiary">Nenhuma função vinculada ainda.</p>
+    <form
+      action={formAction}
+      onSubmit={() => {
+        if (hiddenRef.current) hiddenRef.current.value = JSON.stringify(buildPayload());
+      }}
+      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5"
+    >
+      <input ref={hiddenRef} type="hidden" name="rows" />
+      <FormMessage error={state.error} success={state.success} />
+
+      {availableFunctions.length === 0 ? (
+        <p className="text-sm text-text-tertiary">Nenhuma função cadastrada para esta organização ainda.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {assignments.map((a) => (
-            <div key={a.functionId} className="flex items-center justify-between rounded-[10px] border border-border px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-text-primary">{a.functionName}</span>
-                {a.isPrimary && <Badge tone="accent">Principal</Badge>}
-                <Badge tone="neutral">{MEDIA_FUNCTION_ASSIGNMENT_LABELS[a.status]}</Badge>
+          {availableFunctions.map((fn) => {
+            const row = rows[fn.id];
+            const mentors = mentorsByFunction[fn.id] ?? [];
+            return (
+              <div key={fn.id} className="rounded-[10px] border border-border p-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex flex-1 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={row.checked}
+                      onChange={(e) => update(fn.id, { checked: e.target.checked })}
+                      className="h-4 w-4 rounded border-border bg-card accent-accent"
+                    />
+                    <span className="text-sm font-medium text-text-primary">{fn.name}</span>
+                    {row.isPrimary && <Badge tone="accent">Principal</Badge>}
+                  </label>
+
+                  {row.checked && (
+                    <>
+                      <Select value={row.status} onChange={(e) => update(fn.id, { status: e.target.value as Row["status"] })} className="w-44">
+                        <option value="EM_TREINAMENTO">Em treinamento</option>
+                        <option value="HABILITADO">Habilitado</option>
+                        <option value="AVANCADO">Avançado</option>
+                      </Select>
+                      <label className="flex items-center gap-1.5 text-xs text-text-secondary">
+                        <input type="radio" name="primary-radio" checked={row.isPrimary} onChange={() => setPrimary(fn.id)} className="h-3.5 w-3.5 accent-accent" />
+                        Principal
+                      </label>
+                    </>
+                  )}
+                </div>
+
+                {row.checked && row.status === "EM_TREINAMENTO" && (
+                  <div className="mt-2.5 border-t border-border pt-2.5">
+                    <Select
+                      label="Titular responsável (mentor)"
+                      value={row.mentorMemberId}
+                      onChange={(e) => update(fn.id, { mentorMemberId: e.target.value })}
+                    >
+                      <option value="">Nenhum definido ainda</option>
+                      {mentors.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </Select>
+                    {mentors.length === 0 && (
+                      <p className="mt-1 text-xs text-text-tertiary">Nenhum outro membro Habilitado/Avançado nesta função ainda para apontar como mentor.</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <form action={removeMemberFunctionAction.bind(null, memberId, a.functionId)}>
-                <button type="submit" className="text-xs text-error hover:underline">
-                  Remover
-                </button>
-              </form>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {remaining.length > 0 && (
-        <form action={formAction} className="grid grid-cols-1 gap-3 border-t border-border pt-4 sm:grid-cols-2">
-          <FormMessage error={state.error} success={state.success} />
-          <Select label="Função" name="functionId" required defaultValue="">
-            <option value="" disabled>
-              Selecione...
-            </option>
-            {remaining.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </Select>
-          <Select label="Nível" name="status" defaultValue="HABILITADO">
-            <option value="EM_TREINAMENTO">Em treinamento</option>
-            <option value="HABILITADO">Habilitado</option>
-            <option value="AVANCADO">Avançado</option>
-          </Select>
-          <label className="flex items-center gap-2 text-sm text-text-secondary sm:col-span-2">
-            <input type="checkbox" name="isPrimary" className="h-4 w-4 rounded border-border bg-card accent-accent" />
-            Definir como função principal
-          </label>
-          <Button type="submit" disabled={pending} className="self-start sm:col-span-2">
-            {pending ? "Vinculando..." : "Vincular função"}
-          </Button>
-        </form>
-      )}
-    </div>
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? "Salvando..." : "Salvar funções"}
+      </Button>
+    </form>
   );
 }

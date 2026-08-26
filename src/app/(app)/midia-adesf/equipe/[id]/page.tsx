@@ -20,7 +20,7 @@ export default async function MediaAdesfMemberDetailPage({ params }: { params: P
     where: { id, organizationId: user.organizationId },
     include: {
       user: { select: { name: true, email: true, avatarUrl: true, lastLoginAt: true } },
-      functions: { include: { function: true } },
+      functions: { include: { function: true, mentor: { include: { user: { select: { name: true } } } } } },
       availabilityRecurring: { orderBy: { dayOfWeek: "asc" } },
       availabilityExceptions: { where: { date: { gte: new Date() } }, orderBy: { date: "asc" } },
     },
@@ -31,6 +31,24 @@ export default async function MediaAdesfMemberDetailPage({ params }: { params: P
     where: { organizationId: user.organizationId, active: true },
     orderBy: { displayOrder: "asc" },
   });
+
+  // Candidatos a mentor por função: outros membros já Habilitado/Avançado
+  // naquela função (§ pedido do usuário: quem está em treinamento precisa
+  // de um titular responsável por ele).
+  const mentorCandidates = await db.mediaMemberFunction.findMany({
+    where: {
+      memberId: { not: member.id },
+      status: { in: ["HABILITADO", "AVANCADO"] },
+      function: { organizationId: user.organizationId },
+    },
+    include: { member: { include: { user: { select: { name: true } } } } },
+  });
+  const mentorsByFunction = new Map<string, { id: string; name: string }[]>();
+  for (const mf of mentorCandidates) {
+    const list = mentorsByFunction.get(mf.functionId) ?? [];
+    list.push({ id: mf.memberId, name: mf.member.user.name });
+    mentorsByFunction.set(mf.functionId, list);
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -58,11 +76,12 @@ export default async function MediaAdesfMemberDetailPage({ params }: { params: P
           memberId={member.id}
           assignments={member.functions.map((f) => ({
             functionId: f.functionId,
-            functionName: f.function.name,
             isPrimary: f.isPrimary,
             status: f.status,
+            mentorMemberId: f.mentorMemberId,
           }))}
           availableFunctions={allFunctions.map((f) => ({ id: f.id, name: f.name }))}
+          mentorsByFunction={Object.fromEntries(mentorsByFunction)}
         />
       </section>
 

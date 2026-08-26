@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Users2 } from "lucide-react";
-import { resendMediaInvitationAction, removeMediaMemberAction } from "@/lib/actions/media-actions";
+import { Plus, Search, Users2, Trash2 } from "lucide-react";
+import { resendMediaInvitationAction, removeMediaMemberAction, deletePendingMediaInviteAction } from "@/lib/actions/media-actions";
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -136,11 +136,27 @@ export function MediaTeamList({
                     {canEdit && (
                       <div className="flex items-center justify-end gap-1">
                         {m.status === "INVITED" && (
-                          <form action={resendMediaInvitationAction.bind(null, m.id)}>
-                            <button type="submit" className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary">
-                              Reenviar convite
-                            </button>
-                          </form>
+                          <>
+                            <form action={resendMediaInvitationAction.bind(null, m.id)}>
+                              <button type="submit" className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary">
+                                Reenviar convite
+                              </button>
+                            </form>
+                            <form
+                              action={deletePendingMediaInviteAction.bind(null, m.id)}
+                              onSubmit={(e) => {
+                                if (!confirm(`Excluir o convite de ${m.name}? Essa ação não pode ser desfeita.`)) e.preventDefault();
+                              }}
+                            >
+                              <button
+                                type="submit"
+                                title="Excluir convite"
+                                className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </form>
+                          </>
                         )}
                         {m.status !== "INACTIVE" && (
                           <form action={removeMediaMemberAction.bind(null, m.id)}>

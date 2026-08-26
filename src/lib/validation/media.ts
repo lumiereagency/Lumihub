@@ -27,10 +27,20 @@ export const mediaFunctionSchema = z.object({
   active: z.preprocess((v) => v === "on" || v === true, z.boolean()).default(true),
 });
 
-export const memberFunctionAssignSchema = z.object({
-  functionId: z.string().min(1, "Selecione uma função."),
-  isPrimary: z.preprocess((v) => v === "on" || v === true, z.boolean()).default(false),
-  status: z.enum(["EM_TREINAMENTO", "HABILITADO", "AVANCADO"]).default("HABILITADO"),
+// Sincronização em lote da grade "todas as funções" (§ pedido do usuário:
+// ver todas de uma vez, não escolher uma por uma num select) na página do
+// membro — mesmo padrão de "substitui tudo numa tacada" já usado em
+// updateMyAvailabilityAction, só que aqui cada linha carrega função +
+// nível + mentor em vez de um dia da semana.
+export const syncMemberFunctionsSchema = z.object({
+  rows: z.array(
+    z.object({
+      functionId: z.string().min(1),
+      status: z.enum(["EM_TREINAMENTO", "HABILITADO", "AVANCADO"]),
+      isPrimary: z.boolean().default(false),
+      mentorMemberId: z.string().min(1).nullable().default(null),
+    }),
+  ),
 });
 
 export const mediaBrandSettingsSchema = z.object({

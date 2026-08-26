@@ -1370,6 +1370,7 @@ model MediaMember {
   attendances            MediaAttendance[]            @relation("MediaMemberAttendance")
   aiSuggestionsAsTarget  MediaAISuggestion[]          @relation("MediaAISuggestedMember")
   actionTokens           MediaActionToken[]
+  mentoringFunctions     MediaMemberFunction[]        @relation("MediaMemberFunctionMentor")
 
   @@index([organizationId, status])
   @@map("media_members")
@@ -1404,16 +1405,22 @@ enum MediaFunctionAssignmentStatus {
 }
 
 model MediaMemberFunction {
-  id         String                        @id @default(cuid())
-  memberId   String
-  functionId String
-  isPrimary  Boolean                       @default(false)
-  status     MediaFunctionAssignmentStatus @default(HABILITADO)
-  createdAt  DateTime                      @default(now())
-  updatedAt  DateTime                      @updatedAt
+  id             String                        @id @default(cuid())
+  memberId       String
+  functionId     String
+  isPrimary      Boolean                       @default(false)
+  status         MediaFunctionAssignmentStatus @default(HABILITADO)
+  // Titular responsável por acompanhar quem está EM_TREINAMENTO nesta
+  // função (§ pedido do usuário) — só informativo por enquanto: aparece no
+  // perfil do membro e como dica na hora de escalar, não altera sozinho
+  // nenhuma escala.
+  mentorMemberId String?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
 
   member   MediaMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   function MediaFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  mentor   MediaMember?  @relation("MediaMemberFunctionMentor", fields: [mentorMemberId], references: [id], onDelete: SetNull)
 
   @@unique([memberId, functionId])
   @@map("media_member_functions")

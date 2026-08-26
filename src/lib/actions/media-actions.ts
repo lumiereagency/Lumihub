@@ -18,7 +18,7 @@ import {
   inviteMediaMemberSchema,
   updateMediaMemberSchema,
   mediaFunctionSchema,
-  memberFunctionAssignSchema,
+  syncMemberFunctionsSchema,
   mediaBrandSettingsSchema,
   mediaAIWeightsSchema,
 } from "@/lib/validation/media";
@@ -347,6 +347,44 @@ export async function resendMediaInvitationAction(
   revalidatePath("/midia/equipe");
 }
 
+// Exclui de vez um convite ainda não aceito (§ pedido do usuário: "não
+// tenho a opção de excluir, preciso de uma lixeirazinha") — diferente de
+// removeMediaMemberAction, que só desativa. Só permitido para quem nunca
+// acessou o portal (status INVITED): não há escala/presença/troca real
+// vinculada ainda, então apagar é seguro. Se o convite foi pra um e-mail
+// que já era um usuário do LUMIBASE, mantém o User (a conta é dele, não
+// foi criada pra isso); só apaga o User-casca criado especificamente para
+// este convite (role MEDIA_ONLY, nunca logou em lugar nenhum).
+export async function deletePendingMediaInviteAction(memberId: string): Promise<void> {
+  const admin = await requirePermission(DELETE);
+
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId, status: "INVITED" },
+    include: { user: { include: { role: true } } },
+  });
+  if (!member) return;
+
+  const isShellUser = member.user.role.key === "MEDIA_ONLY" && !member.user.lastLoginAt;
+
+  await db.$transaction(async (tx) => {
+    await tx.mediaMember.delete({ where: { id: memberId } });
+    await tx.mediaInvitation.deleteMany({ where: { organizationId: admin.organizationId, email: member.user.email, status: "INVITED" } });
+    if (isShellUser) await tx.user.delete({ where: { id: member.userId } });
+  });
+
+  await audit({
+    organizationId: admin.organizationId,
+    userId: admin.id,
+    action: "MEDIA_INVITATION_DELETED",
+    entityType: "MediaMember",
+    entityId: memberId,
+    metadata: { email: member.user.email },
+  });
+
+  revalidatePath("/midia-adesf/equipe");
+  revalidatePath("/midia/equipe");
+}
+
 // Funções (ex: Data Show, Fotógrafo) — catálogo configurável por organização.
 export async function createMediaFunctionAction(
   _prev: ActionState,
@@ -468,98 +506,71 @@ export async function deleteMediaFunctionAction(
   revalidatePath("/midia/configuracoes");
 }
 
-// Vincula/atualiza a função de um membro. Feito em transação porque "função
-// principal" é imposta por um índice único parcial no banco (uma por
-// membro) — zera as demais antes de marcar a nova como principal.
-export async function assignMemberFunctionAction(
+// Grade "todas as funções de uma vez" (§ pedido do usuário) — substitui
+// assignMemberFunctionAction/removeMemberFunctionAction linha-por-linha
+// por um único envio: a UI manda o estado final desejado (quais funções
+// ficam marcadas, com qual nível/mentor) e aqui é feito o diff contra o
+// que já existe, tudo numa transação.
+export async function syncMemberFunctionsAction(
   memberId: string,
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const admin = await requirePermission(EDIT);
 
-  const parsed = memberFunctionAssignSchema.safeParse({
-    functionId: formData.get("functionId"),
-    isPrimary: formData.get("isPrimary"),
-    status: formData.get("status") || "HABILITADO",
-  });
-  if (!parsed.success)
-    return {
-      error:
-        parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
-    };
+  let rowsInput: unknown;
+  try {
+    rowsInput = JSON.parse(String(formData.get("rows") ?? "[]"));
+  } catch {
+    return { error: "Dados de funções inválidos." };
+  }
+  const parsed = syncMemberFunctionsSchema.safeParse({ rows: rowsInput });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
 
-  const member = await db.mediaMember.findFirst({
-    where: { id: memberId, organizationId: admin.organizationId },
-  });
+  const member = await db.mediaMember.findFirst({ where: { id: memberId, organizationId: admin.organizationId } });
   if (!member) return { error: "Membro não encontrado." };
 
-  const fn = await db.mediaFunction.findFirst({
-    where: { id: parsed.data.functionId, organizationId: admin.organizationId },
-  });
-  if (!fn) return { error: "Função não encontrada." };
+  // Nunca confia nos IDs vindos do cliente — só aceita funções e mentores
+  // que realmente existem nesta organização.
+  const functionIds = parsed.data.rows.map((r) => r.functionId);
+  const validFunctionIds = new Set(
+    (await db.mediaFunction.findMany({ where: { id: { in: functionIds }, organizationId: admin.organizationId }, select: { id: true } })).map((f) => f.id),
+  );
+  const mentorIds = parsed.data.rows.map((r) => r.mentorMemberId).filter((id): id is string => !!id);
+  const validMentorIds = new Set(
+    mentorIds.length > 0
+      ? (await db.mediaMember.findMany({ where: { id: { in: mentorIds }, organizationId: admin.organizationId }, select: { id: true } })).map((m) => m.id)
+      : [],
+  );
+
+  const rows = parsed.data.rows.filter((r) => validFunctionIds.has(r.functionId));
+  const primaryCount = rows.filter((r) => r.isPrimary).length;
+  if (primaryCount > 1) return { error: "Só é possível marcar uma função principal." };
 
   await db.$transaction(async (tx) => {
-    if (parsed.data.isPrimary) {
-      await tx.mediaMemberFunction.updateMany({
-        where: { memberId },
-        data: { isPrimary: false },
+    await tx.mediaMemberFunction.deleteMany({ where: { memberId, functionId: { notIn: rows.map((r) => r.functionId) } } });
+    for (const row of rows) {
+      const mentorMemberId = row.status === "EM_TREINAMENTO" && row.mentorMemberId && validMentorIds.has(row.mentorMemberId) ? row.mentorMemberId : null;
+      await tx.mediaMemberFunction.upsert({
+        where: { memberId_functionId: { memberId, functionId: row.functionId } },
+        create: { memberId, functionId: row.functionId, status: row.status, isPrimary: row.isPrimary, mentorMemberId },
+        update: { status: row.status, isPrimary: row.isPrimary, mentorMemberId },
       });
     }
-    await tx.mediaMemberFunction.upsert({
-      where: { memberId_functionId: { memberId, functionId: fn.id } },
-      create: {
-        memberId,
-        functionId: fn.id,
-        isPrimary: parsed.data.isPrimary,
-        status: parsed.data.status,
-      },
-      update: { isPrimary: parsed.data.isPrimary, status: parsed.data.status },
-    });
   });
 
   await audit({
     organizationId: admin.organizationId,
     userId: admin.id,
-    action: "MEDIA_MEMBER_FUNCTION_ASSIGNED",
+    action: "MEDIA_MEMBER_FUNCTIONS_SYNCED",
     entityType: "MediaMember",
     entityId: memberId,
-    metadata: {
-      functionId: fn.id,
-      functionName: fn.name,
-      isPrimary: parsed.data.isPrimary,
-    },
+    metadata: { functionIds: rows.map((r) => r.functionId) },
   });
 
   revalidatePath(`/midia-adesf/equipe/${memberId}`);
   revalidatePath(`/midia/equipe/${memberId}`);
-  return { success: "Função vinculada ao membro." };
-}
-
-export async function removeMemberFunctionAction(
-  memberId: string,
-  functionId: string,
-): Promise<void> {
-  const admin = await requirePermission(EDIT);
-
-  const member = await db.mediaMember.findFirst({
-    where: { id: memberId, organizationId: admin.organizationId },
-  });
-  if (!member) return;
-
-  await db.mediaMemberFunction.deleteMany({ where: { memberId, functionId } });
-
-  await audit({
-    organizationId: admin.organizationId,
-    userId: admin.id,
-    action: "MEDIA_MEMBER_FUNCTION_REMOVED",
-    entityType: "MediaMember",
-    entityId: memberId,
-    metadata: { functionId },
-  });
-
-  revalidatePath(`/midia-adesf/equipe/${memberId}`);
-  revalidatePath(`/midia/equipe/${memberId}`);
+  return { success: "Funções atualizadas." };
 }
 
 // Identidade visual (Fase 01 — configurável por quem tem MANAGE). Upload de
