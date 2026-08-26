@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Repeat, Clapperboard, Trash2 } from "lucide-react";
-import { createEventAction, deleteEventAction } from "@/lib/actions/media-event-actions";
+import { createEventAction, createRecurrenceAction, deleteEventAction } from "@/lib/actions/media-event-actions";
 import { MEDIA_EVENT_STATUS_LABELS, MEDIA_EVENT_STATUS_TONE } from "@/lib/media/labels";
 import { formatDateTime } from "@/lib/format";
 import { Drawer } from "@/components/ui/drawer";
@@ -110,7 +110,12 @@ export function EventList({ events, allFunctions }: { events: EventRow[]; allFun
       </Drawer>
 
       <Drawer open={creatingRecurrence} onClose={() => setCreatingRecurrence(false)} title="Nova série recorrente">
-        <RecurrenceForm allFunctions={allFunctions} onSuccess={() => setCreatingRecurrence(false)} />
+        <RecurrenceForm
+          action={createRecurrenceAction}
+          allFunctions={allFunctions}
+          submitLabel="Criar série recorrente"
+          onSuccess={() => setCreatingRecurrence(false)}
+        />
       </Drawer>
     </div>
   );

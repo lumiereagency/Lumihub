@@ -180,3 +180,46 @@ export async function generateDueMediaEventOccurrences(): Promise<number> {
   }
   return total;
 }
+
+// Sincroniza nome/tipo/local/horário de uma série editada para as
+// ocorrências futuras já geradas por ela (§ pedido do usuário: "editar
+// não estava obedecendo o horário ser o mesmo em todas"). Só toca o que
+// ainda vai acontecer (nunca passado/cancelado/arquivado/concluído) e só
+// ajusta a HORA do dia em cada ocorrência — a data de cada uma continua a
+// mesma. Mudança de dia da semana não realinha ocorrências já criadas
+// para o novo dia (isso exigiria decidir o que fazer com as antigas);
+// para isso o caminho é excluir a série e recriar (já existe na tela).
+export async function syncRecurrenceScheduleToFutureOccurrences(
+  recurrenceId: string,
+  fields: { name: string; type: string; location: string | null; startTime: string; endTime: string | null },
+): Promise<number> {
+  const futureEvents = await db.mediaEvent.findMany({
+    where: { recurrenceId, startAt: { gte: new Date() }, status: { notIn: ["CANCELLED", "ARCHIVED", "COMPLETED"] } },
+  });
+
+  const [startHour, startMinute] = fields.startTime.split(":").map(Number);
+  const [endHour, endMinute] = fields.endTime ? fields.endTime.split(":").map(Number) : [null, null];
+
+  for (const event of futureEvents) {
+    const startAt = new Date(event.startAt);
+    startAt.setHours(startHour, startMinute, 0, 0);
+    const endAt = endHour != null && endMinute != null ? new Date(event.startAt) : null;
+    if (endAt && endHour != null && endMinute != null) endAt.setHours(endHour, endMinute, 0, 0);
+
+    await db.mediaEvent.update({
+      where: { id: event.id },
+      data: { name: fields.name, type: fields.type, location: fields.location, startAt, endAt },
+    });
+    await syncCalendarEventForMediaEvent({
+      id: event.id,
+      organizationId: event.organizationId,
+      name: fields.name,
+      startAt,
+      endAt,
+      location: fields.location,
+      description: event.description,
+    });
+  }
+
+  return futureEvents.length;
+}

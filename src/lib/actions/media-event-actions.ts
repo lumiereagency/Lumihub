@@ -10,6 +10,7 @@ import {
   syncCalendarEventForMediaEvent,
   generateRecurringEventOccurrences,
   setRecurrenceRequirementsTemplate,
+  syncRecurrenceScheduleToFutureOccurrences,
 } from "@/lib/media/schedule/event-service";
 import { mediaEventSchema, mediaEventRecurrenceSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
@@ -269,6 +270,73 @@ export async function createRecurrenceAction(_prev: ActionState, formData: FormD
   revalidatePath("/midia-adesf/calendario");
   revalidatePath("/midia/calendario");
   return { success: `Série criada — ${created} ocorrência(s) gerada(s) para os próximos 90 dias.` };
+}
+
+// Editar a série agora sincroniza de verdade as ocorrências futuras já
+// geradas (§ pedido do usuário: "elas não estão obedecendo ao comando de
+// o horário ser o mesmo em todas") — nome/tipo/local/horário e o template
+// de funções são sempre reaplicados ao que ainda vai acontecer, sem opção
+// de "não propagar": diferente da edição de UM culto avulso, editar a
+// série inteira só faz sentido se ela realmente vale pra série inteira.
+export async function updateRecurrenceAction(recurrenceId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requirePermission(EDIT);
+
+  const parsed = mediaEventRecurrenceSchema.safeParse({
+    name: formData.get("name"),
+    type: formData.get("type") || "Culto",
+    dayOfWeek: formData.get("dayOfWeek"),
+    startTime: formData.get("startTime"),
+    endTime: formData.get("endTime"),
+    location: formData.get("location"),
+    startDate: formData.get("startDate"),
+    endDate: formData.get("endDate"),
+    requirements: parseRequirements(formData),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+
+  const recurrence = await db.mediaEventRecurrence.findFirst({ where: { id: recurrenceId, organizationId: user.organizationId } });
+  if (!recurrence) return { error: "Série não encontrada." };
+
+  await db.mediaEventRecurrence.update({
+    where: { id: recurrenceId },
+    data: {
+      name: parsed.data.name,
+      type: parsed.data.type,
+      dayOfWeek: parsed.data.dayOfWeek,
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime ?? null,
+      location: parsed.data.location ?? null,
+      startDate: new Date(`${parsed.data.startDate}T00:00:00Z`),
+      endDate: parsed.data.endDate ? new Date(`${parsed.data.endDate}T00:00:00Z`) : null,
+    },
+  });
+
+  const syncedCount = await syncRecurrenceScheduleToFutureOccurrences(recurrenceId, {
+    name: parsed.data.name,
+    type: parsed.data.type,
+    location: parsed.data.location ?? null,
+    startTime: parsed.data.startTime,
+    endTime: parsed.data.endTime ?? null,
+  });
+  await setRecurrenceRequirementsTemplate(recurrenceId, parsed.data.requirements, true);
+
+  const created = await generateRecurringEventOccurrences(recurrenceId, new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "MEDIA_EVENT_RECURRENCE_UPDATED",
+    entityType: "MediaEventRecurrence",
+    entityId: recurrenceId,
+    metadata: { syncedCount, eventsGenerated: created },
+  });
+
+  revalidatePath("/midia-adesf/cultos");
+  revalidatePath("/midia-adesf/calendario");
+  revalidatePath("/midia/calendario");
+  return {
+    success: `Série atualizada — ${syncedCount} ocorrência(s) futura(s) sincronizada(s)${created > 0 ? `, ${created} nova(s) gerada(s)` : ""}.`,
+  };
 }
 
 export async function toggleRecurrenceActiveAction(recurrenceId: string, active: boolean): Promise<void> {

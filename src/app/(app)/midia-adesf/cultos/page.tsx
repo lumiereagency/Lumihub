@@ -18,7 +18,7 @@ export default async function MediaAdesfEventsPage() {
     db.mediaFunction.findMany({ where: { organizationId: user.organizationId, active: true }, orderBy: { displayOrder: "asc" } }),
     db.mediaEventRecurrence.findMany({
       where: { organizationId: user.organizationId },
-      include: { _count: { select: { events: true } } },
+      include: { _count: { select: { events: true } }, requirements: true },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -27,14 +27,20 @@ export default async function MediaAdesfEventsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Cultos e Eventos" description="Cadastro de cultos e eventos cobertos pela equipe de mídia." />
       <RecurrencesPanel
+        allFunctions={allFunctions.map((f) => ({ id: f.id, name: f.name }))}
         recurrences={recurrences.map((r) => ({
           id: r.id,
           name: r.name,
+          type: r.type,
           dayOfWeek: r.dayOfWeek,
           startTime: r.startTime,
           endTime: r.endTime,
+          location: r.location,
+          startDate: r.startDate.toISOString(),
+          endDate: r.endDate?.toISOString() ?? null,
           active: r.active,
           eventsCount: r._count.events,
+          requirements: r.requirements.map((req) => ({ functionId: req.functionId, requiredQuantity: req.requiredQuantity, mandatory: req.mandatory })),
         }))}
       />
       <EventList

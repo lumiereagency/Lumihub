@@ -1,31 +1,49 @@
 "use client";
 
-import { useTransition } from "react";
-import { Trash2 } from "lucide-react";
-import { toggleRecurrenceActiveAction, deleteRecurrenceAction } from "@/lib/actions/media-event-actions";
+import { useState, useTransition } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { toggleRecurrenceActiveAction, deleteRecurrenceAction, updateRecurrenceAction } from "@/lib/actions/media-event-actions";
+import { RecurrenceForm } from "./recurrence-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
 
 const DAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export interface RecurrenceRow {
   id: string;
   name: string;
+  type: string;
   dayOfWeek: number;
   startTime: string;
   endTime: string | null;
+  location: string | null;
+  startDate: string;
+  endDate: string | null;
   active: boolean;
   eventsCount: number;
+  requirements: { functionId: string; requiredQuantity: number; mandatory: boolean }[];
 }
 
 // Gestão das séries recorrentes — antes só existia a tela de criar; não
-// havia como ver o que já foi criado, pausar ou desfazer uma série
-// inteira. Pausar (toggle) só impede novas ocorrências futuras; excluir
-// apaga a série e TODAS as ocorrências já geradas por ela de uma vez.
-export function RecurrencesPanel({ recurrences }: { recurrences: RecurrenceRow[] }) {
+// havia como ver o que já foi criado, editar, pausar ou desfazer uma
+// série inteira. Pausar (toggle) só impede novas ocorrências futuras;
+// editar sincroniza nome/tipo/local/horário/funções com as ocorrências
+// futuras já geradas; excluir apaga a série e TODAS as ocorrências de uma
+// vez.
+export function RecurrencesPanel({
+  recurrences,
+  allFunctions,
+}: {
+  recurrences: RecurrenceRow[];
+  allFunctions: { id: string; name: string }[];
+}) {
   const [pending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   if (recurrences.length === 0) return null;
+
+  const editing = recurrences.find((r) => r.id === editingId) ?? null;
 
   function toggle(id: string, active: boolean) {
     startTransition(async () => {
@@ -55,6 +73,15 @@ export function RecurrencesPanel({ recurrences }: { recurrences: RecurrenceRow[]
           </div>
           <div className="flex items-center gap-2">
             <Badge tone={r.active ? "success" : "neutral"}>{r.active ? "Ativa" : "Pausada"}</Badge>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setEditingId(r.id)}
+              className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-accent-light disabled:opacity-50"
+              aria-label="Editar série"
+            >
+              <Pencil size={15} />
+            </button>
             <Button variant="secondary" size="sm" disabled={pending} onClick={() => toggle(r.id, !r.active)}>
               {r.active ? "Pausar" : "Reativar"}
             </Button>
@@ -70,6 +97,18 @@ export function RecurrencesPanel({ recurrences }: { recurrences: RecurrenceRow[]
           </div>
         </div>
       ))}
+
+      <Drawer open={!!editing} onClose={() => setEditingId(null)} title={editing ? `Editar série — ${editing.name}` : ""}>
+        {editing && (
+          <RecurrenceForm
+            action={updateRecurrenceAction.bind(null, editing.id)}
+            defaultValues={editing}
+            allFunctions={allFunctions}
+            submitLabel="Salvar alterações"
+            onSuccess={() => setEditingId(null)}
+          />
+        )}
+      </Drawer>
     </div>
   );
 }
