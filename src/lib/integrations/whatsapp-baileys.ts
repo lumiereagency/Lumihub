@@ -1,5 +1,6 @@
 import "server-only";
 import path from "node:path";
+import fs from "node:fs/promises";
 import { makeWASocket, useMultiFileAuthState as loadBaileysAuthState, DisconnectReason, type WASocket } from "baileys";
 import QRCode from "qrcode";
 import { db } from "@/lib/db";
@@ -22,6 +23,19 @@ globalThis.__lumibaseWhatsAppSessions = sessions;
 
 function authDir(organizationId: string): string {
   return path.join(process.cwd(), "storage", "whatsapp-auth", organizationId);
+}
+
+// Bug real encontrado (§ pedido do usuário: "QR code não aparece pra
+// reconectar"): um logout (seja pelo próprio celular em "Aparelhos
+// conectados", seja pelo botão Desconectar aqui) invalida as credenciais
+// no lado do WhatsApp, mas os arquivos salvos em disco continuam lá. Na
+// próxima tentativa de conectar, o Baileys carrega essas credenciais
+// mortas e fica tentando retomar a sessão com elas em vez de pedir um QR
+// novo — o botão "Conectar WhatsApp" fica girando pra sempre porque o
+// evento nunca vira "qr". Apagar os arquivos ao deslogar garante que a
+// próxima conexão sempre comece do zero, com QR de verdade.
+async function clearAuthState(organizationId: string): Promise<void> {
+  await fs.rm(authDir(organizationId), { recursive: true, force: true });
 }
 
 export interface WhatsAppSessionStatus {
@@ -96,6 +110,7 @@ export async function startWhatsAppSession(organizationId: string): Promise<void
       if (loggedOut) {
         current.qrDataUrl = null;
         sessions.delete(organizationId);
+        await clearAuthState(organizationId);
         await db.integration.updateMany({
           where: { organizationId, provider: "WHATSAPP_BUSINESS" },
           data: { status: "DESCONECTADO", connectedAt: null },
@@ -120,6 +135,11 @@ export async function disconnectWhatsAppSession(organizationId: string): Promise
     }
   }
   sessions.delete(organizationId);
+  // Não espera o evento "connection.update" (close/loggedOut) rodar
+  // sozinho — ele pode nunca chegar a rodar aqui porque a sessão já foi
+  // removida do Map acima (o handler descarta update se `current` for
+  // undefined). Limpa direto para garantir QR novo na próxima conexão.
+  await clearAuthState(organizationId);
 }
 
 export async function sendWhatsAppBaileysMessage(
