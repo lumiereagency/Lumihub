@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Repeat, Clapperboard } from "lucide-react";
-import { createEventAction } from "@/lib/actions/media-event-actions";
+import { Plus, Repeat, Clapperboard, Trash2 } from "lucide-react";
+import { createEventAction, deleteEventAction } from "@/lib/actions/media-event-actions";
 import { MEDIA_EVENT_STATUS_LABELS, MEDIA_EVENT_STATUS_TONE } from "@/lib/media/labels";
 import { formatDateTime } from "@/lib/format";
 import { Drawer } from "@/components/ui/drawer";
@@ -26,6 +26,15 @@ interface EventRow {
 export function EventList({ events, allFunctions }: { events: EventRow[]; allFunctions: { id: string; name: string }[] }) {
   const [creating, setCreating] = useState(false);
   const [creatingRecurrence, setCreatingRecurrence] = useState(false);
+  const [pendingDelete, startDelete] = useTransition();
+
+  function remove(id: string, name: string) {
+    if (confirm(`Excluir "${name}"? Isso remove funções e atribuições ligadas a este evento. Não pode ser desfeito.`)) {
+      startDelete(async () => {
+        await deleteEventAction(id);
+      });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,6 +67,7 @@ export function EventList({ events, allFunctions }: { events: EventRow[]; allFun
                 <th className="px-4 py-3 font-medium">Local</th>
                 <th className="px-4 py-3 font-medium">Funções</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody>
@@ -76,6 +86,17 @@ export function EventList({ events, allFunctions }: { events: EventRow[]; allFun
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={MEDIA_EVENT_STATUS_TONE[e.status]}>{MEDIA_EVENT_STATUS_LABELS[e.status]}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      disabled={pendingDelete}
+                      onClick={() => remove(e.id, e.name)}
+                      className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </td>
                 </tr>
               ))}

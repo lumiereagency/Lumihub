@@ -11,6 +11,7 @@ import { cancelEventAction, saveEventRequirementsAsDefaultAction, updateEventAct
 import { EventForm } from "../event-form";
 import { RequestAvailabilityButton } from "./request-availability-button";
 import { ApplyToRecurrenceButton } from "./apply-to-recurrence-button";
+import { DeleteEventButton } from "./delete-event-button";
 
 export default async function MediaAdesfEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -48,6 +49,7 @@ export default async function MediaAdesfEventDetailPage({ params }: { params: Pr
                 </Button>
               </form>
             )}
+            <DeleteEventButton eventId={event.id} eventName={event.name} />
           </div>
         }
       />

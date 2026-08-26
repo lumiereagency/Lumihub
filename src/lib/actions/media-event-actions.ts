@@ -157,6 +157,35 @@ export async function cancelEventAction(eventId: string): Promise<void> {
   revalidatePath("/midia/calendario");
 }
 
+// Exclusão de verdade (§ pedido do usuário) — diferente de "Cancelar", que
+// preserva o evento com status CANCELLED para manter histórico. Usada para
+// limpar cultos/eventos criados por engano (ex: recorrências de teste),
+// nunca o caminho recomendado para um evento real que só não vai mais
+// acontecer. Cascata do banco já limpa funções, atribuições, trocas,
+// presença e o CalendarEvent espelhado.
+export async function deleteEventAction(eventId: string): Promise<ActionState> {
+  const user = await requirePermission(DELETE);
+
+  const event = await db.mediaEvent.findFirst({ where: { id: eventId, organizationId: user.organizationId } });
+  if (!event) return { error: "Evento não encontrado." };
+
+  await db.mediaEvent.delete({ where: { id: eventId } });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "MEDIA_EVENT_DELETED",
+    entityType: "MediaEvent",
+    entityId: eventId,
+    metadata: { name: event.name, startAt: event.startAt },
+  });
+
+  revalidatePath("/midia-adesf/cultos");
+  revalidatePath("/midia-adesf/calendario");
+  revalidatePath("/midia/calendario");
+  return { success: "Evento excluído." };
+}
+
 // Salva o conjunto atual de funções de um culto como o novo "Template de
 // Culto" padrão da organização (§87/§88) — próximos eventos criados sem
 // customizar já vêm com esta configuração.
@@ -290,4 +319,36 @@ export async function applyEventRequirementsToRecurrenceAction(eventId: string):
   revalidatePath("/midia-adesf/cultos");
   revalidatePath(`/midia-adesf/cultos/${eventId}`);
   return { success: `Funções aplicadas a toda a série — ${updatedCount} ocorrência(s) futura(s) atualizada(s).` };
+}
+
+// Limpeza rápida de uma série inteira (§ pedido do usuário: "preciso de
+// uma opção na qual eu possa limpar todas as recorrências... de uma forma
+// mais rápida"). Diferente de pausar (toggleRecurrenceActiveAction), que
+// só impede novas ocorrências futuras: isto apaga a regra E TODAS as
+// ocorrências já geradas por ela, passadas ou futuras — pensado para
+// desfazer uma série criada por engano/teste, não para uma série real em
+// uso (nesse caso, pausar é o caminho certo).
+export async function deleteRecurrenceAction(recurrenceId: string): Promise<ActionState> {
+  const user = await requirePermission(DELETE);
+
+  const recurrence = await db.mediaEventRecurrence.findFirst({ where: { id: recurrenceId, organizationId: user.organizationId } });
+  if (!recurrence) return { error: "Série não encontrada." };
+
+  const eventsCount = await db.mediaEvent.count({ where: { recurrenceId } });
+
+  await db.$transaction([db.mediaEvent.deleteMany({ where: { recurrenceId } }), db.mediaEventRecurrence.delete({ where: { id: recurrenceId } })]);
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "MEDIA_EVENT_RECURRENCE_DELETED",
+    entityType: "MediaEventRecurrence",
+    entityId: recurrenceId,
+    metadata: { name: recurrence.name, eventsDeleted: eventsCount },
+  });
+
+  revalidatePath("/midia-adesf/cultos");
+  revalidatePath("/midia-adesf/calendario");
+  revalidatePath("/midia/calendario");
+  return { success: `Série "${recurrence.name}" excluída — ${eventsCount} ocorrência(s) removida(s).` };
 }
