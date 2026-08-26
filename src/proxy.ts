@@ -27,7 +27,13 @@ export function proxy(request: NextRequest) {
 
   const isPublic =
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
-    pathname.startsWith("/api/webhooks");
+    pathname.startsWith("/api/webhooks") ||
+    // Logo/avatares do Mídia ADESF — a própria rota já não tem gate de
+    // permissão de propósito (comentário em route.ts), justamente para
+    // aparecer em /midia/login e /midia/publico antes de existir sessão;
+    // sem esta linha o proxy intercepta a requisição da <img> antes dela
+    // chegar na rota e devolve o HTML de /login no lugar da imagem.
+    pathname.startsWith("/api/midia/arquivos/");
 
   if (isPublic) {
     return NextResponse.next();
