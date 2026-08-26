@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarClock } from "lucide-react";
-import { requirePermission } from "@/lib/auth/guard";
+import { hasPermission, requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { MEDIA_SCHEDULE_STATUS_LABELS, MEDIA_SCHEDULE_STATUS_TONE } from "@/lib/media/labels";
@@ -8,9 +8,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CreateScheduleButton } from "./create-schedule-form";
+import { DeleteScheduleButton } from "./delete-schedule-button";
 
 export default async function MediaAdesfSchedulesPage() {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
+  const canDelete = hasPermission(user, permKey("MEDIA_ADESF", "DELETE"));
 
   const schedules = await db.mediaSchedule.findMany({
     where: { organizationId: user.organizationId },
@@ -36,7 +38,10 @@ export default async function MediaAdesfSchedulesPage() {
                 <p className="text-sm font-medium text-text-primary">{s.name}</p>
                 <p className="text-xs text-text-tertiary">{s._count.assignments} atribuição(ões)</p>
               </div>
-              <Badge tone={MEDIA_SCHEDULE_STATUS_TONE[s.status]}>{MEDIA_SCHEDULE_STATUS_LABELS[s.status]}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge tone={MEDIA_SCHEDULE_STATUS_TONE[s.status]}>{MEDIA_SCHEDULE_STATUS_LABELS[s.status]}</Badge>
+                {canDelete && s.status === "DRAFT" && <DeleteScheduleButton scheduleId={s.id} scheduleName={s.name} />}
+              </div>
             </Link>
           ))}
         </div>

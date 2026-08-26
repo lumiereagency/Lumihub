@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
+import { audit } from "@/lib/audit";
 import { createMonthlySchedule, assignScheduleSlot, clearScheduleSlot, publishSchedule } from "@/lib/media/schedule/schedule-service";
 import { findEligibleMembers } from "@/lib/media/schedule/conflict-service";
 import { rankEligibleMembers, type RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
@@ -13,6 +14,7 @@ import type { ActionState } from "@/lib/actions/auth-actions";
 const CREATE = permKey("MEDIA_ADESF", "CREATE");
 const EDIT = permKey("MEDIA_ADESF", "EDIT");
 const MANAGE = permKey("MEDIA_ADESF", "MANAGE");
+const DELETE = permKey("MEDIA_ADESF", "DELETE");
 
 export async function createMonthlyScheduleAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requirePermission(CREATE);
@@ -94,4 +96,31 @@ export async function publishScheduleAction(scheduleId: string, force: boolean):
   revalidatePath("/midia/escala");
   revalidatePath("/midia/minha-escala");
   return { success: "Escala publicada." };
+}
+
+// Só permite excluir rascunho (§ pedido do usuário) — uma escala PUBLISHED
+// já foi vista/confirmada por membros reais e tem histórico de presença;
+// excluir teria que apagar isso silenciosamente. Publicada demais, o
+// caminho é ARCHIVED, não exclusão. Cascata do banco já cuida de
+// atribuições/trocas/execuções de IA ligadas a esta escala.
+export async function deleteScheduleAction(scheduleId: string): Promise<ActionState> {
+  const user = await requirePermission(DELETE);
+
+  const schedule = await db.mediaSchedule.findFirst({ where: { id: scheduleId, organizationId: user.organizationId } });
+  if (!schedule) return { error: "Escala não encontrada." };
+  if (schedule.status !== "DRAFT") return { error: "Só é possível excluir escalas em rascunho." };
+
+  await db.mediaSchedule.delete({ where: { id: scheduleId } });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "MEDIA_SCHEDULE_DELETED",
+    entityType: "MediaSchedule",
+    entityId: scheduleId,
+    metadata: { name: schedule.name, month: schedule.month, year: schedule.year },
+  });
+
+  revalidatePath("/midia-adesf/escalas");
+  return { success: "Rascunho excluído." };
 }
