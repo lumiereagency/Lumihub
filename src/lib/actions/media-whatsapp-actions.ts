@@ -30,12 +30,13 @@ export async function sendScheduleWhatsAppAction(scheduleId: string): Promise<Ac
   const schedule = await db.mediaSchedule.findFirst({ where: { id: scheduleId, organizationId: admin.organizationId } });
   if (!schedule) return { error: "Escala não encontrada." };
 
-  const { sent, withoutPhone } = await sendScheduleConfirmationRequests(scheduleId, admin.organizationId);
+  const { sent, withoutPhone, failed } = await sendScheduleConfirmationRequests(scheduleId, admin.organizationId);
 
-  if (sent === 0 && withoutPhone === 0) return { error: "Nenhum membro com atribuição nesta escala." };
-  return {
-    success: withoutPhone > 0 ? `Enviado para ${sent} membro(s). ${withoutPhone} sem telefone cadastrado.` : `Enviado para ${sent} membro(s).`,
-  };
+  if (sent === 0 && withoutPhone === 0 && failed === 0) return { error: "Nenhum membro com atribuição nesta escala." };
+  const notes = [withoutPhone > 0 && `${withoutPhone} sem telefone cadastrado`, failed > 0 && `${failed} falha(s) no envio (WhatsApp desconectado?)`]
+    .filter(Boolean)
+    .join(", ");
+  return { success: notes ? `Enviado para ${sent} membro(s). ${notes}.` : `Enviado para ${sent} membro(s).` };
 }
 
 // Pergunta de disponibilidade para um culto específico (§ "perguntar

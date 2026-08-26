@@ -102,7 +102,11 @@ export async function publishScheduleAction(scheduleId: string, force: boolean):
   // culto. Falha de envio nunca deve desfazer a publicação já efetivada.
   const dispatch = await sendScheduleConfirmationRequests(scheduleId, user.organizationId).catch(() => null);
   if (dispatch && dispatch.sent > 0) {
-    return { success: `Escala publicada. Confirmação enviada por WhatsApp para ${dispatch.sent} membro(s).` };
+    const failedNote = dispatch.failed > 0 ? ` ${dispatch.failed} falha(s) no envio (confira a conexão do WhatsApp).` : "";
+    return { success: `Escala publicada. Confirmação enviada por WhatsApp para ${dispatch.sent} membro(s).${failedNote}` };
+  }
+  if (dispatch && dispatch.failed > 0) {
+    return { success: "Escala publicada. Não foi possível enviar a confirmação por WhatsApp — verifique a conexão em Configurações → Integrações." };
   }
   return { success: "Escala publicada." };
 }

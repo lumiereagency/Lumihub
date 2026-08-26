@@ -57,6 +57,10 @@ async function createSwapAcceptToken(organizationId: string, memberId: string, s
   return createToken({ organizationId, memberId, type: "SWAP_ACCEPT", swapRequestId, expiresAt: new Date(Date.now() + SWAP_TOKEN_TTL_MS) });
 }
 
+function swapAcceptMessage(candidateName: string, previousMemberName: string, functionName: string, eventName: string, eventStartAt: Date, token: string): string {
+  return `Oi, ${candidateName}! ${previousMemberName} não poderá servir como ${functionName} no culto ${eventName} (${formatDate(eventStartAt)}). Você topa cobrir essa vaga? Responda aqui: ${appUrl()}/midia/acao/${token}`;
+}
+
 // ---------------------------------------------------------------------
 // Resolução (chamada pela página pública /midia/acao/[token])
 // ---------------------------------------------------------------------
@@ -304,17 +308,68 @@ async function suggestSubstituteForAssignment(organizationId: string, assignment
   });
   if (swap) {
     const targetMember = await db.mediaMember.findUnique({ where: { id: best.memberId } });
-    if (targetMember?.phone) {
-      const swapToken = await createSwapAcceptToken(organizationId, best.memberId, swap.id);
-      await sendWhatsApp({
+    const previousName = assignment.member?.user.name ?? "Um colega";
+
+    if (!targetMember?.phone) {
+      await notifyMediaLeaders(
         organizationId,
-        to: targetMember.phone,
-        message: `Oi, ${best.name}! ${assignment.member?.user.name ?? "Um colega"} não poderá servir como ${assignment.function.name} no culto ${assignment.event.name} (${formatDate(assignment.event.startAt)}). Você topa cobrir essa vaga? Responda aqui: ${appUrl()}/midia/acao/${swapToken}`,
-      });
+        "Substituto sugerido sem telefone",
+        `${best.name} foi sugerido(a) automaticamente para cobrir ${assignment.function.name} em ${assignment.event.name}, mas não tem telefone cadastrado — avise manualmente e peça para responder em Solicitações.`,
+        `/midia-adesf/solicitacoes`,
+      );
+    } else {
+      const swapToken = await createSwapAcceptToken(organizationId, best.memberId, swap.id);
+      const message = swapAcceptMessage(best.name, previousName, assignment.function.name, assignment.event.name, assignment.event.startAt, swapToken);
+      const sendResult = await sendWhatsApp({ organizationId, to: targetMember.phone, message });
+      // sendWhatsApp nunca lança erro quando falha (WhatsApp desconectado,
+      // número inválido) — só devolve delivered:false. Sem checar isso
+      // aqui, a troca fica presa em PENDING_TARGET pra sempre, sem
+      // ninguém nunca saber que o convite nunca chegou ao substituto
+      // (§ pedido do usuário: "consta alteração pendente" sem andamento).
+      if (!sendResult.delivered) {
+        await notifyMediaLeaders(
+          organizationId,
+          "Substituto sugerido, mas não notificado",
+          `${best.name} foi sugerido(a) automaticamente para cobrir ${assignment.function.name} em ${assignment.event.name}, mas o convite por WhatsApp não pôde ser enviado (${sendResult.error ?? (sendResult.pending ? "WhatsApp desconectado" : "erro desconhecido")}). Reenvie manualmente em Solicitações assim que o WhatsApp estiver reconectado.`,
+          `/midia-adesf/solicitacoes`,
+        );
+      }
     }
   }
 
   return { success: `Indisponibilidade registrada. ${best.name} foi convidado(a) automaticamente para cobrir a vaga.` };
+}
+
+// Reenvio manual (§ pedido do usuário: troca ficou "pendente" sem avançar
+// porque o WhatsApp estava desconectado quando o convite automático foi
+// disparado) — mesma mensagem/token de sempre, só que sob demanda em vez
+// de só no momento da recusa original.
+export async function resendSwapAcceptNotification(organizationId: string, swapRequestId: string): Promise<ServiceResult> {
+  const swap = await db.mediaSwapRequest.findFirst({
+    where: { id: swapRequestId, organizationId, status: "PENDING_TARGET" },
+    include: {
+      targetMember: { include: { user: { select: { name: true } } } },
+      assignment: { include: { event: true, function: true } },
+      requestedBy: { include: { user: { select: { name: true } } } },
+    },
+  });
+  if (!swap) return { error: "Solicitação não encontrada ou já respondida." };
+  if (!swap.targetMember.phone) return { error: "Este membro não tem telefone cadastrado." };
+
+  const swapToken = await createSwapAcceptToken(organizationId, swap.targetMemberId, swap.id);
+  const message = swapAcceptMessage(
+    swap.targetMember.user.name,
+    swap.requestedBy.user.name,
+    swap.assignment.function.name,
+    swap.assignment.event.name,
+    swap.assignment.event.startAt,
+    swapToken,
+  );
+  const sendResult = await sendWhatsApp({ organizationId, to: swap.targetMember.phone, message });
+  if (!sendResult.delivered) {
+    return { error: sendResult.error ?? "WhatsApp não está conectado no momento — verifique em Configurações → Integrações." };
+  }
+  return { success: "Convite de troca reenviado por WhatsApp." };
 }
 
 // Substituto sugerido aceita/recusa pelo link — reaproveita 100% do
@@ -341,6 +396,7 @@ export async function respondSwapViaToken(token: string, accept: boolean): Promi
 export interface ScheduleConfirmationDispatchResult {
   sent: number;
   withoutPhone: number;
+  failed: number;
 }
 
 // Um disparo por membro por escala publicada (§ pedido do usuário: "não
@@ -364,6 +420,7 @@ export async function sendScheduleConfirmationRequests(scheduleId: string, organ
 
   let sent = 0;
   let withoutPhone = 0;
+  let failed = 0;
   for (const [memberId, entry] of byMember) {
     if (!entry.phone) {
       withoutPhone++;
@@ -371,9 +428,14 @@ export async function sendScheduleConfirmationRequests(scheduleId: string, organ
     }
     const token = await createScheduleConfirmationToken(organizationId, memberId, scheduleId, schedule.periodEnd);
     const message = `Olá, ${entry.name}! A ${schedule.name} foi publicada. Você foi escalado em ${entry.lines.length} culto(s):\n${entry.lines.join("\n")}\n\nConfirme sua disponibilidade em cada dia: ${appUrl()}/midia/acao/${token}`;
-    await sendWhatsApp({ organizationId, to: entry.phone, message });
-    sent++;
+    // Conta como enviado só se realmente entregou — sendWhatsApp nunca
+    // lança erro quando o WhatsApp está desconectado, só devolve
+    // delivered:false, então sem checar isso o retorno mentiria dizendo
+    // que todo mundo foi avisado.
+    const result = await sendWhatsApp({ organizationId, to: entry.phone, message });
+    if (result.delivered) sent++;
+    else failed++;
   }
 
-  return { sent, withoutPhone };
+  return { sent, withoutPhone, failed };
 }

@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { requestSwap, respondToSwapAsTarget, cancelSwap, approveSwapAsLeader } from "@/lib/media/schedule/swap-service";
 import { findEligibleMembers, type EligibleMemberCandidate } from "@/lib/media/schedule/conflict-service";
+import { resendSwapAcceptNotification } from "@/lib/media/tokens/action-tokens";
 import { requestSwapSchema, swapDecisionSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -86,4 +87,13 @@ export async function decideSwapAction(swapId: string, approve: boolean, _prev: 
   revalidatePath("/midia-adesf/escalas");
   revalidatePath("/midia/minha-escala");
   return result;
+}
+
+// Reenvio manual do convite de troca por WhatsApp (§ pedido do usuário: uma
+// troca sugerida automaticamente pela IA fica "pendente" sem avançar
+// quando o WhatsApp estava desconectado no momento do convite original —
+// o substituto nunca soube que precisava responder).
+export async function resendSwapNotificationAction(swapId: string): Promise<ActionState> {
+  const admin = await requirePermission(permKey("MEDIA_ADESF", "EDIT"));
+  return resendSwapAcceptNotification(admin.organizationId, swapId);
 }
