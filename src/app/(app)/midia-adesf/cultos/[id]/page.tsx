@@ -9,6 +9,7 @@ import { MEDIA_EVENT_STATUS_LABELS, MEDIA_EVENT_STATUS_TONE } from "@/lib/media/
 import { AuditHistoryList } from "@/components/media/audit-history-list";
 import { cancelEventAction, saveEventRequirementsAsDefaultAction, updateEventAction } from "@/lib/actions/media-event-actions";
 import { EventForm } from "../event-form";
+import { RequestAvailabilityButton } from "./request-availability-button";
 
 export default async function MediaAdesfEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -38,6 +39,7 @@ export default async function MediaAdesfEventDetailPage({ params }: { params: Pr
         actions={
           <div className="flex items-center gap-2">
             <Badge tone={MEDIA_EVENT_STATUS_TONE[event.status]}>{MEDIA_EVENT_STATUS_LABELS[event.status]}</Badge>
+            {event.status !== "CANCELLED" && <RequestAvailabilityButton eventId={event.id} />}
             {event.status !== "CANCELLED" && (
               <form action={cancelEventAction.bind(null, event.id)}>
                 <Button type="submit" variant="danger" size="sm">

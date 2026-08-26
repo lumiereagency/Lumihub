@@ -71,6 +71,7 @@ model Organization {
   mediaSwapRequests             MediaSwapRequest[]
   mediaOperationsSettings       MediaOperationsSettings?
   mediaAIGenerationRuns         MediaAIGenerationRun[]
+  mediaActionTokens             MediaActionToken[]
 
   @@map("organizations")
 }
@@ -1367,6 +1368,7 @@ model MediaMember {
   swapRequestsReceived   MediaSwapRequest[]           @relation("MediaSwapTarget")
   attendances            MediaAttendance[]            @relation("MediaMemberAttendance")
   aiSuggestionsAsTarget  MediaAISuggestion[]          @relation("MediaAISuggestedMember")
+  actionTokens           MediaActionToken[]
 
   @@index([organizationId, status])
   @@map("media_members")
@@ -1448,6 +1450,29 @@ model MediaAvailabilityException {
 
   @@index([memberId, date])
   @@map("media_availability_exceptions")
+}
+
+// Link de um clique enviado por WhatsApp perguntando disponibilidade para um
+// culto específico — nunca exige login (o token É a autorização, mesmo
+// modelo de confiança do PasswordResetToken). Guarda só o hash do token,
+// nunca o valor puro; expira e é de uso único (usedAt) para não permitir
+// reabrir e trocar a resposta depois de já respondido.
+model MediaActionToken {
+  id             String    @id @default(cuid())
+  organizationId String
+  memberId       String
+  eventId        String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       MediaMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  event        MediaEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, memberId])
+  @@map("media_action_tokens")
 }
 
 model MediaBrandSettings {
@@ -1566,6 +1591,7 @@ model MediaEvent {
   assignments   MediaScheduleAssignment[]
   calendarEvent CalendarEvent?
   aiSuggestions MediaAISuggestion[]
+  actionTokens  MediaActionToken[]
 
   @@index([organizationId, startAt])
   @@index([recurrenceId])

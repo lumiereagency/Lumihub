@@ -12,6 +12,7 @@ import { CalendarClock } from "lucide-react";
 import { ScheduleFillView, type ScheduleEventData } from "./schedule-fill-view";
 import { PublishSchedulePanel } from "./publish-panel";
 import { GenerateAIScheduleButton } from "./generate-ai-button";
+import { SendScheduleWhatsAppButton } from "./send-schedule-whatsapp-button";
 
 export default async function MediaAdesfScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
@@ -69,6 +70,7 @@ export default async function MediaAdesfScheduleDetailPage({ params }: { params:
       />
 
       {canManage && schedule.status !== "ARCHIVED" && <GenerateAIScheduleButton scheduleId={schedule.id} />}
+      {canManage && schedule.status === "PUBLISHED" && <SendScheduleWhatsAppButton scheduleId={schedule.id} />}
 
       {validation && <PublishSchedulePanel scheduleId={schedule.id} validation={validation} />}
 
