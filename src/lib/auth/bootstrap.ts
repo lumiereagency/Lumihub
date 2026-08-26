@@ -23,7 +23,7 @@ export async function ensurePermissionCatalog(client: DbClient = db) {
 // o client global não enxerga linhas ainda não commitadas por outra transação).
 export async function ensureDefaultRoles(organizationId: string, client: DbClient = db) {
   await ensurePermissionCatalog(client);
-  const roleKeys = Object.keys(DEFAULT_ROLE_PERMISSIONS) as Exclude<RoleKey, "CUSTOM">[];
+  const roleKeys = Object.keys(DEFAULT_ROLE_PERMISSIONS) as Exclude<RoleKey, "CUSTOM" | "MEDIA_ONLY">[];
 
   for (const key of roleKeys) {
     const role = await client.role.upsert({

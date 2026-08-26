@@ -86,6 +86,13 @@ enum RoleKey {
   COMERCIAL
   GESTAO
   CUSTOM
+  // Role "casca vazia" exclusiva do shell user do Mídia ADESF (ver
+  // ensureMediaOnlyRole em @/lib/media/bootstrap.ts). Nunca usar CUSTOM
+  // aqui: CUSTOM é o slot único de "perfil personalizado" que o próprio
+  // admin cria em Usuários e Permissões (@@unique([organizationId, key])),
+  // e reaproveitá-lo para este shell colidia (P2002) sempre que a
+  // organização já tinha um perfil personalizado seu.
+  MEDIA_ONLY
 }
 
 model Role {
@@ -1759,6 +1766,11 @@ model MediaOperationsSettings {
   aiWeightWorkload      Int      @default(100)
   aiWeightRecency       Int      @default(50)
   aiWeightPreference    Int      @default(20)
+  // Intervalo mínimo de descanso, em dias, que a geração por IA tenta
+  // respeitar antes de escalar o MESMO membro de novo — "bom senso" de
+  // intercalar quem serve, não uma restrição obrigatória: só é ignorado
+  // quando não sobra nenhum outro candidato elegível para a vaga.
+  aiMinRestDays         Int      @default(6)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

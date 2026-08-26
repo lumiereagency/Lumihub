@@ -11,11 +11,14 @@ export default async function MediaPortalTeamPage() {
   const user = await requireMediaMember();
   const isLeader = isMediaLeader(user);
 
-  const members = await db.mediaMember.findMany({
-    where: { organizationId: user.organizationId, status: "ACTIVE" },
-    include: { user: { select: { name: true, avatarUrl: true } }, functions: { include: { function: true } } },
-    orderBy: { user: { name: "asc" } },
-  });
+  const [members, allFunctions] = await Promise.all([
+    db.mediaMember.findMany({
+      where: { organizationId: user.organizationId, status: "ACTIVE" },
+      include: { user: { select: { name: true, avatarUrl: true } }, functions: { include: { function: true } } },
+      orderBy: { user: { name: "asc" } },
+    }),
+    db.mediaFunction.findMany({ where: { organizationId: user.organizationId, active: true }, orderBy: { displayOrder: "asc" } }),
+  ]);
 
   return (
     <div>
@@ -25,6 +28,7 @@ export default async function MediaPortalTeamPage() {
       />
       <PortalTeamList
         isLeader={isLeader}
+        allFunctions={allFunctions.map((f) => ({ id: f.id, name: f.name }))}
         members={members.map((m) => ({
           id: m.id,
           name: m.user.name,

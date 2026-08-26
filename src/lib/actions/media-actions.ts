@@ -78,6 +78,8 @@ export async function inviteMediaMemberAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     role: formData.get("role"),
+    functionIds: formData.getAll("functionIds"),
+    primaryFunctionId: formData.get("primaryFunctionId"),
   });
   if (!parsed.success) {
     return {
@@ -85,7 +87,15 @@ export async function inviteMediaMemberAction(
         parsed.error.issues[0]?.message ?? "Verifique os dados informados.",
     };
   }
-  const { name, email, phone, role } = parsed.data;
+  const { name, email, phone, role, functionIds, primaryFunctionId } = parsed.data;
+
+  // Nunca confia nos IDs de função vindos do cliente — só usa os que
+  // realmente pertencem a esta organização (§funções configuráveis).
+  const validFunctions = functionIds.length > 0
+    ? await db.mediaFunction.findMany({ where: { id: { in: functionIds }, organizationId: admin.organizationId }, select: { id: true } })
+    : [];
+  const validFunctionIds = validFunctions.map((f) => f.id);
+  const resolvedPrimaryId = validFunctionIds.includes(primaryFunctionId) ? primaryFunctionId : null;
 
   const existingUser = await db.user.findFirst({
     where: { email, deletedAt: null },
@@ -125,6 +135,15 @@ export async function inviteMediaMemberAction(
           acceptedAt: new Date(),
         },
       });
+      if (validFunctionIds.length > 0) {
+        await tx.mediaMemberFunction.createMany({
+          data: validFunctionIds.map((functionId) => ({
+            memberId: created.id,
+            functionId,
+            isPrimary: functionId === resolvedPrimaryId,
+          })),
+        });
+      }
       return created;
     });
 
@@ -141,7 +160,7 @@ export async function inviteMediaMemberAction(
       action: "MEDIA_MEMBER_ADDED",
       entityType: "MediaMember",
       entityId: member.id,
-      metadata: { email, role, existingUser: true },
+      metadata: { email, role, existingUser: true, functionIds: validFunctionIds },
     });
 
     revalidatePath("/midia-adesf/equipe");
@@ -182,6 +201,15 @@ export async function inviteMediaMemberAction(
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+    if (validFunctionIds.length > 0) {
+      await tx.mediaMemberFunction.createMany({
+        data: validFunctionIds.map((functionId) => ({
+          memberId: created.id,
+          functionId,
+          isPrimary: functionId === resolvedPrimaryId,
+        })),
+      });
+    }
     return created;
   });
 
@@ -197,7 +225,7 @@ export async function inviteMediaMemberAction(
     action: "MEDIA_MEMBER_INVITED",
     entityType: "MediaMember",
     entityId: member.id,
-    metadata: { email, role },
+    metadata: { email, role, functionIds: validFunctionIds },
   });
 
   revalidatePath("/midia-adesf/equipe");
@@ -586,6 +614,7 @@ export async function updateMediaAIWeightsAction(_prev: ActionState, formData: F
     aiWeightWorkload: formData.get("aiWeightWorkload"),
     aiWeightRecency: formData.get("aiWeightRecency"),
     aiWeightPreference: formData.get("aiWeightPreference"),
+    aiMinRestDays: formData.get("aiMinRestDays"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
 

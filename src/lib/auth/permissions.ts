@@ -102,7 +102,7 @@ const RO: Action[] = ["VIEW"];
 const RO_EXPORT: Action[] = ["VIEW", "EXPORT"];
 
 // Permissões padrão por perfil (Fase 1.4). ADMIN sempre recebe tudo.
-export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM">, string[]> = {
+export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM" | "MEDIA_ONLY">, string[]> = {
   ADMIN: ALL_PERMISSIONS.map((p) => p.key),
 
   FINANCEIRO: [
@@ -204,4 +204,5 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   COMERCIAL: "Comercial",
   GESTAO: "Gestão",
   CUSTOM: "Personalizado",
+  MEDIA_ONLY: "Mídia ADESF (somente portal)",
 };

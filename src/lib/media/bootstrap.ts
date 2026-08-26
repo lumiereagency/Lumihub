@@ -10,10 +10,16 @@ export const MEDIA_ONLY_ROLE_NAME = "Mídia ADESF (portal apenas)";
 // convidado sem nenhum vínculo prévio com o LUMIBASE. isSystem:true reusa a
 // trava já existente em user-actions.ts (não pode ter permissões editadas
 // nem ser excluída pela tela de Usuários) — nunca deve receber permissões.
+//
+// Usa a key dedicada MEDIA_ONLY (nunca CUSTOM): CUSTOM é o slot único de
+// "perfil personalizado" que o próprio admin cria em Usuários e Permissões
+// (Role tem @@unique([organizationId, key])), então criar este shell com
+// key:"CUSTOM" quebrava (P2002) toda vez que a organização já tinha um
+// perfil personalizado seu — bug real que já derrubou produção.
 export async function ensureMediaOnlyRole(organizationId: string) {
-  const existing = await db.role.findFirst({ where: { organizationId, key: "CUSTOM", name: MEDIA_ONLY_ROLE_NAME } });
+  const existing = await db.role.findFirst({ where: { organizationId, key: "MEDIA_ONLY" } });
   if (existing) return existing;
-  return db.role.create({ data: { organizationId, key: "CUSTOM", name: MEDIA_ONLY_ROLE_NAME, isSystem: true } });
+  return db.role.create({ data: { organizationId, key: "MEDIA_ONLY", name: MEDIA_ONLY_ROLE_NAME, isSystem: true } });
 }
 
 // Garante que uma organização tem a identidade visual e as funções iniciais

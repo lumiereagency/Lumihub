@@ -10,6 +10,8 @@ export const inviteMediaMemberSchema = z.object({
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
   phone: z.string().trim().optional().default(""),
   role: mediaMemberRoleSchema,
+  functionIds: z.array(z.string().min(1)).optional().default([]),
+  primaryFunctionId: z.string().trim().optional().default(""),
 });
 
 export const updateMediaMemberSchema = z.object({
@@ -80,4 +82,5 @@ export const mediaAIWeightsSchema = z.object({
   aiWeightWorkload: z.coerce.number().int().min(0).max(100),
   aiWeightRecency: z.coerce.number().int().min(0).max(100),
   aiWeightPreference: z.coerce.number().int().min(0).max(100),
+  aiMinRestDays: z.coerce.number().int().min(0).max(90),
 });

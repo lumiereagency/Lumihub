@@ -164,7 +164,7 @@ export function MediaTeamList({
       )}
 
       <Drawer open={inviting} onClose={() => setInviting(false)} title="Convidar membro">
-        <InviteMemberForm onSuccess={() => setInviting(false)} />
+        <InviteMemberForm onSuccess={() => setInviting(false)} availableFunctions={allFunctions} />
       </Drawer>
     </div>
   );

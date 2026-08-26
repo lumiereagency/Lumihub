@@ -17,10 +17,12 @@ export function AIWeightsForm({
   aiWeightWorkload,
   aiWeightRecency,
   aiWeightPreference,
+  aiMinRestDays,
 }: {
   aiWeightWorkload: number;
   aiWeightRecency: number;
   aiWeightPreference: number;
+  aiMinRestDays: number;
 }) {
   const [state, formAction, pending] = useActionState(updateMediaAIWeightsAction, initialState);
 
@@ -36,6 +38,15 @@ export function AIWeightsForm({
         <Input label="Recência" name="aiWeightRecency" type="number" min={0} max={100} defaultValue={aiWeightRecency} />
         <Input label="Preferência (função primária)" name="aiWeightPreference" type="number" min={0} max={100} defaultValue={aiWeightPreference} />
       </div>
+      <Input
+        label="Descanso mínimo entre escalas (dias)"
+        name="aiMinRestDays"
+        type="number"
+        min={0}
+        max={90}
+        defaultValue={aiMinRestDays}
+        hint="A IA evita escalar o mesmo membro de novo antes desse intervalo, intercalando com o resto da equipe — só ignora quando não sobra ninguém mais disponível para a vaga."
+      />
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Salvando..." : "Salvar pesos"}
       </Button>

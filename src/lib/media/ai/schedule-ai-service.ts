@@ -35,6 +35,7 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
     recency: settings.aiWeightRecency,
     preference: settings.aiWeightPreference,
   };
+  const minRestDays = settings.aiMinRestDays;
 
   const events = await db.mediaEvent.findMany({
     where: { organizationId, startAt: { gte: schedule.periodStart, lte: schedule.periodEnd }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
@@ -43,7 +44,7 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
   });
 
   const run = await db.mediaAIGenerationRun.create({
-    data: { organizationId, scheduleId, requestedByUserId, weightsSnapshot: weights },
+    data: { organizationId, scheduleId, requestedByUserId, weightsSnapshot: { ...weights, minRestDays } },
   });
 
   let slotsEvaluated = 0;
@@ -107,7 +108,16 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
           });
         }
 
-        const winner = rankCandidates(candidateInputs, weights)[0] ?? null;
+        // "Bom senso" de intercalar quem serve (§ pedido do usuário): candidatos
+        // que serviram há menos de aiMinRestDays só entram no ranking se
+        // ninguém mais estiver de fora do período de descanso — a IA nunca
+        // deixa uma vaga vazia só para forçar rodízio, mas prioriza quem está
+        // descansado sempre que existe alguém nessa condição.
+        const rested = candidateInputs.filter((c) => c.daysSinceLastAssignment === null || c.daysSinceLastAssignment >= minRestDays);
+        const usedFallback = rested.length === 0 && candidateInputs.length > 0;
+        const pool = rested.length > 0 ? rested : candidateInputs;
+
+        const winner = rankCandidates(pool, weights)[0] ?? null;
 
         if (!winner) {
           unfilledNoCandidate++;
@@ -133,6 +143,10 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
           where: { scheduleId_eventId_functionId_slotIndex: { scheduleId, eventId: event.id, functionId: requirement.functionId, slotIndex } },
         });
 
+        const justification = usedFallback
+          ? `${winner.justification} · Nenhum colega fora do intervalo mínimo de descanso (${minRestDays}d) — escalado por necessidade.`
+          : winner.justification;
+
         await db.mediaAISuggestion.create({
           data: {
             runId: run.id,
@@ -142,7 +156,7 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
             assignmentId: assignment.id,
             suggestedMemberId: winner.memberId,
             score: winner.score,
-            justification: winner.justification,
+            justification,
           },
         });
       }
@@ -165,7 +179,7 @@ export async function generateAIProposal(scheduleId: string, organizationId: str
     action: "MEDIA_AI_GENERATION_RUN",
     entityType: "MediaSchedule",
     entityId: scheduleId,
-    metadata: { runId: run.id, slotsEvaluated, filledCount, skippedAlreadyFilled, unfilledNoCandidate, weights },
+    metadata: { runId: run.id, slotsEvaluated, filledCount, skippedAlreadyFilled, unfilledNoCandidate, weights, minRestDays },
   });
 
   return { runId: finishedRun.id, slotsEvaluated, filledCount, skippedAlreadyFilled, unfilledNoCandidate };

@@ -73,6 +73,7 @@ export default async function MediaAdesfSettingsPage() {
           aiWeightWorkload={operationsSettings.aiWeightWorkload}
           aiWeightRecency={operationsSettings.aiWeightRecency}
           aiWeightPreference={operationsSettings.aiWeightPreference}
+          aiMinRestDays={operationsSettings.aiMinRestDays}
         />
       </section>
 

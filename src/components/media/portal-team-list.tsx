@@ -22,7 +22,15 @@ interface MemberRow {
   enabledFunctions: string[];
 }
 
-export function PortalTeamList({ members, isLeader }: { members: MemberRow[]; isLeader: boolean }) {
+export function PortalTeamList({
+  members,
+  isLeader,
+  allFunctions,
+}: {
+  members: MemberRow[];
+  isLeader: boolean;
+  allFunctions: { id: string; name: string }[];
+}) {
   const [inviting, setInviting] = useState(false);
 
   return (
@@ -74,7 +82,7 @@ export function PortalTeamList({ members, isLeader }: { members: MemberRow[]; is
       )}
 
       <Drawer open={inviting} onClose={() => setInviting(false)} title="Convidar membro">
-        <InviteMemberForm onSuccess={() => setInviting(false)} />
+        <InviteMemberForm onSuccess={() => setInviting(false)} availableFunctions={allFunctions} />
       </Drawer>
     </div>
   );
