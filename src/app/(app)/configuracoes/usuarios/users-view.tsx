@@ -93,7 +93,7 @@ export function UsersView({
         (users.length === 0 ? (
           <EmptyState icon={<UsersIcon size={28} />} title="Nenhum usuário além de você" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

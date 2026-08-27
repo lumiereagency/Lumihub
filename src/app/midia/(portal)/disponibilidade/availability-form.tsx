@@ -71,7 +71,7 @@ export function WeeklyAvailabilityForm({ initialSlots }: { initialSlots: Slot[] 
     >
       <input ref={hiddenRef} type="hidden" name="slots" />
       <FormMessage error={state.error} success={state.success} />
-      <div className="overflow-hidden rounded-2xl border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

@@ -136,7 +136,7 @@ export function CobrancasView({
         {reminders.length === 0 ? (
           <EmptyState title="Nenhum lembrete agendado ainda" description="Lembretes são gerados automaticamente quando uma cobrança é criada, a partir dos modelos ativos." />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
