@@ -90,6 +90,7 @@ interface ResetLinkDeliveryResult {
   emailDelivered: boolean;
   whatsappDelivered: boolean;
   whatsappError: string | null;
+  whatsappTo: string | null;
   resetUrl: string;
 }
 
@@ -125,13 +126,23 @@ async function sendPasswordResetLink(
     emailDelivered: emailResult.delivered,
     whatsappDelivered: whatsappResult?.delivered ?? false,
     whatsappError: whatsappResult?.error ?? null,
+    whatsappTo: whatsappResult?.to ?? null,
     resetUrl,
   };
 }
 
 function describeResetLinkDelivery(result: ResetLinkDeliveryResult, hasPhone: boolean): string {
   const channels = [result.emailDelivered && "e-mail", result.whatsappDelivered && "WhatsApp"].filter(Boolean).join(" e ");
-  if (channels) return `Link de redefinição enviado por ${channels}.`;
+  if (channels) {
+    // Mostra o número exato usado mesmo quando "deu certo" (§ pedido do
+    // usuário: "ela não recebeu no WhatsApp" mesmo com o sistema dizendo
+    // que entregou) — o Baileys confirma que o número existe no WhatsApp e
+    // envia sem lançar erro, mas isso não garante que seja o número CERTO
+    // da pessoa; comparar esse dígito com o WhatsApp real dela é o
+    // primeiro passo pra achar um cadastro errado ou trocado.
+    const whatsappNote = result.whatsappDelivered && result.whatsappTo ? ` (WhatsApp enviado para ${result.whatsappTo})` : "";
+    return `Link de redefinição enviado por ${channels}.${whatsappNote}`;
+  }
   if (result.whatsappError) return `${result.whatsappError} Copie e envie manualmente: ${result.resetUrl}`;
   return `Nenhum provedor de e-mail ou WhatsApp conectado${hasPhone ? "" : " (e não há telefone cadastrado)"}. Copie e envie manualmente: ${result.resetUrl}`;
 }
