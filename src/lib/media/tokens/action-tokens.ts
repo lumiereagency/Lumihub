@@ -582,3 +582,22 @@ export async function sendScheduleConfirmationRequests(scheduleId: string, organ
 
   return { sent, withoutPhone, failed };
 }
+
+// Aviso automático quando a liderança escala/substitui alguém manualmente
+// numa vaga de uma escala já publicada (§ pedido do usuário: "como ela vai
+// saber?") — antes só existia uma notificação dentro do portal (o
+// sininho), que só aparece se a pessoa entrar e conferir; agora sai
+// também por WhatsApp, com o mesmo link de confirmação por dia que a
+// escala mensal já usa (ela também vê ali os outros dias em que já estava
+// escalada nesta mesma escala, não só este).
+export async function notifyMemberOfManualAssignment(organizationId: string, assignmentId: string): Promise<void> {
+  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({
+    where: { id: assignmentId },
+    include: { event: true, function: true, schedule: true, member: { include: { user: { select: { name: true } } } } },
+  });
+  if (!assignment.memberId || !assignment.member?.phone) return;
+
+  const token = await createScheduleConfirmationToken(organizationId, assignment.memberId, assignment.scheduleId, assignment.schedule.periodEnd);
+  const message = `Olá, ${assignment.member.user.name}! Você foi escalado(a) como ${assignment.function.name} em ${assignment.event.name} (${formatDate(assignment.event.startAt)}). Confirme se poderá estar: ${appUrl()}/midia/acao/${token}`;
+  await sendWhatsApp({ organizationId, to: assignment.member.phone, message });
+}

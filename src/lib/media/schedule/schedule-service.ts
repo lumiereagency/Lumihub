@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { findScheduleConflicts, getMemberAvailabilityState } from "@/lib/media/schedule/conflict-service";
 import { notifyMediaMember, notifyMediaLeaders } from "@/lib/media/schedule/notification-service";
+import { notifyMemberOfManualAssignment } from "@/lib/media/tokens/action-tokens";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -314,6 +315,14 @@ export async function setAssignmentMember(
       `Você foi escalado como ${assignment.function.name} em ${assignment.event.name}.`,
       "/midia/minha-escala",
     );
+
+    // Além do sininho do portal (só visto se a pessoa entrar sozinha), avisa
+    // por WhatsApp sempre que a vaga muda de dono de verdade — cobre tanto
+    // preencher uma vaga vazia quanto substituir quem já estava lá
+    // (§ pedido do usuário: "como ela vai saber?").
+    if (previousMemberId !== memberId) {
+      await notifyMemberOfManualAssignment(organizationId, assignmentId);
+    }
   }
 }
 
