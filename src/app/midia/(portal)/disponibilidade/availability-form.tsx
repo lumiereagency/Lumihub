@@ -50,11 +50,31 @@ interface Slot {
   available: boolean;
 }
 
-export function WeeklyAvailabilityForm({ initialSlots }: { initialSlots: Slot[] }) {
+interface CultTime {
+  startTime: string;
+  endTime: string;
+}
+
+export function WeeklyAvailabilityForm({
+  initialSlots,
+  defaultTimesByDay = {},
+}: {
+  initialSlots: Slot[];
+  defaultTimesByDay?: Record<number, CultTime>;
+}) {
   const [state, formAction, pending] = useActionState(updateMyAvailabilityAction, initialState);
   const hiddenRef = useRef<HTMLInputElement>(null);
   const [slots, setSlots] = useState<Slot[]>(() =>
-    DAY_LABELS.map((_, dayOfWeek) => initialSlots.find((s) => s.dayOfWeek === dayOfWeek) ?? { dayOfWeek, startTime: "08:00", endTime: "12:00", available: false }),
+    DAY_LABELS.map((_, dayOfWeek) => {
+      const existing = initialSlots.find((s) => s.dayOfWeek === dayOfWeek);
+      if (existing) return existing;
+      // Sem preferência salva ainda — sugere o horário real do culto
+      // daquele dia (§ pedido do usuário: "08:00–12:00 não tem nada a ver
+      // com nossas decisões internas") em vez de um placeholder genérico
+      // que não corresponde a nenhum culto de verdade.
+      const cultTime = defaultTimesByDay[dayOfWeek];
+      return { dayOfWeek, startTime: cultTime?.startTime ?? "08:00", endTime: cultTime?.endTime ?? "12:00", available: false };
+    }),
   );
 
   function updateSlot(dayOfWeek: number, patch: Partial<Slot>) {

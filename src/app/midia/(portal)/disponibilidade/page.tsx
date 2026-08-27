@@ -14,10 +14,27 @@ export default async function MediaPortalAvailabilityPage() {
     },
   });
 
-  const [coverage, pendingSpecialEvents] = await Promise.all([
+  const [coverage, pendingSpecialEvents, activeRecurrences] = await Promise.all([
     getWeekdayCoverageStatus(member.id),
     getPendingSpecialEvents(user.organizationId, member.id),
+    db.mediaEventRecurrence.findMany({
+      where: { organizationId: user.organizationId, active: true },
+      orderBy: { startTime: "asc" },
+      select: { dayOfWeek: true, startTime: true, endTime: true },
+    }),
   ]);
+
+  // Um dia pode ter mais de uma recorrência ativa em tese; fica com a
+  // primeira (mais cedo) — é só uma sugestão de horário, o membro sempre
+  // pode ajustar antes de salvar.
+  const defaultTimesByDay: Record<number, { startTime: string; endTime: string }> = {};
+  for (const r of activeRecurrences) {
+    if (defaultTimesByDay[r.dayOfWeek]) continue;
+    const [h, m] = r.startTime.split(":").map(Number);
+    const endMinutesTotal = h * 60 + m + 60;
+    const fallbackEnd = `${String(Math.floor(endMinutesTotal / 60) % 24).padStart(2, "0")}:${String(endMinutesTotal % 60).padStart(2, "0")}`;
+    defaultTimesByDay[r.dayOfWeek] = { startTime: r.startTime, endTime: r.endTime ?? fallbackEnd };
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -31,6 +48,7 @@ export default async function MediaPortalAvailabilityPage() {
             endTime: s.endTime,
             available: s.available,
           }))}
+          defaultTimesByDay={defaultTimesByDay}
         />
       </div>
 
