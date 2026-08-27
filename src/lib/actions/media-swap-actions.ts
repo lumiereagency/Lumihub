@@ -45,6 +45,19 @@ export async function requestSwapAction(assignmentId: string, _prev: ActionState
   const member = await db.mediaMember.findUniqueOrThrow({ where: { userId: user.id } });
   const result = await requestSwap(user.organizationId, user.id, assignmentId, member.id, parsed.data.targetMemberId, parsed.data.reason ?? null);
 
+  // Antes só notificava dentro do portal (o sininho, que só aparece se o
+  // colega entrar sozinho) — agora avisa também por WhatsApp, com o mesmo
+  // link de aceite que a sugestão automática da IA já usa (§ pedido do
+  // usuário: "é bom enviar nos dois jeitos"). Falha aqui não desfaz a
+  // solicitação já criada.
+  if (!result.error) {
+    const swap = await db.mediaSwapRequest.findFirst({
+      where: { assignmentId, targetMemberId: parsed.data.targetMemberId, requestedByMemberId: member.id, status: "PENDING_TARGET" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (swap) await resendSwapAcceptNotification(user.organizationId, swap.id);
+  }
+
   revalidatePath("/midia/minha-escala");
   revalidatePath("/midia/solicitacoes");
   return result;

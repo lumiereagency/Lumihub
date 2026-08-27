@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent, AlertTriangle, ArrowRight } from "lucide-react";
+import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent, AlertTriangle, ArrowRight, UserCheck } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { AssignmentCard, type AssignmentCardData } from "@/components/media/assignment-card";
+import { PendingConfirmationButtons } from "@/components/media/pending-confirmation-buttons";
+import { RespondToSwapButtons } from "@/app/midia/(portal)/solicitacoes/swap-actions";
 import { getWeekdayCoverageStatus, getPendingSpecialEvents } from "@/lib/media/schedule/availability-service";
 import { formatDateTime } from "@/lib/format";
 
@@ -55,6 +57,28 @@ export default async function MediaPortalHomePage() {
       where: { OR: [{ requestedByMemberId: member.id }, { targetMemberId: member.id }], status: { in: ["PENDING_TARGET", "PENDING_LEADER"] } },
     }),
     db.notification.findMany({ where: { userId: user.id, readAt: null }, orderBy: { createdAt: "desc" }, take: 5 }),
+  ]);
+
+  // "Ações pendentes" (§ pedido do usuário: widget que aparece assim que o
+  // membro entra, igual à mensagem de WhatsApp) — troca de colega aguardando
+  // resposta e atribuição nova/substituição ainda sem confirmação, as duas
+  // coisas que hoje só chegavam por WhatsApp ou pelo sininho escondido.
+  const [pendingSwapsAsTarget, pendingConfirmationAssignments] = await Promise.all([
+    db.mediaSwapRequest.findMany({
+      where: { targetMemberId: member.id, status: "PENDING_TARGET" },
+      include: { requestedBy: { include: { user: { select: { name: true } } } }, assignment: { include: { event: true, function: true } } },
+      orderBy: { requestedAt: "asc" },
+    }),
+    db.mediaScheduleAssignment.findMany({
+      where: {
+        memberId: member.id,
+        schedule: { status: "PUBLISHED" },
+        event: { startAt: { gte: now } },
+        OR: [{ attendance: null }, { attendance: { confirmationStatus: "PENDING" } }],
+      },
+      include: { event: true, function: true },
+      orderBy: { event: { startAt: "asc" } },
+    }),
   ]);
 
   // "Meu desempenho" (Fase 03, §22): sempre um recorte individual — nunca
@@ -110,6 +134,43 @@ export default async function MediaPortalHomePage() {
           </div>
           <ArrowRight size={18} className="shrink-0" />
         </Link>
+      )}
+
+      {(pendingSwapsAsTarget.length > 0 || pendingConfirmationAssignments.length > 0) && (
+        <section>
+          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-accent-light">
+            <UserCheck size={14} /> Ações pendentes
+          </h2>
+          <div className="flex flex-col gap-3">
+            {pendingSwapsAsTarget.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-accent/40 bg-card p-4">
+                <p className="text-sm text-text-primary">
+                  <strong>{s.requestedBy.user.name}</strong> pediu que você cubra:
+                </p>
+                <p className="text-xs text-text-tertiary">
+                  {s.assignment.function.name} em {s.assignment.event.name} · {formatDateTime(s.assignment.event.startAt)}
+                </p>
+                {s.reason && <p className="mt-1 text-xs text-text-tertiary">Motivo: {s.reason}</p>}
+                <div className="mt-3">
+                  <RespondToSwapButtons swapId={s.id} />
+                </div>
+              </div>
+            ))}
+            {pendingConfirmationAssignments.map((a) => (
+              <div key={a.id} className="rounded-2xl border border-accent/40 bg-card p-4">
+                <p className="text-sm text-text-primary">
+                  Você foi escalado(a) como <strong>{a.function.name}</strong>:
+                </p>
+                <p className="text-xs text-text-tertiary">
+                  {a.event.name} · {formatDateTime(a.event.startAt)}
+                </p>
+                <div className="mt-3">
+                  <PendingConfirmationButtons assignmentId={a.id} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

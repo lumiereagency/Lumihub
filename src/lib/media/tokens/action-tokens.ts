@@ -247,8 +247,16 @@ export async function respondAssignmentViaToken(token: string, assignmentId: str
   }
 
   await declineAttendance(row.organizationId, member.userId, assignmentId, row.memberId);
-  const result = await findAndInviteNextCandidate(row.organizationId, assignmentId, row.memberId, []);
+  const result = await triggerSubstituteSearch(row.organizationId, assignmentId, row.memberId);
   return result.error ? result : { success: `Indisponibilidade registrada. ${result.success}` };
+}
+
+// Ponto de entrada público da busca de substituto — reaproveitado tanto
+// pelo link de WhatsApp sem login (acima) quanto pela recusa dentro do
+// portal logado (§ pedido do usuário: o widget do dashboard precisa do
+// mesmo "Não vou poder" disparar a mesma cascata, não um mecanismo novo).
+export async function triggerSubstituteSearch(organizationId: string, assignmentId: string, decliningMemberId: string): Promise<ServiceResult> {
+  return findAndInviteNextCandidate(organizationId, assignmentId, decliningMemberId, []);
 }
 
 // Convida UM candidato específico e cuida do envio por WhatsApp — usada
