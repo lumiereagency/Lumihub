@@ -2,8 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Search, Users2, Trash2 } from "lucide-react";
-import { resendMediaInvitationAction, removeMediaMemberAction, deleteMediaMemberAction } from "@/lib/actions/media-actions";
+import { Plus, Search, Users2, Trash2, KeyRound } from "lucide-react";
+import {
+  resendMediaInvitationAction,
+  removeMediaMemberAction,
+  deleteMediaMemberAction,
+  sendMemberPasswordResetLinkAction,
+} from "@/lib/actions/media-actions";
 import { MEDIA_STATUS_LABELS, MEDIA_STATUS_TONE } from "@/lib/media/labels";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -59,6 +64,16 @@ export function MediaTeamList({
     setPendingId(member.id);
     startTransition(async () => {
       const result = await resendMediaInvitationAction(member.id, phoneOverride);
+      setPendingId(null);
+      alert(result.success ?? result.error);
+    });
+  }
+
+  function sendResetLink(member: MemberRow) {
+    if (!confirm(`Enviar link de redefinição de senha para ${member.name} por e-mail${member.phone ? " e WhatsApp" : ""}?`)) return;
+    setPendingId(member.id);
+    startTransition(async () => {
+      const result = await sendMemberPasswordResetLinkAction(member.id);
       setPendingId(null);
       alert(result.success ?? result.error);
     });
@@ -174,6 +189,17 @@ export function MediaTeamList({
                             className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary disabled:opacity-50"
                           >
                             {pendingId === m.id ? "Reenviando..." : "Reenviar convite"}
+                          </button>
+                        )}
+                        {m.status === "ACTIVE" && (
+                          <button
+                            type="button"
+                            disabled={pendingId === m.id}
+                            title="Enviar link de redefinição de senha por e-mail/WhatsApp"
+                            onClick={() => sendResetLink(m)}
+                            className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-text-primary disabled:opacity-50"
+                          >
+                            <KeyRound size={14} />
                           </button>
                         )}
                         {m.status !== "INACTIVE" && (

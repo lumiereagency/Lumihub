@@ -86,6 +86,56 @@ function describeInviteDelivery(result: InviteDeliveryResult, hasPhone: boolean)
   return `Nenhum provedor de e-mail ou WhatsApp conectado${hasPhone ? "" : " (e não há telefone cadastrado)"}. Copie e envie manualmente: ${result.inviteUrl}`;
 }
 
+interface ResetLinkDeliveryResult {
+  emailDelivered: boolean;
+  whatsappDelivered: boolean;
+  whatsappError: string | null;
+  resetUrl: string;
+}
+
+// Link de redefinição de senha disparado manualmente pelo admin (§ pedido
+// do usuário: um membro esqueceu a senha e não recebeu o e-mail do
+// autosserviço em /esqueci-senha porque nenhum provedor de e-mail está
+// conectado — dá pro admin mandar o mesmo link por WhatsApp e/ou e-mail
+// como caminho assistido, SEM substituir o autosserviço, que continua
+// funcionando do jeito que está). Token de 24h — mesmo mecanismo de
+// PasswordResetToken do /esqueci-senha e do convite, só que criado sob
+// demanda pelo admin em vez de esperar o membro pedir sozinho.
+async function sendPasswordResetLink(
+  organizationId: string,
+  userId: string,
+  name: string,
+  email: string,
+  phone: string | null,
+): Promise<ResetLinkDeliveryResult> {
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  await db.passwordResetToken.create({
+    data: { userId, tokenHash, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+  });
+
+  const resetUrl = `${appUrl()}/redefinir-senha/${token}`;
+  const text = `Olá, ${name}! Você esqueceu sua senha? Aqui está o link para redefinição (válido por 24 horas): ${resetUrl}`;
+
+  const emailResult = await sendEmail({ organizationId, to: email, subject: "LUMIBASE — Link para redefinição de senha", text });
+  const whatsappResult = phone ? await sendWhatsApp({ organizationId, to: phone, message: text }) : null;
+
+  return {
+    emailDelivered: emailResult.delivered,
+    whatsappDelivered: whatsappResult?.delivered ?? false,
+    whatsappError: whatsappResult?.error ?? null,
+    resetUrl,
+  };
+}
+
+function describeResetLinkDelivery(result: ResetLinkDeliveryResult, hasPhone: boolean): string {
+  const channels = [result.emailDelivered && "e-mail", result.whatsappDelivered && "WhatsApp"].filter(Boolean).join(" e ");
+  if (channels) return `Link de redefinição enviado por ${channels}.`;
+  if (result.whatsappError) return `${result.whatsappError} Copie e envie manualmente: ${result.resetUrl}`;
+  return `Nenhum provedor de e-mail ou WhatsApp conectado${hasPhone ? "" : " (e não há telefone cadastrado)"}. Copie e envie manualmente: ${result.resetUrl}`;
+}
+
 // Convida um membro para o Mídia ADESF. Cobre os dois casos exigidos pela
 // especificação sem duplicar usuário: e-mail já cadastrado no LUMIBASE só
 // ganha o vínculo MediaMember (ACTIVE de imediato — a pessoa já tem senha);
@@ -365,6 +415,34 @@ export async function resendMediaInvitationAction(memberId: string, phoneOverrid
   revalidatePath("/midia-adesf/equipe");
   revalidatePath("/midia/equipe");
   return { success: describeInviteDelivery(inviteResult, !!phone) };
+}
+
+// Botão ao lado do nome do membro na lista da equipe (§ pedido do usuário:
+// "um dos membros esqueceu a senha... deixar do lado do nome uma opção pra
+// eu conseguir enviar o link de redefinição por WhatsApp ou e-mail"). Não
+// exige status INVITED — é justamente para quem já tem conta ativa e não
+// consegue mais entrar. O autosserviço em /esqueci-senha continua existindo
+// sem nenhuma alteração; isto é só um caminho assistido a mais.
+export async function sendMemberPasswordResetLinkAction(memberId: string): Promise<ActionState> {
+  const admin = await requirePermission(EDIT);
+
+  const member = await db.mediaMember.findFirst({
+    where: { id: memberId, organizationId: admin.organizationId },
+    include: { user: true },
+  });
+  if (!member) return { error: "Membro não encontrado." };
+
+  const result = await sendPasswordResetLink(admin.organizationId, member.user.id, member.user.name, member.user.email, member.phone);
+
+  await audit({
+    organizationId: admin.organizationId,
+    userId: admin.id,
+    action: "MEDIA_PASSWORD_RESET_LINK_SENT",
+    entityType: "MediaMember",
+    entityId: memberId,
+  });
+
+  return { success: describeResetLinkDelivery(result, !!member.phone) };
 }
 
 // Exclui de vez um convite ainda não aceito (§ pedido do usuário: "não
