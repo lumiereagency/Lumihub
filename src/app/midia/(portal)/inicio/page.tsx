@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent, AlertTriangle, ArrowRight, UserCheck } from "lucide-react";
+import { Sparkles, Clock, Bell, CalendarClock, ClipboardCheck, Send, History, Percent, AlertTriangle, ArrowRight, UserCheck, RefreshCcw } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
@@ -173,6 +173,36 @@ export default async function MediaPortalHomePage() {
         </section>
       )}
 
+      {/* Avisos logo abaixo das ações pendentes (§ pedido do usuário:
+          "mensagens de troca de escala estarem mais visíveis assim que eles
+          entrarem na plataforma") — antes ficava no fim da página, depois de
+          várias seções; troca/substituição usa um ícone e destaque próprios
+          pra chamar mais atenção que um aviso genérico. */}
+      <section>
+        <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-text-secondary">
+          <Bell size={14} /> Avisos {notifications.length > 0 && <Badge tone="accent">{notifications.length}</Badge>}
+        </h2>
+        {notifications.length === 0 ? (
+          <EmptyState icon={<Bell size={24} />} title="Nenhum aviso no momento" />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {notifications.map((n) => {
+              const isSwap = n.title.toLowerCase().includes("troca");
+              return (
+                <div key={n.id} className={`rounded-[10px] border px-4 py-3 ${isSwap ? "border-accent/40 bg-card" : "border-border bg-card"}`}>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
+                    {isSwap && <RefreshCcw size={13} className="shrink-0 text-accent-light" />}
+                    {n.title}
+                  </p>
+                  <p className="text-sm text-text-secondary">{n.body}</p>
+                  <p className="mt-1 text-xs text-text-tertiary">{formatDateTime(n.createdAt)}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard label="Escalas do mês" value={String(assignmentsThisMonth)} icon={<CalendarClock size={18} />} />
         <MetricCard label="Confirmações pendentes" value={String(pendingConfirmations)} icon={<ClipboardCheck size={18} />} />
@@ -221,23 +251,6 @@ export default async function MediaPortalHomePage() {
         >
           <Clock size={14} /> Atualizar disponibilidade
         </Link>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Avisos</h2>
-        {notifications.length === 0 ? (
-          <EmptyState icon={<Bell size={24} />} title="Nenhum aviso no momento" />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {notifications.map((n) => (
-              <div key={n.id} className="rounded-[10px] border border-border bg-card px-4 py-3">
-                <p className="text-sm font-medium text-text-primary">{n.title}</p>
-                <p className="text-sm text-text-secondary">{n.body}</p>
-                <p className="mt-1 text-xs text-text-tertiary">{formatDateTime(n.createdAt)}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       <section>

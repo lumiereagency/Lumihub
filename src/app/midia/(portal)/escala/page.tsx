@@ -1,9 +1,10 @@
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, RefreshCcw } from "lucide-react";
 import { requireMediaMember } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
 
 export default async function MediaPortalGeneralSchedulePage() {
@@ -25,7 +26,12 @@ export default async function MediaPortalGeneralSchedulePage() {
 
   const events = await db.mediaEvent.findMany({
     where: { organizationId: user.organizationId, startAt: { gte: schedule.periodStart, lte: schedule.periodEnd }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
-    include: { assignments: { where: { scheduleId: schedule.id, memberId: { not: null } }, include: { function: true, member: { include: { user: { select: { name: true, avatarUrl: true } } } } } } },
+    include: {
+      assignments: {
+        where: { scheduleId: schedule.id, memberId: { not: null } },
+        include: { function: true, member: { include: { user: { select: { name: true, avatarUrl: true } } } } },
+      },
+    },
     orderBy: { startAt: "asc" },
   });
 
@@ -49,6 +55,11 @@ export default async function MediaPortalGeneralSchedulePage() {
                     <Avatar name={a.member!.user.name} src={a.member!.user.avatarUrl} size="sm" />
                     <span className="text-text-primary">{a.member!.user.name}</span>
                     <span className="text-text-tertiary">— {a.function.name}</span>
+                    {a.status === "SWAP_PENDING" && (
+                      <Badge tone="info" title="Uma troca está sendo negociada para esta vaga">
+                        <RefreshCcw size={10} /> Troca pendente
+                      </Badge>
+                    )}
                   </div>
                 ))}
               </div>

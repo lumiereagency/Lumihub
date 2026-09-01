@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Users2, Mail, Clapperboard, Clock, CheckCircle2, AlertTriangle, CalendarClock, Send, ClipboardCheck, PieChart } from "lucide-react";
-import { requirePermission } from "@/lib/auth/guard";
+import { Users2, Mail, Clapperboard, Clock, CheckCircle2, AlertTriangle, CalendarClock, Send, ClipboardCheck, PieChart, Sparkles, ArrowRight } from "lucide-react";
+import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { ensureMediaAdesfDefaults } from "@/lib/media/bootstrap";
@@ -13,9 +13,12 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { SwapDecisionForm } from "./solicitacoes/swap-decision-form";
+import { ResendSwapNotificationButton, ReassignSwapTargetPicker } from "./solicitacoes/resend-swap-notification-button";
 
 export default async function MediaAdesfDashboardPage() {
   const user = await requirePermission(permKey("MEDIA_ADESF", "VIEW"));
+  const canEdit = hasPermission(user, permKey("MEDIA_ADESF", "EDIT"));
   await ensureMediaAdesfDefaults(user.organizationId);
 
   const [activeMembers, invited, functionsActive, brand, recentMembers] = await Promise.all([
@@ -44,17 +47,51 @@ export default async function MediaAdesfDashboardPage() {
   const functionsConfigured = functionsActive > 0;
 
   const now = new Date();
-  const [nextEvent, currentSchedule, pendingSwaps, pendingConfirmations] = await Promise.all([
+  const [
+    nextEvent,
+    currentSchedule,
+    pendingLeaderSwaps,
+    pendingLeaderCount,
+    pendingTargetSwaps,
+    pendingTargetCount,
+    pendingConfirmations,
+  ] = await Promise.all([
     db.mediaEvent.findFirst({
       where: { organizationId: user.organizationId, startAt: { gte: now }, status: { notIn: ["CANCELLED", "ARCHIVED"] } },
       orderBy: { startAt: "asc" },
     }),
     db.mediaSchedule.findFirst({ where: { organizationId: user.organizationId, month: now.getMonth() + 1, year: now.getFullYear() } }),
+    // Detalhado (não só contagem) porque agora renderiza direto no
+    // dashboard (§ pedido do usuário: "conseguir fazer a maior parte das
+    // coisas dali mesmo, sem precisar ficar clicando em outras abas") — as
+    // 5 mais antigas primeiro, com link para "ver todas" quando sobrar mais.
+    db.mediaSwapRequest.findMany({
+      where: { organizationId: user.organizationId, status: "PENDING_LEADER" },
+      include: {
+        requestedBy: { include: { user: { select: { name: true } } } },
+        targetMember: { include: { user: { select: { name: true } } } },
+        assignment: { include: { event: true, function: true } },
+      },
+      orderBy: { requestedAt: "asc" },
+      take: 5,
+    }),
     db.mediaSwapRequest.count({ where: { organizationId: user.organizationId, status: "PENDING_LEADER" } }),
+    db.mediaSwapRequest.findMany({
+      where: { organizationId: user.organizationId, status: "PENDING_TARGET" },
+      include: {
+        requestedBy: { include: { user: { select: { name: true } } } },
+        targetMember: { include: { user: { select: { name: true } } } },
+        assignment: { include: { event: true, function: true } },
+      },
+      orderBy: { requestedAt: "asc" },
+      take: 5,
+    }),
+    db.mediaSwapRequest.count({ where: { organizationId: user.organizationId, status: "PENDING_TARGET" } }),
     db.mediaAttendance.count({
       where: { confirmationStatus: "PENDING", assignment: { schedule: { organizationId: user.organizationId, status: "PUBLISHED" }, event: { startAt: { gte: now } } } },
     }),
   ]);
+  const pendingSwaps = pendingLeaderCount + pendingTargetCount;
 
   let coverageLabel = "—";
   let uncoveredMandatory = 0;
@@ -82,9 +119,104 @@ export default async function MediaAdesfDashboardPage() {
     }
   }
 
+  const attentionCount = pendingLeaderCount + pendingTargetCount + (uncoveredMandatory > 0 ? 1 : 0) + (withoutAvailability > 0 ? 1 : 0);
+
   return (
     <div>
       <PageHeader title="Mídia ADESF" description="Gestão da equipe de mídia — visão geral." />
+
+      {/* Central de ação do admin (§ pedido do usuário: "as principais
+          funções onde preciso dar mais atenção e conseguir fazer a maior
+          parte das coisas dali mesmo, sem precisar ficar clicando em outras
+          abas") — aprova/recusa troca, reenvia convite e reatribui
+          substituto direto aqui, reaproveitando os mesmos componentes de
+          Solicitações. */}
+      <section className="mb-8">
+        <h2 className="mb-3 flex items-center gap-1.5 text-lg font-semibold text-text-primary">
+          <Sparkles size={18} className="text-accent-light" /> Precisa da sua atenção
+        </h2>
+        {attentionCount === 0 ? (
+          <div className="flex items-center gap-2.5 rounded-2xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-text-primary">
+            <CheckCircle2 size={18} className="shrink-0 text-success" /> Tudo em dia — nenhuma troca ou pendência aguardando você agora.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {uncoveredMandatory > 0 && currentSchedule && (
+              <Link
+                href={`/midia-adesf/escalas/${currentSchedule.id}`}
+                className="flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-text-primary hover:brightness-105"
+              >
+                <AlertTriangle size={18} className="shrink-0 text-warning" />
+                <span className="flex-1">
+                  <strong>{uncoveredMandatory}</strong> função(ões) obrigatória(s) sem preencher em {currentSchedule.name}.
+                </span>
+                <ArrowRight size={16} className="shrink-0" />
+              </Link>
+            )}
+            {withoutAvailability > 0 && (
+              <Link
+                href="/midia-adesf/equipe"
+                className="flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-text-primary hover:brightness-105"
+              >
+                <Clock size={18} className="shrink-0 text-warning" />
+                <span className="flex-1">
+                  <strong>{withoutAvailability}</strong> membro(s) ativo(s) ainda sem disponibilidade configurada.
+                </span>
+                <ArrowRight size={16} className="shrink-0" />
+              </Link>
+            )}
+
+            {pendingLeaderSwaps.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-sm text-text-primary">
+                  <strong>{s.requestedBy.user.name}</strong> → <strong>{s.targetMember.user.name}</strong>
+                  <span className="ml-2 align-middle text-xs">
+                    <Badge tone="warning">Aguardando sua aprovação</Badge>
+                  </span>
+                </p>
+                <p className="text-xs text-text-tertiary">
+                  {s.assignment.function.name} em {s.assignment.event.name} · {formatDateTime(s.assignment.event.startAt)}
+                </p>
+                {s.reason && <p className="mt-1 text-xs text-text-tertiary">Motivo: {s.reason}</p>}
+                {canEdit ? (
+                  <div className="mt-3">
+                    <SwapDecisionForm swapId={s.id} />
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-text-tertiary">Sem permissão para decidir — peça a um admin com edição.</p>
+                )}
+              </div>
+            ))}
+
+            {pendingTargetSwaps.map((s) => (
+              <div key={s.id} className="rounded-2xl border border-border bg-card p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-text-primary">
+                    <strong>{s.requestedBy.user.name}</strong> → <strong>{s.targetMember.user.name}</strong>
+                  </p>
+                  {s.autoSuggested && <Badge tone="accent">Sugerido pela IA</Badge>}
+                  <Badge tone="info">Aguardando resposta do substituto</Badge>
+                </div>
+                <p className="text-xs text-text-tertiary">
+                  {s.assignment.function.name} em {s.assignment.event.name} · {formatDateTime(s.assignment.event.startAt)}
+                </p>
+                {canEdit && s.autoSuggested && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    {s.targetMember.phone && <ResendSwapNotificationButton swapId={s.id} />}
+                    <ReassignSwapTargetPicker swapId={s.id} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {(pendingLeaderCount > pendingLeaderSwaps.length || pendingTargetCount > pendingTargetSwaps.length) && (
+              <Link href="/midia-adesf/solicitacoes" className="self-start text-sm text-accent-light hover:underline">
+                Ver todas as solicitações →
+              </Link>
+            )}
+          </div>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Membros ativos" value={String(activeMembers.length)} icon={<Users2 size={18} />} />

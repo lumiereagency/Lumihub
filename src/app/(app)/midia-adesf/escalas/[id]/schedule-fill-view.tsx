@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, RefreshCcw, Plus, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { formatDateTime } from "@/lib/format";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +79,13 @@ export function ScheduleFillView({ scheduleId, events, editable }: { scheduleId:
                           <Badge tone="accent">
                             <Sparkles size={10} /> IA
                           </Badge>
+                        )}
+                        {slot.assignmentStatus === "SWAP_PENDING" && (
+                          <Link href="/midia-adesf/solicitacoes" title="Troca em andamento — ver solicitação">
+                            <Badge tone="info">
+                              <RefreshCcw size={10} /> Troca pendente
+                            </Badge>
+                          </Link>
                         )}
                       </div>
                     ) : (
