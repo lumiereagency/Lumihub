@@ -8,7 +8,12 @@ import { permKey } from "@/lib/auth/permissions";
 import { requestSwap, respondToSwapAsTarget, cancelSwap, approveSwapAsLeader } from "@/lib/media/schedule/swap-service";
 import { findEligibleMembers, type EligibleMemberCandidate } from "@/lib/media/schedule/conflict-service";
 import type { RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
-import { resendSwapAcceptNotification, getSwapReassignCandidates, manuallyReassignSwapTarget } from "@/lib/media/tokens/action-tokens";
+import {
+  resendSwapAcceptNotification,
+  getSwapReassignCandidates,
+  manuallyReassignSwapTarget,
+  escalateRejectedAutoSuggestedSwap,
+} from "@/lib/media/tokens/action-tokens";
 import { requestSwapSchema, swapDecisionSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -68,6 +73,7 @@ export async function respondToSwapAction(swapId: string, accept: boolean): Prom
   const member = await db.mediaMember.findUniqueOrThrow({ where: { userId: user.id } });
 
   const result = await respondToSwapAsTarget(user.organizationId, user.id, swapId, member.id, accept);
+  if (!result.error && !accept) await escalateRejectedAutoSuggestedSwap(user.organizationId, swapId);
 
   revalidatePath("/midia/solicitacoes");
   revalidatePath("/midia/minha-escala");

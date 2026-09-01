@@ -387,6 +387,25 @@ async function findAndInviteNextCandidate(
   return invite;
 }
 
+// Recusa ATIVA de um substituto sugerido pela IA (§ pedido do usuário: "se
+// a próxima pessoa também não aceitar, parece que não segue fazendo os
+// disparos") — antes só o timeout de 1h avançava para o próximo candidato;
+// clicar em "recusar" ficava parado, exigindo revisão manual da liderança.
+// Chamada pelos dois pontos onde um alvo pode recusar (link do WhatsApp e
+// portal logado) logo depois de respondToSwapAsTarget confirmar a recusa.
+// Só cascateia sugestões automáticas — troca pedida por um colega
+// (autoSuggested=false) continua exigindo escolha manual quando recusada.
+export async function escalateRejectedAutoSuggestedSwap(organizationId: string, swapId: string): Promise<void> {
+  const swap = await db.mediaSwapRequest.findUnique({ where: { id: swapId } });
+  if (!swap || !swap.autoSuggested) return;
+
+  const priorAttempts = await db.mediaSwapRequest.findMany({
+    where: { assignmentId: swap.assignmentId, requestedByMemberId: swap.requestedByMemberId },
+    select: { targetMemberId: true },
+  });
+  await findAndInviteNextCandidate(organizationId, swap.assignmentId, swap.requestedByMemberId, priorAttempts.map((p) => p.targetMemberId));
+}
+
 const SWAP_ESCALATION_TIMEOUT_MS = 60 * 60 * 1000; // 1h — decisão do usuário
 
 // Chamada periodicamente por um cron externo (não há infraestrutura de
@@ -537,6 +556,7 @@ export async function respondSwapViaToken(token: string, accept: boolean): Promi
   if (result.error) return result;
 
   await db.mediaActionToken.update({ where: { id: row.id }, data: { usedAt: new Date() } });
+  if (!accept) await escalateRejectedAutoSuggestedSwap(row.organizationId, row.swapRequestId);
   return result;
 }
 

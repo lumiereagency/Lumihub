@@ -95,13 +95,22 @@ export async function respondToSwapAsTarget(
       await tx.mediaSwapRequest.update({ where: { id: swapId }, data: { status: "TARGET_REJECTED", targetRespondedAt: new Date() } });
       await revertAssignmentAfterSwap(swap.assignmentId);
     });
-    await notifyMediaMember(
-      organizationId,
-      swap.requestedByMemberId,
-      "Troca recusada",
-      `O membro selecionado não pôde assumir ${swap.assignment.function.name} em ${swap.assignment.event.name}.`,
-      "/midia/solicitacoes",
-    );
+    // Sugestão automática da IA: quem pediu a troca já está fora da escala
+    // por indisponibilidade própria — avisar "troca recusada" aqui seria
+    // enganoso, já que o chamador (respondToSwapAction/respondSwapViaToken)
+    // dispara a cascata pro próximo candidato logo em seguida (§ pedido do
+    // usuário: "se a próxima pessoa não aceitar, parece que não segue
+    // fazendo os disparos"). Troca pedida por um colega continua avisando
+    // normalmente, já que aí é a pessoa escolher outro alvo manualmente.
+    if (!swap.autoSuggested) {
+      await notifyMediaMember(
+        organizationId,
+        swap.requestedByMemberId,
+        "Troca recusada",
+        `O membro selecionado não pôde assumir ${swap.assignment.function.name} em ${swap.assignment.event.name}.`,
+        "/midia/solicitacoes",
+      );
+    }
     await audit({ organizationId, userId: actorUserId, action: "MEDIA_SWAP_REJECTED_BY_TARGET", entityType: "MediaSwapRequest", entityId: swapId });
     return { success: "Troca recusada." };
   }

@@ -9,6 +9,7 @@ import { createMonthlySchedule, assignScheduleSlot, clearScheduleSlot, publishSc
 import { findEligibleMembers } from "@/lib/media/schedule/conflict-service";
 import { rankEligibleMembers, type RankedEligibleMember } from "@/lib/media/ai/candidate-ranking";
 import { sendScheduleConfirmationRequests } from "@/lib/media/tokens/action-tokens";
+import { notifyMediaLeaders } from "@/lib/media/schedule/notification-service";
 import { createMonthlyScheduleSchema } from "@/lib/validation/media-schedule";
 import type { ActionState } from "@/lib/actions/auth-actions";
 
@@ -99,16 +100,27 @@ export async function publishScheduleAction(scheduleId: string, force: boolean):
 
   // Disparo automático (§ pedido do usuário: publicar já deve avisar todo
   // mundo, sem passo manual extra) — um WhatsApp por membro, nunca um por
-  // culto. Falha de envio nunca deve desfazer a publicação já efetivada.
-  const dispatch = await sendScheduleConfirmationRequests(scheduleId, user.organizationId).catch(() => null);
-  if (dispatch && dispatch.sent > 0) {
-    const failedNote = dispatch.failed > 0 ? ` ${dispatch.failed} falha(s) no envio (confira a conexão do WhatsApp).` : "";
-    return { success: `Escala publicada. Confirmação enviada por WhatsApp para ${dispatch.sent} membro(s).${failedNote}` };
-  }
-  if (dispatch && dispatch.failed > 0) {
-    return { success: "Escala publicada. Não foi possível enviar a confirmação por WhatsApp — verifique a conexão em Configurações → Integrações." };
-  }
-  return { success: "Escala publicada." };
+  // culto, em série. A escala já está publicada e visível no dashboard dos
+  // membros desde o revalidatePath acima, ANTES deste disparo começar — não
+  // espera mais o loop de envio terminar pra devolver resposta ao admin
+  // (§ pedido do usuário: "mesmo que os disparos ainda estejam sendo
+  // feitos, já precisa aparecer no dashboard"): numa equipe grande esse
+  // loop pode levar bem mais que o tempo de uma requisição, e falha de
+  // envio nunca deve desfazer a publicação já efetivada. Roda em segundo
+  // plano; a liderança é avisada à parte se sobrar alguém sem notificação.
+  void sendScheduleConfirmationRequests(scheduleId, user.organizationId)
+    .then((dispatch) => {
+      if (dispatch.failed === 0 && dispatch.withoutPhone === 0) return;
+      return notifyMediaLeaders(
+        user.organizationId,
+        "Confirmação de escala — envios pendentes",
+        `${dispatch.sent} confirmação(ões) enviada(s) por WhatsApp. ${dispatch.failed} falha(s) no envio e ${dispatch.withoutPhone} membro(s) sem telefone cadastrado — confira e avise manualmente quem faltou.`,
+        `/midia-adesf/escalas/${scheduleId}`,
+      );
+    })
+    .catch((err) => console.error("[LUMIBASE][escala:disparo] Falha ao disparar confirmações da escala publicada.", err));
+
+  return { success: "Escala publicada — já disponível para a equipe. As confirmações estão sendo enviadas por WhatsApp em segundo plano." };
 }
 
 // Só permite excluir rascunho (§ pedido do usuário) — uma escala PUBLISHED
