@@ -4,6 +4,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { ASSETS_TABS, filterTabsForUser } from "@/lib/nav";
 import { CardsView } from "./cards-view";
 
 export default async function CardsPage() {
@@ -63,6 +65,7 @@ export default async function CardsPage() {
   return (
     <div>
       <PageHeader title="Cartões" description="Cartões de crédito, compras parceladas e distribuição automática nas faturas." />
+      <SectionTabs tabs={filterTabsForUser(ASSETS_TABS, user.permissions)} />
       <CardsView cards={cardsWithInvoices} currency={organization.currency} permissions={permissions} />
     </div>
   );

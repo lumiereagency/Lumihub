@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { getFinanceOverview } from "@/lib/finance/queries";
 import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { FINANCE_TABS, filterTabsForUser } from "@/lib/nav";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HorizontalBarChart } from "@/components/charts/horizontal-bar-chart";
@@ -27,6 +29,7 @@ export default async function FinancePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Visão Financeira" description="Saldo, receitas, despesas, margem e indicadores financeiros consolidados." />
+      <SectionTabs tabs={filterTabsForUser(FINANCE_TABS, user.permissions)} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricCard label="Saldo atual" value={formatCurrency(kpis.saldoAtual, currency)} tone="accent" />

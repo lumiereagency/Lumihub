@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { ASSETS_TABS, filterTabsForUser } from "@/lib/nav";
 import { InvestmentList } from "./investment-list";
 
 export default async function InvestmentsPage() {
@@ -20,6 +22,7 @@ export default async function InvestmentsPage() {
   return (
     <div>
       <PageHeader title="Investimentos" description="Equipamentos, tecnologia, marketing e expansão com objetivo e retorno esperado." />
+      <SectionTabs tabs={filterTabsForUser(ASSETS_TABS, user.permissions)} />
       <InvestmentList
         investments={investments.map((i) => ({
           id: i.id,

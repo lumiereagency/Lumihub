@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { FINANCE_TABS, filterTabsForUser } from "@/lib/nav";
 import { PayableList } from "./payable-list";
 
 export default async function PayablesPage() {
@@ -40,6 +42,7 @@ export default async function PayablesPage() {
   return (
     <div>
       <PageHeader title="Contas a Pagar" description="Despesas, recorrências, parcelamentos e centros de custo." />
+      <SectionTabs tabs={filterTabsForUser(FINANCE_TABS, user.permissions)} />
       <PayableList
         payables={payables.map((p) => ({
           id: p.id,

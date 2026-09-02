@@ -109,10 +109,10 @@ export async function getUpcomingCommitments(organizationId: string) {
       take: 5,
     }),
     db.contract.findMany({
-      where: { organizationId, status: "ATIVO", endDate: { gte: now, lte: in14 } },
+      where: { organizationId, status: "ATIVO", deletedAt: null, endDate: { gte: now, lte: in14 } },
       orderBy: { endDate: "asc" },
       take: 5,
-      include: { client: { select: { companyName: true } } },
+      include: { client: { select: { id: true, companyName: true } } },
     }),
   ]);
 
@@ -131,7 +131,7 @@ export async function getAttentionItems(organizationId: string) {
       },
       orderBy: { dueDate: "asc" },
       take: 10,
-      include: { client: { select: { companyName: true } } },
+      include: { client: { select: { id: true, companyName: true } } },
     }),
     db.project.findMany({
       where: {
@@ -141,12 +141,12 @@ export async function getAttentionItems(organizationId: string) {
         status: { notIn: ["CONCLUIDO"] },
       },
       take: 10,
-      include: { client: { select: { companyName: true } } },
+      include: { client: { select: { id: true, companyName: true } } },
     }),
     db.contract.findMany({
-      where: { organizationId, status: "ATIVO", endDate: { gte: now, lte: in30 } },
+      where: { organizationId, status: "ATIVO", deletedAt: null, endDate: { gte: now, lte: in30 } },
       take: 10,
-      include: { client: { select: { companyName: true } } },
+      include: { client: { select: { id: true, companyName: true } } },
     }),
   ]);
 

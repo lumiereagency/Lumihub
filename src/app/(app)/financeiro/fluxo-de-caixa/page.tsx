@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { getCashFlowProjection } from "@/lib/finance/cashflow";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { ASSETS_TABS, filterTabsForUser } from "@/lib/nav";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +28,7 @@ export default async function CashFlowPage() {
         title="Fluxo de Caixa"
         description="Previsão de caixa em 7, 30, 90 dias, 6 e 12 meses, a partir das contas a receber, contas a pagar e faturas de cartão já lançadas — nunca uma projeção fictícia."
       />
+      <SectionTabs tabs={filterTabsForUser(ASSETS_TABS, user.permissions)} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {projection.horizons.map((h) => (

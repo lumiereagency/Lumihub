@@ -79,3 +79,29 @@ export async function updateClientAction(
   revalidatePath(`/clientes/${clientId}`);
   return { success: "Cliente atualizado." };
 }
+
+// Exclusão lógica (§ pedido do usuário: "ainda não vi a opção de apagar ou
+// excluir um cliente") — nunca remove a linha de verdade, só marca
+// deletedAt e some das listagens (mesmo padrão já usado em Lead). Contratos,
+// propostas, projetos etc. já vinculados ao cliente continuam intactos e
+// consultáveis por quem acessa direto pelo registro deles.
+export async function deleteClientAction(clientId: string): Promise<ActionState> {
+  const user = await requirePermission(permKey("CLIENTS", "DELETE"));
+
+  const client = await db.client.findFirst({ where: { id: clientId, organizationId: user.organizationId, deletedAt: null } });
+  if (!client) return { error: "Cliente não encontrado." };
+
+  await db.client.update({ where: { id: clientId }, data: { deletedAt: new Date() } });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "CLIENT_DELETED",
+    entityType: "Client",
+    entityId: clientId,
+    metadata: { companyName: client.companyName },
+  });
+
+  revalidatePath("/clientes");
+  return { success: "Cliente excluído." };
+}

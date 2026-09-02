@@ -24,7 +24,11 @@ export function Sidebar({ permissions, user }: { permissions: string[]; user: Si
   const permissionSet = new Set(permissions);
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || permissionSet.has(item.permission)),
+    items: group.items.filter((item) => {
+      if (!item.permission) return true;
+      const required = Array.isArray(item.permission) ? item.permission : [item.permission];
+      return required.some((p) => permissionSet.has(p));
+    }),
   })).filter((group) => group.items.length > 0);
   const activeHref = getActiveHref(pathname, groups);
 

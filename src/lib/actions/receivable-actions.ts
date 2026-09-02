@@ -77,6 +77,8 @@ export async function createReceivableAction(_prev: ActionState, formData: FormD
 
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
   return { success: "Cobrança criada." };
 }
@@ -132,6 +134,9 @@ export async function updateReceivableAction(
 
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/dashboard");
   return { success: "Cobrança atualizada." };
 }
 
@@ -182,6 +187,7 @@ export async function confirmPaymentAction(
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
   return { success: "Pagamento confirmado." };
 }
@@ -221,6 +227,7 @@ export async function undoPaymentAction(receivableId: string) {
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
 }
 
@@ -248,4 +255,7 @@ export async function cancelReceivableAction(receivableId: string) {
 
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/dashboard");
 }

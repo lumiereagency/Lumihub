@@ -107,7 +107,7 @@ async function detectAlerts(organizationId: string): Promise<DetectedAlert[]> {
   }
 
   const expiringContracts = await db.contract.findMany({
-    where: { organizationId, status: "ATIVO", endDate: { not: null, lt: new Date(now.getTime() + 30 * DAY_MS) } },
+    where: { organizationId, status: "ATIVO", deletedAt: null, endDate: { not: null, lt: new Date(now.getTime() + 30 * DAY_MS) } },
     select: { id: true, title: true, endDate: true },
   });
   for (const c of expiringContracts) {

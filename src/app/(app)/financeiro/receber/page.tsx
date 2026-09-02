@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { FINANCE_TABS, filterTabsForUser } from "@/lib/nav";
 import { ReceivableList } from "./receivable-list";
 
 export default async function ReceivablesPage() {
@@ -19,7 +21,7 @@ export default async function ReceivablesPage() {
       orderBy: { companyName: "asc" },
     }),
     db.contract.findMany({
-      where: { organizationId: user.organizationId },
+      where: { organizationId: user.organizationId, deletedAt: null },
       select: { id: true, title: true, clientId: true },
       orderBy: { title: "asc" },
     }),
@@ -35,6 +37,7 @@ export default async function ReceivablesPage() {
   return (
     <div>
       <PageHeader title="Contas a Receber" description="Cobranças, régua de lembretes e confirmação de pagamentos." />
+      <SectionTabs tabs={filterTabsForUser(FINANCE_TABS, user.permissions)} />
       <ReceivableList
         receivables={receivables.map((r) => ({
           id: r.id,

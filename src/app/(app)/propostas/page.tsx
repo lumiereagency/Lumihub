@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { CRM_TABS, filterTabsForUser } from "@/lib/nav";
 import { ProposalBoard } from "./proposal-board";
 
 export default async function ProposalsPage() {
@@ -35,6 +37,7 @@ export default async function ProposalsPage() {
   return (
     <div>
       <PageHeader title="Propostas" description="Propostas comerciais vinculadas a leads e clientes, do rascunho ao fechamento." />
+      <SectionTabs tabs={filterTabsForUser(CRM_TABS, user.permissions)} />
       <ProposalBoard
         proposals={proposals.map((p) => ({
           id: p.id,

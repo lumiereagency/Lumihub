@@ -128,6 +128,7 @@ export async function createCardTransactionAction(cardId: string, _prev: ActionS
 
   revalidatePath("/financeiro/cartoes");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
   return { success: "Compra lançada e distribuída nas faturas." };
 }
@@ -152,4 +153,5 @@ export async function toggleInstallmentPaidAction(installmentId: string, paid: b
 
   revalidatePath("/financeiro/cartoes");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
 }

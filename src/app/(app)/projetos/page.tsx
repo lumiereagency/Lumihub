@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { PROJECT_TABS, filterTabsForUser } from "@/lib/nav";
 import { ProjectBoard } from "./project-board";
 
 export default async function ProjectsPage() {
@@ -38,6 +40,7 @@ export default async function ProjectsPage() {
   return (
     <div>
       <PageHeader title="Projetos" description="Kanban de projetos por cliente, responsável e prazo." />
+      <SectionTabs tabs={filterTabsForUser(PROJECT_TABS, user.permissions)} />
       <ProjectBoard
         projects={projects.map((p) => ({
           id: p.id,

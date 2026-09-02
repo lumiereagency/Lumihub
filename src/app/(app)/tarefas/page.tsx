@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { PROJECT_TABS, filterTabsForUser } from "@/lib/nav";
 import { TaskBoard } from "./task-board";
 
 export default async function TasksPage() {
@@ -34,6 +36,7 @@ export default async function TasksPage() {
   return (
     <div>
       <PageHeader title="Tarefas" description="Tarefas por projeto, responsável e prioridade." />
+      <SectionTabs tabs={filterTabsForUser(PROJECT_TABS, user.permissions)} />
       <TaskBoard
         tasks={tasks.map((t) => ({
           id: t.id,

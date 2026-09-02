@@ -158,6 +158,12 @@ export async function createContractAction(_prev: ActionState, formData: FormDat
 
   revalidatePath("/contratos");
   revalidatePath(`/clientes/${contract.clientId}`);
+  if (contract.status === "ATIVO") {
+    revalidatePath("/financeiro/receber");
+    revalidatePath("/financeiro");
+    revalidatePath("/financeiro/fluxo-de-caixa");
+    revalidatePath("/dashboard");
+  }
   return { success: "Contrato criado." };
 }
 
@@ -208,7 +214,47 @@ export async function updateContractAction(
 
   revalidatePath("/contratos");
   revalidatePath(`/clientes/${parsed.data.clientId}`);
+  if (!wasActive && becomesActive) {
+    revalidatePath("/financeiro/receber");
+    revalidatePath("/financeiro");
+    revalidatePath("/financeiro/fluxo-de-caixa");
+    revalidatePath("/dashboard");
+  }
   return { success: "Contrato atualizado." };
+}
+
+// Exclusão lógica (§ pedido do usuário: "ainda não vi a opção de apagar ou
+// excluir um... contrato") — nunca remove a linha de verdade, só marca
+// deletedAt: cobranças e movimentos financeiros já gerados continuam
+// intactos no histórico e nas telas de quem acessa direto por eles; o
+// contrato só some das listagens e para de contar pra régua de vencimento
+// e geração de parcelas futuras (@/lib/billing/recurring já filtra
+// deletedAt: null).
+export async function deleteContractAction(contractId: string): Promise<ActionState> {
+  const user = await requirePermission(permKey("CONTRACTS", "DELETE"));
+
+  const contract = await db.contract.findFirst({
+    where: { id: contractId, organizationId: user.organizationId, deletedAt: null },
+  });
+  if (!contract) return { error: "Contrato não encontrado." };
+
+  await db.$transaction(async (tx) => {
+    await tx.contract.update({ where: { id: contractId }, data: { deletedAt: new Date() } });
+    await tx.calendarEvent.deleteMany({ where: { contractId, type: "CONTRATO" } });
+  });
+
+  await audit({
+    organizationId: user.organizationId,
+    userId: user.id,
+    action: "CONTRACT_DELETED",
+    entityType: "Contract",
+    entityId: contractId,
+    metadata: { title: contract.title },
+  });
+
+  revalidatePath("/contratos");
+  revalidatePath(`/clientes/${contract.clientId}`);
+  return { success: "Contrato excluído." };
 }
 
 function parseTemplateForm(formData: FormData) {

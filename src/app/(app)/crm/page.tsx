@@ -4,6 +4,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { CRM_TABS, filterTabsForUser } from "@/lib/nav";
 import { LeadBoard } from "./lead-board";
 
 export default async function CrmPage() {
@@ -49,6 +51,7 @@ export default async function CrmPage() {
           )
         }
       />
+      <SectionTabs tabs={filterTabsForUser(CRM_TABS, user.permissions)} />
       <LeadBoard
         leads={leads.map((l) => ({
           ...l,

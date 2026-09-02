@@ -92,6 +92,7 @@ export async function createPayableAction(_prev: ActionState, formData: FormData
 
   revalidatePath("/financeiro/pagar");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
   return { success: installmentTotal > 1 ? `${installmentTotal} parcelas criadas.` : "Conta a pagar criada." };
 }
@@ -157,6 +158,9 @@ export async function updatePayableAction(payableId: string, _prev: ActionState,
   });
 
   revalidatePath("/financeiro/pagar");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/dashboard");
   return { success: "Conta a pagar atualizada." };
 }
 
@@ -225,6 +229,7 @@ export async function confirmPayablePaymentAction(
 
   revalidatePath("/financeiro/pagar");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
   return { success: "Pagamento confirmado." };
 }
@@ -255,6 +260,7 @@ export async function undoPayablePaymentAction(payableId: string) {
 
   revalidatePath("/financeiro/pagar");
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
   revalidatePath("/dashboard");
 }
 
@@ -280,4 +286,7 @@ export async function cancelPayableAction(payableId: string) {
   });
 
   revalidatePath("/financeiro/pagar");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/fluxo-de-caixa");
+  revalidatePath("/dashboard");
 }

@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { FINANCE_TABS, filterTabsForUser } from "@/lib/nav";
 import { CobrancasView } from "./cobrancas-view";
 
 export default async function CobrancasPage() {
@@ -22,6 +24,7 @@ export default async function CobrancasPage() {
   return (
     <div>
       <PageHeader title="Lumi Cobranças" description="Régua de lembretes configurável para contas a receber." />
+      <SectionTabs tabs={filterTabsForUser(FINANCE_TABS, user.permissions)} />
       <CobrancasView
         templates={templates}
         reminders={reminders.map((r) => ({

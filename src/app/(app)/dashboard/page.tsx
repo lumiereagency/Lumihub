@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Wallet,
   ArrowDownCircle,
@@ -8,6 +9,8 @@ import {
   AlertTriangle,
   CalendarClock,
   Sparkles,
+  Plus,
+  ArrowRight,
 } from "lucide-react";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
@@ -48,6 +51,16 @@ export default async function DashboardPage() {
   const canViewProjects = hasPermission(user, permKey("PROJECTS", "VIEW"));
   const canViewContracts = hasPermission(user, permKey("CONTRACTS", "VIEW"));
   const canViewCalendar = hasPermission(user, permKey("CALENDAR", "VIEW"));
+  // Atalhos de criação no topo (§ pedido do usuário: "agilizar tudo através
+  // do dashboard, não precisar ficar toda hora entrando nas abas") — vão
+  // direto pra tela certa já prontos pra criar, sem precisar navegar até
+  // achar o botão "Novo" lá dentro.
+  const quickCreateLinks = [
+    hasPermission(user, permKey("CLIENTS", "CREATE")) && { label: "Novo cliente", href: "/clientes" },
+    hasPermission(user, permKey("CRM", "CREATE")) && { label: "Novo lead", href: "/crm" },
+    hasPermission(user, permKey("PROJECTS", "CREATE")) && { label: "Novo projeto", href: "/projetos" },
+    hasPermission(user, permKey("TASKS", "CREATE")) && { label: "Nova tarefa", href: "/tarefas" },
+  ].filter((l): l is { label: string; href: string } => Boolean(l));
 
   const organization = await db.organization.findUniqueOrThrow({
     where: { id: user.organizationId },
@@ -93,6 +106,10 @@ export default async function DashboardPage() {
   const visibleExpiringContracts = canViewContracts ? attention.expiringContracts : [];
   const attentionCount = visibleOverdueReceivables.length + visibleOverdueProjects.length + visibleExpiringContracts.length;
 
+  // Cada linha já leva pra tela certa pra resolver — não só informa, deixa
+  // agir (§ pedido do usuário: "não precisar ficar toda hora entrando nas
+  // abas" — aqui pelo menos já entra direto na aba certa em vez de precisar
+  // descobrir qual é).
   const commitmentRows = [
     ...(canViewCalendar
       ? commitments.events.map((e) => ({
@@ -100,6 +117,7 @@ export default async function DashboardPage() {
           label: e.title,
           sub: e.client?.companyName ?? e.type,
           date: e.startAt,
+          href: "/agenda",
         }))
       : []),
     ...(canViewFinance
@@ -108,6 +126,7 @@ export default async function DashboardPage() {
           label: `Cobrança — ${r.client.companyName}`,
           sub: formatCurrency(Number(r.amount), currency),
           date: r.dueDate,
+          href: "/financeiro/receber",
         }))
       : []),
     ...(canViewFinance
@@ -116,6 +135,7 @@ export default async function DashboardPage() {
           label: p.description,
           sub: formatCurrency(Number(p.amount), currency),
           date: p.dueDate,
+          href: "/financeiro/pagar",
         }))
       : []),
     ...(canViewContracts
@@ -124,6 +144,7 @@ export default async function DashboardPage() {
           label: `Contrato vencendo — ${c.client.companyName}`,
           sub: c.title,
           date: c.endDate!,
+          href: `/clientes/${c.client.id}`,
         }))
       : []),
   ]
@@ -132,7 +153,25 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`${greeting()}, ${user.name.split(" ")[0]}.`} description="Aqui está o panorama da Lumière hoje." />
+      <PageHeader
+        title={`${greeting()}, ${user.name.split(" ")[0]}.`}
+        description="Aqui está o panorama da Lumière hoje."
+        actions={
+          quickCreateLinks.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {quickCreateLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-border bg-card-elevated px-3 text-sm font-medium text-text-primary hover:brightness-110"
+                >
+                  <Plus size={14} /> {link.label}
+                </Link>
+              ))}
+            </div>
+          )
+        }
+      />
 
       <PendingCaptureAssignments userId={user.id} />
 
@@ -204,13 +243,20 @@ export default async function DashboardPage() {
           ) : (
             <div className="flex flex-col divide-y divide-border">
               {commitmentRows.map((row) => (
-                <div key={row.key} className="flex items-center justify-between gap-3 py-2.5">
-                  <div>
-                    <p className="text-sm text-text-primary">{row.label}</p>
+                <Link
+                  key={row.key}
+                  href={row.href}
+                  className="group flex items-center justify-between gap-3 py-2.5 hover:bg-card-elevated -mx-2 px-2 rounded-[8px] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-text-primary">{row.label}</p>
                     <p className="text-xs text-text-tertiary">{row.sub}</p>
                   </div>
-                  <Badge tone="neutral">{formatDate(row.date)}</Badge>
-                </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge tone="neutral">{formatDate(row.date)}</Badge>
+                    <ArrowRight size={14} className="text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                </Link>
               ))}
             </div>
           )}
@@ -231,22 +277,34 @@ export default async function DashboardPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {visibleOverdueReceivables.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-[10px] bg-error/5 px-3 py-2 text-sm">
+                <Link
+                  key={r.id}
+                  href={`/clientes/${r.client.id}`}
+                  className="flex items-center justify-between rounded-[10px] bg-error/5 px-3 py-2 text-sm transition-colors hover:bg-error/10"
+                >
                   <span className="text-text-primary">Pagamento atrasado — {r.client.companyName}</span>
                   <Badge tone="error">{formatCurrency(Number(r.amount), currency)}</Badge>
-                </div>
+                </Link>
               ))}
               {visibleOverdueProjects.map((p) => (
-                <div key={p.id} className="flex items-center justify-between rounded-[10px] bg-warning/5 px-3 py-2 text-sm">
+                <Link
+                  key={p.id}
+                  href={`/projetos/${p.id}`}
+                  className="flex items-center justify-between rounded-[10px] bg-warning/5 px-3 py-2 text-sm transition-colors hover:bg-warning/10"
+                >
                   <span className="text-text-primary">Projeto atrasado — {p.name}</span>
                   <Badge tone="warning">{p.client.companyName}</Badge>
-                </div>
+                </Link>
               ))}
               {visibleExpiringContracts.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-[10px] bg-info/5 px-3 py-2 text-sm">
+                <Link
+                  key={c.id}
+                  href={`/clientes/${c.client.id}`}
+                  className="flex items-center justify-between rounded-[10px] bg-info/5 px-3 py-2 text-sm transition-colors hover:bg-info/10"
+                >
                   <span className="text-text-primary">Contrato vencendo — {c.client.companyName}</span>
                   <Badge tone="info">{formatDate(c.endDate!)}</Badge>
-                </div>
+                </Link>
               ))}
             </div>
           )}

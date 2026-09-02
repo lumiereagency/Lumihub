@@ -2,19 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Target,
-  FileSignature,
   Users,
   FileText,
   FolderKanban,
-  ListChecks,
   Camera,
   Calendar,
   Wallet,
-  ArrowDownCircle,
-  ArrowUpCircle,
   Send,
-  CreditCard,
-  TrendingUp,
   Landmark,
   UserSquare2,
   Sparkles,
@@ -36,7 +30,11 @@ export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  permission: string | null;
+  // Array = visível se o usuário tiver QUALQUER uma das permissões (§
+  // itens de menu que agora agrupam páginas com permissões distintas —
+  // ex: "Financeiro" cobre Visão Geral/Receber/Cobranças/Pagar, cada uma
+  // com sua própria permissão granular).
+  permission: string | string[] | null;
 }
 
 export interface NavGroup {
@@ -60,6 +58,49 @@ export function getActiveHref(pathname: string, groups: NavGroup[]): string | nu
   return best;
 }
 
+export interface NavTab {
+  label: string;
+  href: string;
+  permission?: string | string[] | null;
+}
+
+// Filtra as abas de uma página agrupada (§ CRM+Propostas, Projetos+Tarefas,
+// os dois blocos do Financeiro) pelas permissões reais do usuário — evita
+// mostrar uma aba que leva a uma página onde ele bateria em "acesso negado".
+// Recebe o Set de permissões que cada Server Component já tem em `user.permissions`.
+export function filterTabsForUser(tabs: NavTab[], permissions: Set<string>): { label: string; href: string }[] {
+  return tabs
+    .filter((tab) => {
+      if (!tab.permission) return true;
+      const required = Array.isArray(tab.permission) ? tab.permission : [tab.permission];
+      return required.some((p) => permissions.has(p));
+    })
+    .map(({ label, href }) => ({ label, href }));
+}
+
+export const CRM_TABS: NavTab[] = [
+  { label: "Funil", href: "/crm", permission: permKey("CRM", "VIEW") },
+  { label: "Propostas", href: "/propostas", permission: permKey("CRM", "VIEW") },
+];
+
+export const PROJECT_TABS: NavTab[] = [
+  { label: "Projetos", href: "/projetos", permission: permKey("PROJECTS", "VIEW") },
+  { label: "Tarefas", href: "/tarefas", permission: permKey("TASKS", "VIEW") },
+];
+
+export const FINANCE_TABS: NavTab[] = [
+  { label: "Visão Geral", href: "/financeiro", permission: permKey("FINANCE", "VIEW") },
+  { label: "Contas a Receber", href: "/financeiro/receber", permission: permKey("RECEIVABLES", "VIEW") },
+  { label: "Cobranças", href: "/financeiro/cobrancas", permission: permKey("RECEIVABLES", "VIEW") },
+  { label: "Contas a Pagar", href: "/financeiro/pagar", permission: permKey("PAYABLES", "VIEW") },
+];
+
+export const ASSETS_TABS: NavTab[] = [
+  { label: "Cartões", href: "/financeiro/cartoes", permission: permKey("CARDS", "VIEW") },
+  { label: "Fluxo de Caixa", href: "/financeiro/fluxo-de-caixa", permission: permKey("FINANCE", "VIEW") },
+  { label: "Investimentos", href: "/financeiro/investimentos", permission: permKey("INVESTMENTS", "VIEW") },
+];
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Visão Geral",
@@ -67,10 +108,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Comercial",
-    items: [
-      { label: "CRM", href: "/crm", icon: Target, permission: permKey("CRM", "VIEW") },
-      { label: "Propostas", href: "/propostas", icon: FileSignature, permission: permKey("CRM", "VIEW") },
-    ],
+    items: [{ label: "CRM", href: "/crm", icon: Target, permission: permKey("CRM", "VIEW") }],
   },
   {
     label: "Clientes",
@@ -83,7 +121,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operação",
     items: [
       { label: "Projetos", href: "/projetos", icon: FolderKanban, permission: permKey("PROJECTS", "VIEW") },
-      { label: "Tarefas", href: "/tarefas", icon: ListChecks, permission: permKey("TASKS", "VIEW") },
       { label: "Captações", href: "/captacoes", icon: Camera, permission: permKey("CAPTURES", "VIEW") },
       { label: "Agenda", href: "/agenda", icon: Calendar, permission: permKey("CALENDAR", "VIEW") },
     ],
@@ -91,13 +128,18 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Financeiro",
     items: [
-      { label: "Visão Financeira", href: "/financeiro", icon: Wallet, permission: permKey("FINANCE", "VIEW") },
-      { label: "Contas a Receber", href: "/financeiro/receber", icon: ArrowDownCircle, permission: permKey("RECEIVABLES", "VIEW") },
-      { label: "Cobranças", href: "/financeiro/cobrancas", icon: Send, permission: permKey("RECEIVABLES", "VIEW") },
-      { label: "Contas a Pagar", href: "/financeiro/pagar", icon: ArrowUpCircle, permission: permKey("PAYABLES", "VIEW") },
-      { label: "Cartões", href: "/financeiro/cartoes", icon: CreditCard, permission: permKey("CARDS", "VIEW") },
-      { label: "Fluxo de Caixa", href: "/financeiro/fluxo-de-caixa", icon: TrendingUp, permission: permKey("FINANCE", "VIEW") },
-      { label: "Investimentos", href: "/financeiro/investimentos", icon: Landmark, permission: permKey("INVESTMENTS", "VIEW") },
+      {
+        label: "Financeiro",
+        href: "/financeiro",
+        icon: Wallet,
+        permission: [permKey("FINANCE", "VIEW"), permKey("RECEIVABLES", "VIEW"), permKey("PAYABLES", "VIEW")],
+      },
+      {
+        label: "Patrimônio",
+        href: "/financeiro/cartoes",
+        icon: Landmark,
+        permission: [permKey("CARDS", "VIEW"), permKey("INVESTMENTS", "VIEW"), permKey("FINANCE", "VIEW")],
+      },
     ],
   },
   {

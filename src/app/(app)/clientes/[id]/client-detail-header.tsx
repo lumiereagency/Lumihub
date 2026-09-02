@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Mail, Phone, MapPin, AtSign, Globe } from "lucide-react";
-import { updateClientAction } from "@/lib/actions/client-actions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Trash2, Mail, Phone, MapPin, AtSign, Globe } from "lucide-react";
+import { updateClientAction, deleteClientAction } from "@/lib/actions/client-actions";
 import { CLIENT_STATUS_LABELS } from "@/lib/validation/clients";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +37,23 @@ export function ClientDetailHeader({
   permissions,
 }: {
   client: ClientData;
-  permissions: { canEdit: boolean };
+  permissions: { canEdit: boolean; canDelete: boolean };
 }) {
   const [editing, setEditing] = useState(false);
+  const [deleting, startDelete] = useTransition();
+  const router = useRouter();
+
+  function handleDelete() {
+    if (!confirm(`Excluir ${client.companyName}? Contratos e cobranças já registrados continuam no histórico, mas o cliente some das listagens.`)) return;
+    startDelete(async () => {
+      const result = await deleteClientAction(client.id);
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+      router.push("/clientes");
+    });
+  }
 
   return (
     <Card>
@@ -79,11 +94,18 @@ export function ClientDetailHeader({
           </div>
           {client.notes && <p className="max-w-2xl text-sm text-text-tertiary">{client.notes}</p>}
         </div>
-        {permissions.canEdit && (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            <Pencil size={14} /> Editar
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {permissions.canEdit && (
+            <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+              <Pencil size={14} /> Editar
+            </Button>
+          )}
+          {permissions.canDelete && (
+            <Button variant="danger" size="sm" disabled={deleting} onClick={handleDelete}>
+              <Trash2 size={14} /> {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Drawer open={editing} onClose={() => setEditing(false)} title="Editar cliente">

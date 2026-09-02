@@ -102,7 +102,7 @@ export async function generateDueRecurringReceivables(): Promise<number> {
   const horizon = addDays(today, 35);
 
   const contracts = await db.contract.findMany({
-    where: { status: "ATIVO", recurrence: { not: "UNICO" } },
+    where: { status: "ATIVO", recurrence: { not: "UNICO" }, deletedAt: null },
   });
 
   let created = 0;

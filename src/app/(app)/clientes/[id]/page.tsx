@@ -42,7 +42,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   if (!client) notFound();
 
   const [contracts, receivables, receivedTotal, organization] = await Promise.all([
-    db.contract.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    db.contract.findMany({ where: { clientId: client.id, deletedAt: null }, orderBy: { createdAt: "desc" } }),
     db.accountReceivable.findMany({
       where: { clientId: client.id },
       orderBy: { dueDate: "desc" },
@@ -73,7 +73,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .filter((r) => r.status === "PENDENTE" || r.status === "ATRASADO")
     .reduce((sum, r) => sum + Number(r.amount), 0);
 
-  const permissions = { canEdit: hasPermission(user, permKey("CLIENTS", "EDIT")) };
+  const permissions = {
+    canEdit: hasPermission(user, permKey("CLIENTS", "EDIT")),
+    canDelete: hasPermission(user, permKey("CLIENTS", "DELETE")),
+  };
 
   return (
     <div className="flex flex-col gap-6">

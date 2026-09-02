@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, FileText, Trash2, Eye, LayoutTemplate } from "lucide-react";
-import { createContractAction, updateContractAction, deleteContractTemplateAction } from "@/lib/actions/contract-actions";
+import { createContractAction, updateContractAction, deleteContractAction, deleteContractTemplateAction } from "@/lib/actions/contract-actions";
 import { CONTRACT_TYPE_LABELS, CONTRACT_STATUS_LABELS, RECURRENCE_LABELS } from "@/lib/validation/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Drawer } from "@/components/ui/drawer";
@@ -69,17 +69,28 @@ export function ContractsView({
   clients: { id: string; companyName: string }[];
   templates: TemplateRow[];
   currency: string;
-  permissions: { canCreate: boolean; canEdit: boolean; canManageTemplates: boolean };
+  permissions: { canCreate: boolean; canEdit: boolean; canDelete: boolean; canManageTemplates: boolean };
 }) {
   const [tab, setTab] = useState<"contratos" | "modelos">("contratos");
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const editing = editingId ? contracts.find((c) => c.id === editingId) : null;
   const preview = previewId ? contracts.find((c) => c.id === previewId) : null;
+
+  function handleDeleteContract(contract: ContractRow) {
+    if (!confirm(`Excluir o contrato "${contract.title}"? Cobranças já geradas continuam no histórico, mas o contrato some das listagens.`)) return;
+    setDeletingId(contract.id);
+    startTransition(async () => {
+      const result = await deleteContractAction(contract.id);
+      setDeletingId(null);
+      if (result.error) alert(result.error);
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -174,6 +185,17 @@ export function ContractsView({
                               className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
                             >
                               Editar
+                            </button>
+                          )}
+                          {permissions.canDelete && (
+                            <button
+                              type="button"
+                              disabled={deletingId === c.id}
+                              onClick={() => handleDeleteContract(c)}
+                              title="Excluir"
+                              className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
+                            >
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>

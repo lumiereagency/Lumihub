@@ -9,7 +9,7 @@ export default async function ContractsPage() {
 
   const [contracts, clients, templates, organization] = await Promise.all([
     db.contract.findMany({
-      where: { organizationId: user.organizationId },
+      where: { organizationId: user.organizationId, deletedAt: null },
       orderBy: { createdAt: "desc" },
       include: { client: { select: { id: true, companyName: true } } },
     }),
@@ -28,6 +28,7 @@ export default async function ContractsPage() {
   const permissions = {
     canCreate: hasPermission(user, permKey("CONTRACTS", "CREATE")),
     canEdit: hasPermission(user, permKey("CONTRACTS", "EDIT")),
+    canDelete: hasPermission(user, permKey("CONTRACTS", "DELETE")),
     canManageTemplates: hasPermission(user, permKey("CONTRACTS", "MANAGE")),
   };
 
