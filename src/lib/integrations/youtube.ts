@@ -25,6 +25,7 @@ export interface YoutubeProspect {
   subscriberCount: number;
   videoCount: number;
   daysSinceLastUpload: number | null;
+  avgUploadIntervalDays: number | null;
   shortsRatio: number | null;
   temperature: LeadTemperature;
 }
@@ -67,10 +68,26 @@ const SHORT_MAX_SECONDS = 60;
 // com legado) — filtra ruído de canais pequenos/irrelevantes.
 const DEFAULT_MIN_SUBSCRIBERS = 50_000;
 const STALE_UPLOAD_DAYS = 45;
+// "Baixa frequência" de verdade (§ pedido do usuário: "grandes figuras com
+// baixa frequência de posts semanais ou mensais") — medido pelo intervalo
+// MÉDIO entre uploads, não só há quanto tempo foi o último vídeo. Um canal
+// que posta 1x a cada 2 meses só por acaso postou há 10 dias continuaria
+// escapando se só olhássemos daysSinceLastUpload.
+const LOW_FREQUENCY_INTERVAL_DAYS = 30;
+const MEDIUM_FREQUENCY_INTERVAL_DAYS = 10;
 
-function computeTemperature(daysSinceLastUpload: number | null, shortsRatio: number | null): LeadTemperature {
-  if (shortsRatio !== null && shortsRatio >= 0.3) return "FRIO"; // já corta e publica Shorts com regularidade
-  if (daysSinceLastUpload === null || daysSinceLastUpload >= STALE_UPLOAD_DAYS || shortsRatio === 0) return "QUENTE";
+function computeTemperature(
+  daysSinceLastUpload: number | null,
+  avgUploadIntervalDays: number | null,
+  shortsRatio: number | null,
+): LeadTemperature {
+  const postsOftenAndCutsAlready = avgUploadIntervalDays !== null && avgUploadIntervalDays <= MEDIUM_FREQUENCY_INTERVAL_DAYS && shortsRatio !== null && shortsRatio >= 0.3;
+  if (postsOftenAndCutsAlready) return "FRIO"; // já posta com frequência E já corta em Shorts — gargalo coberto
+
+  const lowFrequency = avgUploadIntervalDays === null || avgUploadIntervalDays >= LOW_FREQUENCY_INTERVAL_DAYS;
+  const wentQuiet = daysSinceLastUpload === null || daysSinceLastUpload >= STALE_UPLOAD_DAYS;
+  if (lowFrequency || wentQuiet) return "QUENTE"; // exatamente o padrão "grande, mas sumiu"
+
   return "MORNO";
 }
 
@@ -88,10 +105,16 @@ export async function searchYoutubeProspects(
 
   const minSubscribers = options.minSubscribers ?? DEFAULT_MIN_SUBSCRIBERS;
 
+  // Busca por VÍDEO ordenado por visualizações (não por canal ordenado por
+  // "relevância") — a relevância do YouTube tende a favorecer quem está
+  // ativo agora, exatamente o oposto de quem procuramos. Ordenar vídeos do
+  // nicho por viewCount traz à tona quem já teve um vídeo grande/viral no
+  // passado — o sinal mais forte de "é uma figura conhecida" que existe,
+  // independente de estar postando ou não hoje.
   let searchRes: Response;
   try {
     searchRes = await fetchWithTimeout(
-      `${API_BASE}/search?part=snippet&type=channel&maxResults=15&q=${encodeURIComponent(query)}&key=${apiKey}`,
+      `${API_BASE}/search?part=snippet&type=video&order=viewCount&maxResults=25&q=${encodeURIComponent(query)}&key=${apiKey}`,
     );
   } catch (err) {
     return { error: `Falha ao contatar o YouTube: ${(err as Error).message}` };
@@ -126,7 +149,7 @@ export async function searchYoutubeProspects(
     candidates.map(async (channel): Promise<YoutubeProspect> => {
       const subscriberCount = Number(channel.statistics.subscriberCount ?? 0);
       const videoCount = Number(channel.statistics.videoCount ?? 0);
-      const { daysSinceLastUpload, shortsRatio } = await getUploadSignal(channel.contentDetails.relatedPlaylists.uploads, apiKey);
+      const { daysSinceLastUpload, avgUploadIntervalDays, shortsRatio } = await getUploadSignal(channel.contentDetails.relatedPlaylists.uploads, apiKey);
 
       return {
         channelId: channel.id,
@@ -137,8 +160,9 @@ export async function searchYoutubeProspects(
         subscriberCount,
         videoCount,
         daysSinceLastUpload,
+        avgUploadIntervalDays,
         shortsRatio,
-        temperature: computeTemperature(daysSinceLastUpload, shortsRatio),
+        temperature: computeTemperature(daysSinceLastUpload, avgUploadIntervalDays, shortsRatio),
       };
     }),
   );
@@ -149,33 +173,52 @@ export async function searchYoutubeProspects(
   return { prospects };
 }
 
-// Analisa os uploads mais recentes de um canal pra medir dois sinais: há
-// quanto tempo não posta nada, e que fração do que posta já é Short (corte).
-async function getUploadSignal(uploadsPlaylistId: string, apiKey: string): Promise<{ daysSinceLastUpload: number | null; shortsRatio: number | null }> {
+interface UploadSignal {
+  daysSinceLastUpload: number | null;
+  avgUploadIntervalDays: number | null;
+  shortsRatio: number | null;
+}
+
+const EMPTY_UPLOAD_SIGNAL: UploadSignal = { daysSinceLastUpload: null, avgUploadIntervalDays: null, shortsRatio: null };
+
+// Analisa os uploads mais recentes de um canal pra medir três sinais: há
+// quanto tempo não posta nada, o intervalo MÉDIO entre uploads (a
+// frequência de verdade — semanal, mensal, ou nem isso), e que fração do
+// que posta já é Short (corte).
+async function getUploadSignal(uploadsPlaylistId: string, apiKey: string): Promise<UploadSignal> {
   try {
     const playlistRes = await fetchWithTimeout(
       `${API_BASE}/playlistItems?part=contentDetails&maxResults=15&playlistId=${uploadsPlaylistId}&key=${apiKey}`,
     );
-    if (!playlistRes.ok) return { daysSinceLastUpload: null, shortsRatio: null };
+    if (!playlistRes.ok) return EMPTY_UPLOAD_SIGNAL;
     const playlistData = (await playlistRes.json()) as { items?: { contentDetails: { videoId: string; videoPublishedAt?: string } }[] };
     const items = playlistData.items ?? [];
-    if (items.length === 0) return { daysSinceLastUpload: null, shortsRatio: null };
+    if (items.length === 0) return EMPTY_UPLOAD_SIGNAL;
 
     const videoIds = items.map((i) => i.contentDetails.videoId).join(",");
     const videosRes = await fetchWithTimeout(`${API_BASE}/videos?part=contentDetails,snippet&id=${videoIds}&key=${apiKey}`);
-    if (!videosRes.ok) return { daysSinceLastUpload: null, shortsRatio: null };
+    if (!videosRes.ok) return EMPTY_UPLOAD_SIGNAL;
     const videosData = (await videosRes.json()) as { items?: { contentDetails: { duration: string }; snippet: { publishedAt: string } }[] };
     const videos = videosData.items ?? [];
-    if (videos.length === 0) return { daysSinceLastUpload: null, shortsRatio: null };
+    if (videos.length === 0) return EMPTY_UPLOAD_SIGNAL;
 
-    const mostRecent = videos.reduce((latest, v) => (v.snippet.publishedAt > latest ? v.snippet.publishedAt : latest), videos[0].snippet.publishedAt);
-    const daysSinceLastUpload = Math.floor((Date.now() - new Date(mostRecent).getTime()) / (24 * 60 * 60 * 1000));
+    const publishedDates = videos.map((v) => new Date(v.snippet.publishedAt).getTime()).sort((a, b) => b - a);
+    const daysSinceLastUpload = Math.floor((Date.now() - publishedDates[0]) / (24 * 60 * 60 * 1000));
+
+    // Precisa de pelo menos 2 vídeos pra medir um intervalo — com só 1
+    // vídeo no histórico visível, o intervalo médio fica desconhecido
+    // (null), não zero, pra não sugerir "posta toda hora" por engano.
+    let avgUploadIntervalDays: number | null = null;
+    if (publishedDates.length >= 2) {
+      const totalSpanDays = (publishedDates[0] - publishedDates[publishedDates.length - 1]) / (24 * 60 * 60 * 1000);
+      avgUploadIntervalDays = Math.round(totalSpanDays / (publishedDates.length - 1));
+    }
 
     const shortsCount = videos.filter((v) => parseIsoDurationSeconds(v.contentDetails.duration) <= SHORT_MAX_SECONDS).length;
     const shortsRatio = shortsCount / videos.length;
 
-    return { daysSinceLastUpload, shortsRatio };
+    return { daysSinceLastUpload, avgUploadIntervalDays, shortsRatio };
   } catch {
-    return { daysSinceLastUpload: null, shortsRatio: null };
+    return EMPTY_UPLOAD_SIGNAL;
   }
 }

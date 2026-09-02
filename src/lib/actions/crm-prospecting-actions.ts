@@ -36,6 +36,8 @@ export async function importYoutubeProspectAction(prospect: YoutubeProspect): Pr
     prospect.daysSinceLastUpload === null
       ? "sem dados de upload recente"
       : `último vídeo há ${prospect.daysSinceLastUpload} dia(s)`;
+  const frequencyNote =
+    prospect.avgUploadIntervalDays === null ? "frequência de postagem desconhecida" : `posta em média a cada ${prospect.avgUploadIntervalDays} dia(s)`;
   const shortsNote = prospect.shortsRatio === null ? "sem dados de Shorts" : `${Math.round(prospect.shortsRatio * 100)}% dos últimos uploads são Shorts`;
 
   const lead = await db.lead.create({
@@ -46,7 +48,7 @@ export async function importYoutubeProspectAction(prospect: YoutubeProspect): Pr
       segment: "Criador de conteúdo / figura pública",
       source: "Prospecção IA (YouTube)",
       temperature: prospect.temperature,
-      notes: `${prospect.subscriberCount.toLocaleString("pt-BR")} inscritos · ${prospect.videoCount.toLocaleString("pt-BR")} vídeos · ${uploadNote} · ${shortsNote}.`,
+      notes: `${prospect.subscriberCount.toLocaleString("pt-BR")} inscritos · ${prospect.videoCount.toLocaleString("pt-BR")} vídeos · ${uploadNote} · ${frequencyNote} · ${shortsNote}.`,
     },
   });
 

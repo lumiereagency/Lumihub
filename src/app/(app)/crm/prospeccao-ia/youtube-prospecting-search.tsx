@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Search, Users, Video, Clock, Scissors, Plus, Check } from "lucide-react";
+import { Search, Users, Video, Clock, Repeat2, Scissors, Plus, Check } from "lucide-react";
 import { searchYoutubeProspectsAction, importYoutubeProspectAction } from "@/lib/actions/crm-prospecting-actions";
 import type { YoutubeProspect, LeadTemperature } from "@/lib/integrations/youtube";
 import { Input } from "@/components/ui/input";
@@ -137,6 +137,9 @@ export function YoutubeProspectingSearch() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock size={12} /> {p.daysSinceLastUpload === null ? "sem dados de upload" : `último vídeo há ${p.daysSinceLastUpload}d`}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Repeat2 size={12} /> {p.avgUploadIntervalDays === null ? "frequência desconhecida" : `posta a cada ${p.avgUploadIntervalDays}d em média`}
                   </span>
                   <span className="flex items-center gap-1">
                     <Scissors size={12} /> {p.shortsRatio === null ? "sem dados de Shorts" : `${Math.round(p.shortsRatio * 100)}% Shorts`}
