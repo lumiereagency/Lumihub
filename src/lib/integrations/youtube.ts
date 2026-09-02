@@ -63,10 +63,12 @@ function parseIsoDurationSeconds(iso: string): number {
 }
 
 const SHORT_MAX_SECONDS = 60;
-// Abaixo disso não é "figura pública conhecida" o suficiente para o
-// posicionamento de vendas descrito (produção mensal + cortes para artista
-// com legado) — filtra ruído de canais pequenos/irrelevantes.
-const DEFAULT_MIN_SUBSCRIBERS = 50_000;
+// Abaixo disso não é "figura pública grande" o suficiente pro
+// posicionamento de vendas descrito (§ pedido do usuário: "a partir de
+// quinhentos mil seguidores eu acredito que eles já estejam monetizados" —
+// o corte de audiência que separa quem provavelmente já vive de conteúdo,
+// mas ainda edita sozinho ou não achou um profissional, de canal pequeno).
+const DEFAULT_MIN_SUBSCRIBERS = 500_000;
 const STALE_UPLOAD_DAYS = 45;
 // "Baixa frequência" de verdade (§ pedido do usuário: "grandes figuras com
 // baixa frequência de posts semanais ou mensais") — medido pelo intervalo

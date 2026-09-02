@@ -28,7 +28,7 @@ function formatCompactNumber(n: number): string {
 
 export function YoutubeProspectingSearch() {
   const [query, setQuery] = useState("");
-  const [minSubscribers, setMinSubscribers] = useState("50000");
+  const [minSubscribers, setMinSubscribers] = useState("500000");
   const [prospects, setProspects] = useState<YoutubeProspect[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, startSearch] = useTransition();
