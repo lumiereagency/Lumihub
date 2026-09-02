@@ -261,8 +261,18 @@ enum LeadStage {
   PERDIDO
 }
 
+// Sinal de prioridade do lead (§ pedido do usuário: ferramentas de captação
+// externas — e a busca automática por prospects no YouTube — já entregam
+// essa classificação pronta; antes só dava pra jogar em `notes` como texto
+// solto, sem conseguir filtrar/ordenar por quem está mais "quente".
+enum LeadTemperature {
+  QUENTE
+  MORNO
+  FRIO
+}
+
 model Lead {
-  id                String    @id @default(cuid())
+  id                String           @id @default(cuid())
   organizationId    String
   company           String
   contactName       String?
@@ -273,16 +283,17 @@ model Lead {
   city              String?
   segment           String?
   source            String?
+  temperature       LeadTemperature?
   ownerUserId       String?
-  potentialValue    Decimal?  @db.Decimal(14, 2)
-  probability       Int       @default(0)
-  stage             LeadStage @default(LEAD)
+  potentialValue    Decimal?         @db.Decimal(14, 2)
+  probability       Int              @default(0)
+  stage             LeadStage        @default(LEAD)
   lastContactAt     DateTime?
   nextContactAt     DateTime?
   notes             String?
-  convertedClientId String?   @unique
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  convertedClientId String?          @unique
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1169,6 +1180,7 @@ enum IntegrationProviderKey {
   ZAPIER
   WEBHOOK_CUSTOM
   CUSTOM_API
+  YOUTUBE_DATA_API
 }
 
 enum IntegrationStatus {

@@ -105,6 +105,19 @@ const VERIFIERS: Partial<Record<IntegrationProviderKey, Verifier>> = {
       return { ok: false, message: `Falha ao contatar o Dropbox: ${(err as Error).message}` };
     }
   },
+  YOUTUBE_DATA_API: async (creds) => {
+    try {
+      const res = await fetchWithTimeout(
+        `https://www.googleapis.com/youtube/v3/search?part=id&type=channel&maxResults=1&q=teste&key=${encodeURIComponent(creds.apiKey)}`,
+      );
+      if (res.ok) return { ok: true, message: "YouTube Data API validou a credencial com sucesso." };
+      const body = await res.json().catch(() => null);
+      const reason = body?.error?.message ? ` (${body.error.message})` : "";
+      return { ok: false, message: `YouTube recusou a credencial (HTTP ${res.status})${reason}.` };
+    } catch (err) {
+      return { ok: false, message: `Falha ao contatar a YouTube Data API: ${(err as Error).message}` };
+    }
+  },
   N8N: (creds) => pingReachability(creds.webhookUrl),
   MAKE: (creds) => pingReachability(creds.webhookUrl),
   ZAPIER: (creds) => pingReachability(creds.webhookUrl),

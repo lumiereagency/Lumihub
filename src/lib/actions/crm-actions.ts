@@ -19,6 +19,7 @@ function parseLeadForm(formData: FormData) {
     city: formData.get("city"),
     segment: formData.get("segment"),
     source: formData.get("source"),
+    temperature: formData.get("temperature"),
     ownerUserId: formData.get("ownerUserId"),
     potentialValue: formData.get("potentialValue"),
     probability: formData.get("probability") || 0,

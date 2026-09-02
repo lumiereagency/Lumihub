@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus, Phone, AtSign, AlertCircle, Building2 } from "lucide-react";
-import { LEAD_STAGES, LEAD_STAGE_LABELS } from "@/lib/validation/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEMPERATURE_LABELS } from "@/lib/validation/crm";
+
+const TEMPERATURE_TONE: Record<string, "error" | "warning" | "info"> = { QUENTE: "error", MORNO: "warning", FRIO: "info" };
 import {
   createLeadAction,
   updateLeadAction,
@@ -30,6 +32,7 @@ interface LeadRow {
   city: string | null;
   segment: string | null;
   source: string | null;
+  temperature: string | null;
   ownerUserId: string | null;
   owner: { id: string; name: string } | null;
   potentialValue: number | null;
@@ -60,6 +63,7 @@ function toFormValues(lead: LeadRow): LeadFormValues {
     city: lead.city,
     segment: lead.segment,
     source: lead.source,
+    temperature: lead.temperature,
     ownerUserId: lead.ownerUserId,
     potentialValue: lead.potentialValue,
     probability: lead.probability,
@@ -184,6 +188,11 @@ export function LeadBoard({
                           <Badge tone="accent">{formatCurrency(lead.potentialValue, currency)}</Badge>
                         )}
                         <Badge tone="neutral">{lead.probability}%</Badge>
+                        {lead.temperature && (
+                          <Badge tone={TEMPERATURE_TONE[lead.temperature] ?? "neutral"}>
+                            {LEAD_TEMPERATURE_LABELS[lead.temperature as keyof typeof LEAD_TEMPERATURE_LABELS]}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center justify-between text-xs text-text-tertiary">
                         <span className="flex items-center gap-1">

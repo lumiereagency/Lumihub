@@ -195,6 +195,13 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
       { key: "apiKey", label: "API Key (opcional)", type: "password", secret: false, required: false },
     ],
   },
+  {
+    key: "YOUTUBE_DATA_API",
+    category: "OUTROS",
+    label: "YouTube Data API",
+    description: "Busca automática de canais/criadores de conteúdo por nicho em Prospecção (CRM).",
+    fields: [{ key: "apiKey", label: "API Key", type: "password", secret: true, required: true }],
+  },
 ];
 
 export const CATEGORY_LABELS: Record<IntegrationCategory, string> = {

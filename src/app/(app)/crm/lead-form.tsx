@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionState } from "@/lib/actions/auth-actions";
-import { LEAD_STAGES, LEAD_STAGE_LABELS } from "@/lib/validation/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEMPERATURES, LEAD_TEMPERATURE_LABELS } from "@/lib/validation/crm";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ export interface LeadFormValues {
   city: string | null;
   segment: string | null;
   source: string | null;
+  temperature: string | null;
   ownerUserId: string | null;
   potentialValue: number | null;
   probability: number;
@@ -80,7 +81,17 @@ export function LeadForm({
         <Input label="Segmento" name="segment" defaultValue={defaultValues?.segment ?? ""} />
       </div>
 
-      <Input label="Origem" name="source" defaultValue={defaultValues?.source ?? ""} placeholder="Indicação, Instagram, site..." />
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Origem" name="source" defaultValue={defaultValues?.source ?? ""} placeholder="Indicação, Instagram, site..." />
+        <Select label="Temperatura" name="temperature" defaultValue={defaultValues?.temperature ?? ""}>
+          <option value="">Não classificado</option>
+          {LEAD_TEMPERATURES.map((t) => (
+            <option key={t} value={t}>
+              {LEAD_TEMPERATURE_LABELS[t]}
+            </option>
+          ))}
+        </Select>
+      </div>
 
       <Select label="Responsável comercial" name="ownerUserId" defaultValue={defaultValues?.ownerUserId ?? ""}>
         <option value="">Sem responsável</option>

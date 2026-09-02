@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Video } from "lucide-react";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -36,6 +38,16 @@ export default async function CrmPage() {
       <PageHeader
         title="CRM e Prospecção"
         description="Lead → Contato → Qualificado → Reunião → Proposta → Negociação → Fechado → Perdido."
+        actions={
+          permissions.canCreate && (
+            <Link
+              href="/crm/prospeccao-ia"
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary hover:brightness-110"
+            >
+              <Video size={16} /> Buscar leads (IA)
+            </Link>
+          )
+        }
       />
       <LeadBoard
         leads={leads.map((l) => ({

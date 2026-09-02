@@ -24,6 +24,14 @@ export const LEAD_STAGE_LABELS: Record<(typeof LEAD_STAGES)[number], string> = {
 
 const emptyToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
 
+export const LEAD_TEMPERATURES = ["QUENTE", "MORNO", "FRIO"] as const;
+
+export const LEAD_TEMPERATURE_LABELS: Record<(typeof LEAD_TEMPERATURES)[number], string> = {
+  QUENTE: "Quente",
+  MORNO: "Morno",
+  FRIO: "Frio",
+};
+
 export const leadSchema = z.object({
   company: z.string().trim().min(1, "Informe o nome da empresa."),
   contactName: z.preprocess(emptyToUndefined, z.string().trim().optional()),
@@ -34,6 +42,7 @@ export const leadSchema = z.object({
   city: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   segment: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   source: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  temperature: z.preprocess(emptyToUndefined, z.enum(LEAD_TEMPERATURES).optional()),
   ownerUserId: z.preprocess(emptyToUndefined, z.string().optional()),
   potentialValue: z.preprocess(
     emptyToUndefined,
