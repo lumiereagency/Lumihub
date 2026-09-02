@@ -1,18 +1,21 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { createGoogleCalendarReminder, cancelGoogleCalendarReminder } from "@/lib/integrations/google-calendar";
 
 interface ServiceResult {
   error?: string;
   success?: string;
 }
 
+const DEFAULT_EVENT_DURATION_MS = 2 * 60 * 60 * 1000; // sem hora de término cadastrada — 2h de estimativa
+
 // Recusa ("não vou poder", pedido do usuário para a confirmação mensal por
 // WhatsApp) — símetrico a confirmAttendance, mas nunca move o status da
 // atribuição sozinho: quem decide se libera a vaga e busca substituto é a
 // camada que chama isto (hoje: o link de confirmação), nunca esta função.
 export async function declineAttendance(organizationId: string, actorUserId: string, assignmentId: string, memberId: string): Promise<ServiceResult> {
-  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({ where: { id: assignmentId } });
+  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({ where: { id: assignmentId }, include: { attendance: true } });
   if (assignment.memberId !== memberId) return { error: "Esta atribuição não pertence a você." };
 
   await db.mediaAttendance.upsert({
@@ -21,13 +24,22 @@ export async function declineAttendance(organizationId: string, actorUserId: str
     update: { confirmationStatus: "DECLINED", confirmedAt: null },
   });
 
+  // Já tinha confirmado antes (e portanto já tinha lembrete criado) e agora
+  // está desistindo — tira o lembrete do calendário da pessoa.
+  if (assignment.attendance?.googleEventId) {
+    await cancelGoogleCalendarReminder(organizationId, assignment.attendance.googleEventId);
+  }
+
   await audit({ organizationId, userId: actorUserId, action: "MEDIA_ATTENDANCE_DECLINED", entityType: "MediaScheduleAssignment", entityId: assignmentId });
   return { success: "Indisponibilidade registrada." };
 }
 
 // Confirmação (§40-41): "eu pretendo comparecer" — diferente de check-in.
 export async function confirmAttendance(organizationId: string, actorUserId: string, assignmentId: string, memberId: string): Promise<ServiceResult> {
-  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({ where: { id: assignmentId } });
+  const assignment = await db.mediaScheduleAssignment.findUniqueOrThrow({
+    where: { id: assignmentId },
+    include: { event: true, function: true, member: { include: { user: true } } },
+  });
   if (assignment.memberId !== memberId) return { error: "Esta atribuição não pertence a você." };
 
   await db.$transaction(async (tx) => {
@@ -42,6 +54,24 @@ export async function confirmAttendance(organizationId: string, actorUserId: str
   });
 
   await audit({ organizationId, userId: actorUserId, action: "MEDIA_ATTENDANCE_CONFIRMED", entityType: "MediaScheduleAssignment", entityId: assignmentId });
+
+  // Lembrete no Google Calendar de quem confirmou (§ pedido do usuário) —
+  // falha de calendário nunca desfaz a confirmação já registrada.
+  if (assignment.member?.user) {
+    const result = await createGoogleCalendarReminder({
+      organizationId,
+      title: `Escala — ${assignment.function.name} em ${assignment.event.name}`,
+      location: assignment.event.location,
+      startAt: assignment.event.startAt,
+      endAt: assignment.event.endAt ?? new Date(assignment.event.startAt.getTime() + DEFAULT_EVENT_DURATION_MS),
+      attendeeEmail: assignment.member.user.email,
+      attendeeName: assignment.member.user.name,
+    });
+    if (result.eventId) {
+      await db.mediaAttendance.update({ where: { assignmentId }, data: { googleEventId: result.eventId } });
+    }
+  }
+
   return { success: "Presença confirmada." };
 }
 

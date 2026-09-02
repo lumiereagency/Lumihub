@@ -653,6 +653,7 @@ model CaptureAssignment {
   role           String
   status         CaptureAssignmentStatus @default(PENDENTE)
   respondedAt    DateTime?
+  googleEventId  String?
   createdAt      DateTime                @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1863,6 +1864,7 @@ model MediaAttendance {
   checkedInAt        DateTime?
   markedByUserId     String?
   notes              String?
+  googleEventId      String?
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
 

@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { captureSchema } from "@/lib/validation/captures";
+import { cancelGoogleCalendarReminder } from "@/lib/integrations/google-calendar";
 import {
   CAPTURE_CREW_ROLES,
   CAPTURE_CREW_ROLE_LABELS,
@@ -77,29 +78,39 @@ function parseCrewAssignments(formData: FormData): { role: CaptureCrewRole; user
 // Aceite de escala (Fase 46): quando um membro de equipe é vinculado a um
 // papel da captação, gera (ou recria, se a pessoa mudou) uma pendência de
 // aceite + notificação na tela inicial dela. Trocar a pessoa reinicia o
-// aceite; remover a vinculação apaga a pendência.
+// aceite; remover a vinculação apaga a pendência. Devolve os googleEventId
+// das atribuições removidas (§ pedido do usuário sobre lembrete no
+// calendário) pra quem chamou cancelar depois que a transação commitar —
+// chamada de API externa nunca deve rodar dentro de uma transação de banco.
 async function syncCaptureAssignments(
   tx: TxClient,
   organizationId: string,
   captureId: string,
   desired: { role: CaptureCrewRole; userId: string }[],
-) {
+): Promise<string[]> {
   const [existing, capture] = await Promise.all([
     tx.captureAssignment.findMany({ where: { captureId } }),
     tx.capture.findUniqueOrThrow({ where: { id: captureId } }),
   ]);
+  const removedGoogleEventIds: string[] = [];
 
   for (const role of CAPTURE_CREW_ROLES) {
     const wanted = desired.find((d) => d.role === role);
     const current = existing.find((e) => e.role === role);
 
     if (!wanted) {
-      if (current) await tx.captureAssignment.delete({ where: { id: current.id } });
+      if (current) {
+        if (current.googleEventId) removedGoogleEventIds.push(current.googleEventId);
+        await tx.captureAssignment.delete({ where: { id: current.id } });
+      }
       continue;
     }
 
     if (current && current.userId === wanted.userId) continue;
-    if (current) await tx.captureAssignment.delete({ where: { id: current.id } });
+    if (current) {
+      if (current.googleEventId) removedGoogleEventIds.push(current.googleEventId);
+      await tx.captureAssignment.delete({ where: { id: current.id } });
+    }
 
     await tx.captureAssignment.create({
       data: { organizationId, captureId, userId: wanted.userId, role, status: "PENDENTE" },
@@ -115,6 +126,8 @@ async function syncCaptureAssignments(
       },
     });
   }
+
+  return removedGoogleEventIds;
 }
 
 export async function createCaptureAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -170,11 +183,15 @@ export async function updateCaptureAction(
 
   const crewAssignments = parseCrewAssignments(formData);
 
-  await db.$transaction(async (tx) => {
+  const removedGoogleEventIds = await db.$transaction(async (tx) => {
     await tx.capture.update({ where: { id: captureId }, data: parsed.data });
     await syncCaptureCalendarEvent(tx, captureId);
-    await syncCaptureAssignments(tx, user.organizationId, captureId, crewAssignments);
+    return syncCaptureAssignments(tx, user.organizationId, captureId, crewAssignments);
   });
+
+  for (const eventId of removedGoogleEventIds) {
+    await cancelGoogleCalendarReminder(user.organizationId, eventId);
+  }
 
   await audit({
     organizationId: user.organizationId,
