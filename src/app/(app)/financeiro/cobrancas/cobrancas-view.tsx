@@ -59,9 +59,8 @@ export function CobrancasView({
           <Info size={18} className="mt-0.5 shrink-0 text-info" />
           <div className="text-sm text-text-secondary">
             <p>
-              Modo atual: <span className="text-text-primary">Manual</span> — clique em &quot;Processar régua agora&quot; para
-              disparar os lembretes vencidos. Os modos Automática e Assistida (disparo por agendador em segundo plano) dependem de
-              uma integração de automação (Fase 14) e ainda não estão conectados.
+              A régua roda sozinha todo dia, sem precisar de ninguém clicar em nada. O botão &quot;Processar régua agora&quot;
+              abaixo continua disponível pra disparar na hora, útil pra testar um modelo novo ou não esperar até o próximo ciclo.
             </p>
           </div>
         </div>

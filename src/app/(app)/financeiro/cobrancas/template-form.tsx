@@ -31,7 +31,7 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
       <Input label="Nome do modelo" name="name" required placeholder="Ex: Lembrete D-3" />
 
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Gatilho" name="trigger" defaultValue="D_0">
+        <Select label="Quando enviar" name="trigger" defaultValue="D_0">
           {MESSAGE_TRIGGERS.map((t) => (
             <option key={t} value={t}>
               {MESSAGE_TRIGGER_LABELS[t]}

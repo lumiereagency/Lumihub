@@ -2,13 +2,16 @@ import { z } from "zod";
 
 export const MESSAGE_TRIGGERS = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_1", "D_MAIS_5"] as const;
 
+// Linguagem simples em vez da notação "D-3/D0/D+1" (§ pedido do usuário:
+// "tem D mais, D mais, eu não entendo muito disso") — o valor salvo no
+// banco continua o mesmo enum, só a label mudou.
 export const MESSAGE_TRIGGER_LABELS: Record<(typeof MESSAGE_TRIGGERS)[number], string> = {
-  D_MENOS_7: "D-7",
-  D_MENOS_3: "D-3",
-  D_MENOS_1: "D-1",
-  D_0: "D0 (vencimento)",
-  D_MAIS_1: "D+1",
-  D_MAIS_5: "D+5",
+  D_MENOS_7: "7 dias antes do vencimento",
+  D_MENOS_3: "3 dias antes do vencimento",
+  D_MENOS_1: "1 dia antes do vencimento",
+  D_0: "No dia do vencimento",
+  D_MAIS_1: "1 dia depois do vencimento",
+  D_MAIS_5: "5 dias depois do vencimento",
 };
 
 export const TRIGGER_OFFSET_DAYS: Record<(typeof MESSAGE_TRIGGERS)[number], number> = {
