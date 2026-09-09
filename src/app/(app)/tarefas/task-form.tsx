@@ -59,7 +59,7 @@ export function TaskForm({
       <Input label="Título" name="title" required defaultValue={defaultValues?.title} />
       <Textarea label="Descrição" name="description" defaultValue={defaultValues?.description ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Projeto (opcional)" name="projectId" defaultValue={defaultValues?.projectId ?? ""}>
           <option value="">Sem projeto</option>
           {projects.map((p) => (
@@ -78,7 +78,7 @@ export function TaskForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "A_FAZER"}>
           {TASK_STATUSES.map((s) => (
             <option key={s} value={s}>

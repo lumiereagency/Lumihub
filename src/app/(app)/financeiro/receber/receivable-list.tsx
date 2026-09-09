@@ -125,45 +125,71 @@ export function ReceivableList({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
-                <th className="px-4 py-3 font-medium">Cliente</th>
-                <th className="px-4 py-3 font-medium">Descrição</th>
-                <th className="px-4 py-3 font-medium">Valor</th>
-                <th className="px-4 py-3 font-medium">Vencimento</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const status = effectiveStatus(r);
-                return (
-                  <tr key={r.id} className="border-b border-border last:border-0 hover:bg-card">
-                    <td className="px-4 py-3 text-text-primary">{r.clientName}</td>
-                    <td className="px-4 py-3 text-text-secondary">{r.description}</td>
-                    <td className="px-4 py-3 text-text-secondary">{formatCurrency(r.amount, currency)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(r.dueDate))}</td>
-                    <td className="px-4 py-3">
-                      <Badge tone={STATUS_TONE[status] ?? "neutral"}>{RECEIVABLE_STATUS_LABELS[status as keyof typeof RECEIVABLE_STATUS_LABELS] ?? status}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(r.id)}
-                        className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
-                      >
-                        Detalhes
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="flex flex-col gap-2 sm:hidden">
+            {filtered.map((r) => {
+              const status = effectiveStatus(r);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setEditingId(r.id)}
+                  className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 text-left active:bg-card-elevated"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-text-primary">{r.clientName}</span>
+                    <Badge tone={STATUS_TONE[status] ?? "neutral"}>{RECEIVABLE_STATUS_LABELS[status as keyof typeof RECEIVABLE_STATUS_LABELS] ?? status}</Badge>
+                  </div>
+                  <p className="text-sm text-text-secondary">{r.description}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-text-secondary">{formatCurrency(r.amount, currency)}</span>
+                    <span className="text-text-tertiary">{formatDate(new Date(r.dueDate))}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                  <th className="px-4 py-3 font-medium">Cliente</th>
+                  <th className="px-4 py-3 font-medium">Descrição</th>
+                  <th className="px-4 py-3 font-medium">Valor</th>
+                  <th className="px-4 py-3 font-medium">Vencimento</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const status = effectiveStatus(r);
+                  return (
+                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-card">
+                      <td className="px-4 py-3 text-text-primary">{r.clientName}</td>
+                      <td className="px-4 py-3 text-text-secondary">{r.description}</td>
+                      <td className="px-4 py-3 text-text-secondary">{formatCurrency(r.amount, currency)}</td>
+                      <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(r.dueDate))}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={STATUS_TONE[status] ?? "neutral"}>{RECEIVABLE_STATUS_LABELS[status as keyof typeof RECEIVABLE_STATUS_LABELS] ?? status}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(r.id)}
+                          className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
+                        >
+                          Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Cobrança">

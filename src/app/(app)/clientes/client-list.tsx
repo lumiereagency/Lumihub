@@ -105,41 +105,68 @@ export function ClientList({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
-                <th className="px-4 py-3 font-medium">Empresa</th>
-                <th className="px-4 py-3 font-medium">Contato</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Contratos</th>
-                <th className="px-4 py-3 font-medium">Em aberto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((client) => (
-                <tr key={client.id} className="border-b border-border last:border-0 hover:bg-card">
-                  <td className="px-4 py-3">
-                    <Link href={`/clientes/${client.id}`} className="font-medium text-text-primary hover:text-accent-light">
-                      {client.companyName}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">
+        <>
+          <div className="flex flex-col gap-2 sm:hidden">
+            {filtered.map((client) => (
+              <Link
+                key={client.id}
+                href={`/clientes/${client.id}`}
+                className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 active:bg-card-elevated"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium text-text-primary">{client.companyName}</span>
+                  <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}</Badge>
+                </div>
+                {(client.contactName || client.phone) && (
+                  <p className="text-sm text-text-secondary">
                     {client.contactName ?? "—"}
-                    {client.phone && <span className="block text-xs text-text-tertiary">{client.phone}</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-text-secondary">{client.contractsCount}</td>
-                  <td className="px-4 py-3 text-text-secondary">
-                    {client.pendingAmount > 0 ? formatCurrency(client.pendingAmount, currency) : "—"}
-                  </td>
+                    {client.phone && <span className="text-text-tertiary"> · {client.phone}</span>}
+                  </p>
+                )}
+                <div className="flex items-center justify-between text-xs text-text-tertiary">
+                  <span>{client.contractsCount} contrato{client.contractsCount === 1 ? "" : "s"}</span>
+                  <span>{client.pendingAmount > 0 ? `Em aberto: ${formatCurrency(client.pendingAmount, currency)}` : "Sem pendências"}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                  <th className="px-4 py-3 font-medium">Empresa</th>
+                  <th className="px-4 py-3 font-medium">Contato</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Contratos</th>
+                  <th className="px-4 py-3 font-medium">Em aberto</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((client) => (
+                  <tr key={client.id} className="border-b border-border last:border-0 hover:bg-card">
+                    <td className="px-4 py-3">
+                      <Link href={`/clientes/${client.id}`} className="font-medium text-text-primary hover:text-accent-light">
+                        {client.companyName}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      {client.contactName ?? "—"}
+                      {client.phone && <span className="block text-xs text-text-tertiary">{client.phone}</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary">{client.contractsCount}</td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      {client.pendingAmount > 0 ? formatCurrency(client.pendingAmount, currency) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Cliente">

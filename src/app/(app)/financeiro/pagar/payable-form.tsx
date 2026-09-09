@@ -64,7 +64,7 @@ export function PayableForm({
       <Input label="Descrição" name="description" required defaultValue={defaultValues?.description} placeholder="Ex: Assinatura Adobe" />
       <Input label="Fornecedor (opcional)" name="supplier" defaultValue={defaultValues?.supplier ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Categoria" name="categoryId" defaultValue={defaultValues?.categoryId ?? ""}>
           <option value="">Sem categoria</option>
           {categories.map((c) => (
@@ -83,7 +83,7 @@ export function PayableForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor total (R$)" name="amount" type="number" min={0.01} step="0.01" required defaultValue={defaultValues?.amount} />
         <Input label="Vencimento" name="dueDate" type="date" required defaultValue={toDateInputValue(defaultValues?.dueDate ?? null)} />
       </div>
@@ -98,7 +98,7 @@ export function PayableForm({
       </Select>
 
       {showInstallments && (
-        <div className="grid grid-cols-2 gap-3 items-end">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-end sm:items-end">
           <Input
             label="Parcelas"
             name="installmentTotal"

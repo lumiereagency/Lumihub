@@ -78,7 +78,7 @@ export function ReceivableForm({
 
       <Input label="Descrição" name="description" required defaultValue={defaultValues?.description} placeholder="Ex: Mensalidade de setembro" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor (R$)" name="amount" type="number" min={0.01} step="0.01" required defaultValue={defaultValues?.amount} />
         <Input label="Vencimento" name="dueDate" type="date" required defaultValue={toDateInputValue(defaultValues?.dueDate ?? null)} />
       </div>

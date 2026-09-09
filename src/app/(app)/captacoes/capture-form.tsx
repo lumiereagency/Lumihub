@@ -69,7 +69,7 @@ export function CaptureForm({
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Cliente" name="clientId" required defaultValue={defaultValues?.clientId ?? ""}>
           <option value="" disabled>
             Selecione um cliente
@@ -90,7 +90,7 @@ export function CaptureForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Data e horário" name="date" type="datetime-local" required defaultValue={toBrazilDateTimeInputValue(defaultValues?.date ?? null)} />
         <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "PLANEJADA"}>
           {CAPTURE_STATUSES.map((s) => (
@@ -103,11 +103,11 @@ export function CaptureForm({
 
       <Input label="Local" name="location" defaultValue={defaultValues?.location ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Videomaker" name="videomaker" defaultValue={defaultValues?.videomaker ?? ""} />
         <Input label="Fotógrafo" name="photographer" defaultValue={defaultValues?.photographer ?? ""} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Storymaker" name="storymaker" defaultValue={defaultValues?.storymaker ?? ""} />
         <Input label="Operador de drone" name="droneOperator" defaultValue={defaultValues?.droneOperator ?? ""} />
       </div>
@@ -118,7 +118,7 @@ export function CaptureForm({
             Vincular a uma conta do sistema (opcional) — a pessoa recebe uma notificação na tela inicial dela e
             precisa aceitar ou recusar a escala.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {CAPTURE_CREW_ROLES.map((role) => {
               const field = CAPTURE_CREW_FORM_FIELDS[role];
               const defaultUserId = (defaultValues as CaptureFormValues | undefined)?.[
@@ -144,7 +144,7 @@ export function CaptureForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Qtd. vídeos" name="videoCount" type="number" min={0} defaultValue={defaultValues?.videoCount ?? ""} />
         <Input label="Qtd. fotos" name="photoCount" type="number" min={0} defaultValue={defaultValues?.photoCount ?? ""} />
       </div>

@@ -43,7 +43,7 @@ export function GoalForm({ onSuccess }: { onSuccess?: () => void }) {
         ))}
       </Select>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Início do período" name="periodStart" type="date" required />
         <Input label="Fim do período" name="periodEnd" type="date" required />
       </div>

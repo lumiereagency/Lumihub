@@ -132,79 +132,139 @@ export function ContractsView({
               description="Gere contratos a partir dos dados de um cliente, com ou sem um modelo."
             />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
-                    <th className="px-4 py-3 font-medium">Contrato</th>
-                    <th className="px-4 py-3 font-medium">Cliente</th>
-                    <th className="px-4 py-3 font-medium">Valor</th>
-                    <th className="px-4 py-3 font-medium">Início</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {contracts.map((c) => (
-                    <tr key={c.id} className="border-b border-border last:border-0 hover:bg-card">
-                      <td className="px-4 py-3">
+            <>
+              <div className="flex flex-col gap-2 sm:hidden">
+                {contracts.map((c) => (
+                  <div key={c.id} className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
                         <p className="font-medium text-text-primary">{c.title}</p>
                         <p className="text-xs text-text-tertiary">
                           {CONTRACT_TYPE_LABELS[c.type as keyof typeof CONTRACT_TYPE_LABELS] ?? c.type} ·{" "}
                           {RECURRENCE_LABELS[c.recurrence as keyof typeof RECURRENCE_LABELS] ?? c.recurrence}
                         </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/clientes/${c.client.id}`} className="text-text-secondary hover:text-accent-light">
-                          {c.client.companyName}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">{formatCurrency(c.value, currency)}</td>
-                      <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(c.startDate))}</td>
-                      <td className="px-4 py-3">
-                        <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>
-                          {CONTRACT_STATUS_LABELS[c.status as keyof typeof CONTRACT_STATUS_LABELS] ?? c.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          {c.generatedBody && (
-                            <button
-                              type="button"
-                              onClick={() => setPreviewId(c.id)}
-                              className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-text-primary"
-                              aria-label="Visualizar contrato"
-                            >
-                              <Eye size={16} />
-                            </button>
-                          )}
-                          {permissions.canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(c.id)}
-                              className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
-                            >
-                              Editar
-                            </button>
-                          )}
-                          {permissions.canDelete && (
-                            <button
-                              type="button"
-                              disabled={deletingId === c.id}
-                              onClick={() => handleDeleteContract(c)}
-                              title="Excluir"
-                              className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      </div>
+                      <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>
+                        {CONTRACT_STATUS_LABELS[c.status as keyof typeof CONTRACT_STATUS_LABELS] ?? c.status}
+                      </Badge>
+                    </div>
+                    <Link href={`/clientes/${c.client.id}`} className="text-sm text-text-secondary hover:text-accent-light">
+                      {c.client.companyName}
+                    </Link>
+                    <div className="flex items-center justify-between text-sm text-text-secondary">
+                      <span>{formatCurrency(c.value, currency)}</span>
+                      <span className="text-text-tertiary">{formatDate(new Date(c.startDate))}</span>
+                    </div>
+                    <div className="flex items-center gap-1 border-t border-border pt-2">
+                      {c.generatedBody && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewId(c.id)}
+                          className="rounded-[8px] p-2 text-text-tertiary hover:bg-card-elevated hover:text-text-primary"
+                          aria-label="Visualizar contrato"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
+                      {permissions.canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(c.id)}
+                          className="rounded-[8px] px-2 py-2 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {permissions.canDelete && (
+                        <button
+                          type="button"
+                          disabled={deletingId === c.id}
+                          onClick={() => handleDeleteContract(c)}
+                          title="Excluir"
+                          className="rounded-[8px] p-2 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                      <th className="px-4 py-3 font-medium">Contrato</th>
+                      <th className="px-4 py-3 font-medium">Cliente</th>
+                      <th className="px-4 py-3 font-medium">Valor</th>
+                      <th className="px-4 py-3 font-medium">Início</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {contracts.map((c) => (
+                      <tr key={c.id} className="border-b border-border last:border-0 hover:bg-card">
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-text-primary">{c.title}</p>
+                          <p className="text-xs text-text-tertiary">
+                            {CONTRACT_TYPE_LABELS[c.type as keyof typeof CONTRACT_TYPE_LABELS] ?? c.type} ·{" "}
+                            {RECURRENCE_LABELS[c.recurrence as keyof typeof RECURRENCE_LABELS] ?? c.recurrence}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={`/clientes/${c.client.id}`} className="text-text-secondary hover:text-accent-light">
+                            {c.client.companyName}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">{formatCurrency(c.value, currency)}</td>
+                        <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(c.startDate))}</td>
+                        <td className="px-4 py-3">
+                          <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>
+                            {CONTRACT_STATUS_LABELS[c.status as keyof typeof CONTRACT_STATUS_LABELS] ?? c.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            {c.generatedBody && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewId(c.id)}
+                                className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-text-primary"
+                                aria-label="Visualizar contrato"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
+                            {permissions.canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(c.id)}
+                                className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
+                              >
+                                Editar
+                              </button>
+                            )}
+                            {permissions.canDelete && (
+                              <button
+                                type="button"
+                                disabled={deletingId === c.id}
+                                onClick={() => handleDeleteContract(c)}
+                                title="Excluir"
+                                className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card-elevated hover:text-error disabled:opacity-50"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       ) : (

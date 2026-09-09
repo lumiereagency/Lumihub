@@ -25,7 +25,7 @@ export function CreateScheduleButton() {
       <Drawer open={open} onClose={() => setOpen(false)} title="Nova escala mensal">
         <form action={formAction} className="flex flex-col gap-4">
           <FormMessage error={state.error} success={state.success} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Select label="Mês" name="month" defaultValue={String(now.getMonth() + 1)}>
               {MONTHS.map((label, i) => (
                 <option key={i} value={i + 1}>

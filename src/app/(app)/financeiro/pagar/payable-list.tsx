@@ -127,48 +127,77 @@ export function PayableList({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
-                <th className="px-4 py-3 font-medium">Descrição</th>
-                <th className="px-4 py-3 font-medium">Categoria</th>
-                <th className="px-4 py-3 font-medium">Valor</th>
-                <th className="px-4 py-3 font-medium">Vencimento</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                const status = effectiveStatus(p);
-                return (
-                  <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card">
-                    <td className="px-4 py-3">
-                      <p className="text-text-primary">{p.description}</p>
+        <>
+          <div className="flex flex-col gap-2 sm:hidden">
+            {filtered.map((p) => {
+              const status = effectiveStatus(p);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setEditingId(p.id)}
+                  className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 text-left active:bg-card-elevated"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-text-primary">{p.description}</p>
                       {p.supplier && <p className="text-xs text-text-tertiary">{p.supplier}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{p.categoryName ?? "—"}</td>
-                    <td className="px-4 py-3 text-text-secondary">{formatCurrency(p.amount, currency)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(p.dueDate))}</td>
-                    <td className="px-4 py-3">
-                      <Badge tone={STATUS_TONE[status] ?? "neutral"}>{PAYABLE_STATUS_LABELS[status as keyof typeof PAYABLE_STATUS_LABELS] ?? status}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(p.id)}
-                        className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
-                      >
-                        Detalhes
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <Badge tone={STATUS_TONE[status] ?? "neutral"}>{PAYABLE_STATUS_LABELS[status as keyof typeof PAYABLE_STATUS_LABELS] ?? status}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-text-secondary">{formatCurrency(p.amount, currency)}</span>
+                    <span className="text-text-tertiary">{formatDate(new Date(p.dueDate))}</span>
+                  </div>
+                  {p.categoryName && <p className="text-xs text-text-tertiary">{p.categoryName}</p>}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                  <th className="px-4 py-3 font-medium">Descrição</th>
+                  <th className="px-4 py-3 font-medium">Categoria</th>
+                  <th className="px-4 py-3 font-medium">Valor</th>
+                  <th className="px-4 py-3 font-medium">Vencimento</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const status = effectiveStatus(p);
+                  return (
+                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card">
+                      <td className="px-4 py-3">
+                        <p className="text-text-primary">{p.description}</p>
+                        {p.supplier && <p className="text-xs text-text-tertiary">{p.supplier}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-text-secondary">{p.categoryName ?? "—"}</td>
+                      <td className="px-4 py-3 text-text-secondary">{formatCurrency(p.amount, currency)}</td>
+                      <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(p.dueDate))}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={STATUS_TONE[status] ?? "neutral"}>{PAYABLE_STATUS_LABELS[status as keyof typeof PAYABLE_STATUS_LABELS] ?? status}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(p.id)}
+                          className="rounded-[8px] px-2 py-1 text-xs text-text-secondary hover:bg-card-elevated hover:text-text-primary"
+                        >
+                          Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Conta a Pagar">

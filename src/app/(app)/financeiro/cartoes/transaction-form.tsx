@@ -33,7 +33,7 @@ export function TransactionForm({ cardId, onSuccess }: { cardId: string; onSucce
       <Input label="Descrição" name="description" required placeholder="Ex: Equipamento de câmera" />
       <Input label="Categoria (opcional)" name="category" placeholder="Ex: Equipamentos" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor total (R$)" name="totalAmount" type="number" min={0.01} step="0.01" required />
         <Input label="Data da compra" name="purchaseDate" type="date" required defaultValue={todayInputValue()} />
       </div>

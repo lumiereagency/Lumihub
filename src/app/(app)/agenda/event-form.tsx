@@ -60,7 +60,7 @@ export function EventForm({
 
       <Input label="Título" name="title" required defaultValue={defaultValues?.title} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Tipo" name="type" defaultValue={defaultValues?.type ?? "REUNIAO"}>
           {MANUALLY_CREATABLE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -78,7 +78,7 @@ export function EventForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Início" name="startAt" type="datetime-local" required defaultValue={toBrazilDateTimeInputValue(defaultValues?.startAt ?? null)} />
         <Input label="Término (opcional)" name="endAt" type="datetime-local" defaultValue={toBrazilDateTimeInputValue(defaultValues?.endAt ?? null)} />
       </div>
@@ -88,7 +88,7 @@ export function EventForm({
         Dia inteiro
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Cliente (opcional)" name="clientId" defaultValue={defaultValues?.clientId ?? ""}>
           <option value="">Nenhum</option>
           {clients.map((c) => (

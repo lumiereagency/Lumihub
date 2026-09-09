@@ -78,7 +78,7 @@ export function ContractForm({
 
       <Input label="Título do contrato" name="title" required defaultValue={defaultValues?.title} placeholder="Ex: Gestão de Social Media — 2026" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Tipo" name="type" defaultValue={defaultValues?.type ?? "CLIENTE"}>
           {CONTRACT_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -96,7 +96,7 @@ export function ContractForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor (R$)" name="value" type="number" min={0.01} step="0.01" required defaultValue={defaultValues?.value} />
         <Select label="Recorrência" name="recurrence" defaultValue={defaultValues?.recurrence ?? "UNICO"}>
           {RECURRENCE_TYPES.map((r) => (
@@ -107,7 +107,7 @@ export function ContractForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="Início"
           name="startDate"

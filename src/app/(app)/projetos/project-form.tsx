@@ -69,7 +69,7 @@ export function ProjectForm({
 
       <Input label="Nome do projeto" name="name" required defaultValue={defaultValues?.name} placeholder="Ex: Campanha de lançamento" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Responsável" name="responsibleUserId" defaultValue={defaultValues?.responsibleUserId ?? ""}>
           <option value="">Sem responsável</option>
           {users.map((u) => (
@@ -87,12 +87,12 @@ export function ProjectForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Início" name="startDate" type="date" defaultValue={toDateInputValue(defaultValues?.startDate ?? null)} />
         <Input label="Prazo" name="dueDate" type="date" defaultValue={toDateInputValue(defaultValues?.dueDate ?? null)} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor (R$)" name="value" type="number" min={0} step="0.01" defaultValue={defaultValues?.value ?? ""} />
         <Input label="Custo estimado (R$)" name="costEstimate" type="number" min={0} step="0.01" defaultValue={defaultValues?.costEstimate ?? ""} />
       </div>

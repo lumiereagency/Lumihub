@@ -66,22 +66,22 @@ export function LeadForm({
       <Input label="Empresa" name="company" required defaultValue={defaultValues?.company} placeholder="Nome da empresa" />
       <Input label="Responsável (contato)" name="contactName" defaultValue={defaultValues?.contactName ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Telefone" name="phone" defaultValue={defaultValues?.phone ?? ""} />
         <Input label="WhatsApp" name="whatsapp" defaultValue={defaultValues?.whatsapp ?? ""} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Instagram" name="instagram" defaultValue={defaultValues?.instagram ?? ""} />
         <Input label="Site" name="website" defaultValue={defaultValues?.website ?? ""} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Cidade" name="city" defaultValue={defaultValues?.city ?? ""} />
         <Input label="Segmento" name="segment" defaultValue={defaultValues?.segment ?? ""} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Origem" name="source" defaultValue={defaultValues?.source ?? ""} placeholder="Indicação, Instagram, site..." />
         <Select label="Temperatura" name="temperature" defaultValue={defaultValues?.temperature ?? ""}>
           <option value="">Não classificado</option>
@@ -102,7 +102,7 @@ export function LeadForm({
         ))}
       </Select>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="Valor potencial (R$)"
           name="potentialValue"
@@ -121,7 +121,7 @@ export function LeadForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Estágio" name="stage" defaultValue={defaultValues?.stage ?? "LEAD"}>
           {LEAD_STAGES.map((s) => (
             <option key={s} value={s}>

@@ -52,7 +52,7 @@ export function ClientForm({
 
       <Input label="Empresa" name="companyName" required defaultValue={defaultValues?.companyName} placeholder="Nome da empresa" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="CNPJ" name="cnpj" defaultValue={defaultValues?.cnpj ?? ""} />
         <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "ATIVO"}>
           {CLIENT_STATUSES.map((s) => (
@@ -65,14 +65,14 @@ export function ClientForm({
 
       <Input label="Responsável (contato)" name="contactName" defaultValue={defaultValues?.contactName ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="E-mail" name="email" type="email" defaultValue={defaultValues?.email ?? ""} />
         <Input label="Telefone" name="phone" defaultValue={defaultValues?.phone ?? ""} />
       </div>
 
       <Input label="Endereço" name="address" defaultValue={defaultValues?.address ?? ""} />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Instagram" name="instagram" defaultValue={defaultValues?.instagram ?? ""} />
         <Input label="Site" name="website" defaultValue={defaultValues?.website ?? ""} />
       </div>

@@ -56,7 +56,7 @@ export function ProposalForm({
 
       <Input label="Título" name="title" required defaultValue={defaultValues?.title} placeholder="Ex: Cobertura de evento corporativo" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Lead" name="leadId" defaultValue={defaultValues?.leadId ?? ""}>
           <option value="">Sem lead vinculado</option>
           {leads.map((l) => (
@@ -76,7 +76,7 @@ export function ProposalForm({
       </div>
       <p className="-mt-2 text-xs text-text-tertiary">Vincule a pelo menos um lead ou cliente.</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor (R$)" name="value" type="number" min={0.01} step="0.01" required defaultValue={defaultValues?.value} />
         <Input label="Válida até" name="validUntil" type="date" defaultValue={toDateInputValue(defaultValues?.validUntil ?? null)} />
       </div>

@@ -35,7 +35,7 @@ export function InvestmentForm({ onSuccess }: { onSuccess?: () => void }) {
 
       <Input label="Descrição" name="description" required placeholder="Ex: Câmera Sony A7IV" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Categoria" name="category" defaultValue={INVESTMENT_CATEGORIES[0]}>
           {INVESTMENT_CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -46,7 +46,7 @@ export function InvestmentForm({ onSuccess }: { onSuccess?: () => void }) {
         <Input label="Data" name="date" type="date" required defaultValue={todayInputValue()} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Valor (R$)" name="amount" type="number" min={0.01} step="0.01" required />
         <Input label="Parcelas" name="installments" type="number" min={1} max={60} defaultValue={1} />
       </div>

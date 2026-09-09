@@ -63,7 +63,7 @@ export function RecurrenceForm({
       <FormMessage error={state.error} success={state.success} />
       <Input label="Nome da série" name="name" required placeholder="Culto de Domingo à Noite" defaultValue={defaultValues?.name} />
       <Input label="Tipo" name="type" defaultValue={defaultValues?.type ?? "Culto"} />
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Select label="Dia da semana" name="dayOfWeek" defaultValue={String(defaultValues?.dayOfWeek ?? 0)}>
           {DAY_LABELS.map((label, i) => (
             <option key={i} value={i}>
@@ -75,7 +75,7 @@ export function RecurrenceForm({
         <Input label="Fim (opcional)" name="endTime" type="time" defaultValue={defaultValues?.endTime ?? ""} />
       </div>
       <Input label="Local (opcional)" name="location" defaultValue={defaultValues?.location ?? ""} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input
           label="A partir de"
           name="startDate"

@@ -53,7 +53,7 @@ export function TeamMemberForm({
       <Input label="Nome" name="name" required defaultValue={defaultValues?.name} />
       <Input label="Função" name="role" required defaultValue={defaultValues?.role} placeholder="Ex: Editor de vídeo, Social Media..." />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Select label="Tipo" name="type" defaultValue={defaultValues?.type ?? "FUNCIONARIO"}>
           {TEAM_MEMBER_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -71,7 +71,7 @@ export function TeamMemberForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Input
           label="Valor de pagamento (R$)"
           name="paymentValue"

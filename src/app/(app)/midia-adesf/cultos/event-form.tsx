@@ -60,7 +60,7 @@ export function EventForm({
 
       <Input label="Nome" name="name" required defaultValue={defaultValues?.name} placeholder="Culto da Noite" />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Tipo" name="type" defaultValue={defaultValues?.type ?? "Culto"} list="media-event-types" />
         <datalist id="media-event-types">
           <option value="Culto" />
@@ -74,7 +74,7 @@ export function EventForm({
         <Input label="Local" name="location" defaultValue={defaultValues?.location ?? ""} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Início" name="startAt" type="datetime-local" required defaultValue={toBrazilDateTimeInputValue(defaultValues?.startAt ?? null)} />
         <Input label="Término (opcional)" name="endAt" type="datetime-local" defaultValue={toBrazilDateTimeInputValue(defaultValues?.endAt ?? null)} />
       </div>

@@ -95,7 +95,7 @@ export function ProjectTeam({
                   </option>
                 ))}
               </Select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Input name="roleInProject" placeholder="Função no projeto" />
                 <Input name="costAllocated" type="number" min={0} step="0.01" placeholder="Custo (R$)" />
               </div>
