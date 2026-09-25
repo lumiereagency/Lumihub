@@ -43,6 +43,8 @@ export async function importYoutubeProspectAction(prospect: YoutubeProspect): Pr
   const lead = await db.lead.create({
     data: {
       organizationId: user.organizationId,
+      createdByUserId: user.id,
+      ownerUserId: user.id,
       company: prospect.title,
       website: prospect.channelUrl,
       segment: "Criador de conteúdo / figura pública",

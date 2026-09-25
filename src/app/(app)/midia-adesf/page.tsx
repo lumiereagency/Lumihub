@@ -240,7 +240,7 @@ export default async function MediaAdesfDashboardPage() {
                 <Link
                   key={m.id}
                   href={`/midia-adesf/equipe/${m.id}`}
-                  className="flex items-center gap-3 rounded-[10px] border border-border bg-card px-3 py-2 hover:bg-card-elevated"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 hover:bg-card-elevated"
                 >
                   <Avatar name={m.user.name} src={m.user.avatarUrl} size="sm" />
                   <span className="flex-1 truncate text-sm text-text-primary">{m.user.name}</span>

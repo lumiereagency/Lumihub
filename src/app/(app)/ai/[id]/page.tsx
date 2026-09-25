@@ -20,7 +20,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   return (
     <div className="flex h-full min-h-0 flex-col">
       {!provider && (
-        <p className="mb-3 rounded-[10px] border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+        <p className="mb-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
           Nenhum provedor de IA conectado. Conecte OpenAI, Anthropic ou Google Gemini em Configurações → Integrações para enviar mensagens.
         </p>
       )}

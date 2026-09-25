@@ -95,7 +95,7 @@ export function MemberFunctionsPanel({
             const row = rows[fn.id];
             const mentors = mentorsByFunction[fn.id] ?? [];
             return (
-              <div key={fn.id} className="rounded-[10px] border border-border p-3">
+              <div key={fn.id} className="rounded-xl border border-border p-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="flex flex-1 items-center gap-2">
                     <input

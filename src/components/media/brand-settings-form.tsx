@@ -50,7 +50,7 @@ function ColorField({ label, name, defaultValue }: { label: string; name: string
           const sibling = e.currentTarget.nextElementSibling as HTMLInputElement | null;
           if (sibling) sibling.value = e.currentTarget.value;
         }} />
-        <input type="text" name={name} defaultValue={defaultValue} className="h-10 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary" />
+        <input type="text" name={name} defaultValue={defaultValue} className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-text-primary" />
       </div>
     </div>
   );
@@ -90,9 +90,9 @@ function BrandImageUploader({
     <form action={formAction} className="flex items-center gap-3">
       {currentUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={currentUrl} alt={label} className="h-12 w-12 rounded-[10px] border border-border object-contain" />
+        <img src={currentUrl} alt={label} className="h-12 w-12 rounded-xl border border-border object-contain" />
       ) : (
-        <div className="h-12 w-12 rounded-[10px] border border-dashed border-border" />
+        <div className="h-12 w-12 rounded-xl border border-dashed border-border" />
       )}
       <div className="flex flex-col gap-1">
         <span className="text-sm text-text-secondary">{label}</span>

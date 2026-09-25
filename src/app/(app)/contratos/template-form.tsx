@@ -40,7 +40,7 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
 
       <Textarea label="Texto do modelo" name="bodyTemplate" rows={10} required placeholder="Cláusulas do contrato, usando os placeholders abaixo..." />
 
-      <div className="rounded-[10px] border border-border bg-card p-3 text-xs text-text-tertiary">
+      <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-tertiary">
         <p className="mb-1.5 font-medium text-text-secondary">Placeholders disponíveis</p>
         <ul className="flex flex-col gap-0.5">
           {TEMPLATE_PLACEHOLDERS.map((p) => (

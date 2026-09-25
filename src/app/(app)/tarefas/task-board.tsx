@@ -84,7 +84,7 @@ export function TaskBoard({
         <select
           value={projectFilter}
           onChange={(e) => setProjectFilter(e.target.value)}
-          className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
+          className="h-11 rounded-full border border-border bg-card px-4 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
         >
           <option value="TODOS">Todos os projetos</option>
           <option value="">Sem projeto</option>

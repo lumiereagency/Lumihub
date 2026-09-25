@@ -38,7 +38,7 @@ export async function createLeadAction(_prev: ActionState, formData: FormData): 
   }
 
   const lead = await db.lead.create({
-    data: { organizationId: user.organizationId, ...parsed.data },
+    data: { organizationId: user.organizationId, ...parsed.data, createdByUserId: user.id },
   });
 
   await audit({

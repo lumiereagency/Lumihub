@@ -22,23 +22,23 @@ export function Drawer({ open, onClose, title, description, children, widthClass
         type="button"
         aria-label="Fechar"
         onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
       />
       <div
         className={cn(
-          "scrollbar-thin relative flex h-full w-full flex-col overflow-y-auto border-l border-border bg-bg-secondary p-6",
+          "scrollbar-thin relative flex h-full w-full flex-col overflow-y-auto bg-card p-6 sm:m-3 sm:h-[calc(100%-1.5rem)] sm:rounded-3xl sm:border sm:border-border",
           widthClassName ?? "max-w-[480px]",
         )}
       >
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-text-primary">{title}</h2>
             {description && <p className="mt-1 text-sm text-text-tertiary">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[8px] p-1.5 text-text-tertiary hover:bg-card hover:text-text-primary"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-text-tertiary hover:bg-card-elevated hover:text-text-primary"
             aria-label="Fechar"
           >
             <X size={18} />

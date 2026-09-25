@@ -53,7 +53,7 @@ export function MediaCalendarView({ events, emptyMessage }: { events: MediaCalen
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-[10px] border border-border bg-card p-1 w-fit">
+        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1 w-fit">
           <button
             type="button"
             onClick={() => setView("mes")}

@@ -33,7 +33,10 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 
 function greeting(): string {
-  const hour = new Date().getHours();
+  // O servidor roda em UTC — a saudação precisa seguir o horário de Brasília.
+  const hour = Number(
+    new Intl.DateTimeFormat("pt-BR", { hour: "numeric", hourCycle: "h23", timeZone: "America/Sao_Paulo" }).format(new Date()),
+  );
   if (hour < 12) return "Bom dia";
   if (hour < 18) return "Boa tarde";
   return "Boa noite";
@@ -154,16 +157,20 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title={`${greeting()}, ${user.name.split(" ")[0]}.`}
-        description="Aqui está o panorama da Lumière hoje."
+        title={`${greeting()}, ${user.name.split(" ")[0]}`}
+        description="Acompanhe suas tarefas, o progresso da equipe e os números da Lumière."
         actions={
           quickCreateLinks.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              {quickCreateLinks.map((link) => (
+              {quickCreateLinks.map((link, i) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-border bg-card-elevated px-3 text-sm font-medium text-text-primary hover:brightness-110"
+                  className={
+                    i === 0
+                      ? "inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-medium text-ink-on hover:opacity-90"
+                      : "inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-medium text-text-primary hover:bg-card-elevated"
+                  }
                 >
                   <Plus size={14} /> {link.label}
                 </Link>
@@ -178,31 +185,33 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {canViewFinance && (
           <>
-            <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} icon={<Wallet size={16} />} tone="accent" />
-            <MetricCard label="A receber" value={formatCurrency(finance.aReceber, currency)} icon={<ArrowDownCircle size={16} />} />
-            <MetricCard label="A pagar" value={formatCurrency(finance.aPagar, currency)} icon={<ArrowUpCircle size={16} />} />
+            <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} caption="entradas menos saídas pagas" icon={<Wallet />} tone="accent" />
+            <MetricCard label="A receber" value={formatCurrency(finance.aReceber, currency)} caption="cobranças em aberto" icon={<ArrowDownCircle />} />
+            <MetricCard label="A pagar" value={formatCurrency(finance.aPagar, currency)} caption="contas em aberto" icon={<ArrowUpCircle />} />
             <MetricCard
-              label="Resultado projetado (30d)"
+              label="Resultado projetado"
               value={formatCurrency(finance.resultadoProjetado30, currency)}
-              icon={<TrendingUp size={16} />}
+              caption="próximos 30 dias"
+              icon={<TrendingUp />}
             />
           </>
         )}
         {canViewCRM && (
           <>
-            <MetricCard label="Pipeline comercial" value={formatCurrency(commercial.pipelineTotal, currency)} icon={<Target size={16} />} />
+            <MetricCard label="Pipeline comercial" value={formatCurrency(commercial.pipelineTotal, currency)} caption="leads em aberto" icon={<Target />} />
             <MetricCard
               label="Pipeline ponderado"
               value={formatCurrency(commercial.pipelineWeighted, currency)}
-              icon={<Target size={16} />}
+              caption="valor × chance de fechar"
+              icon={<Target />}
             />
           </>
         )}
         {canViewProjects && (
-          <MetricCard label="Projetos ativos" value={String(activeProjects)} icon={<FolderKanban size={16} />} />
+          <MetricCard label="Projetos ativos" value={String(activeProjects)} caption="em andamento" icon={<FolderKanban />} />
         )}
         {(canViewFinance || canViewProjects || canViewContracts) && (
-          <MetricCard label="Itens que precisam de atenção" value={String(attentionCount)} icon={<AlertTriangle size={16} />} />
+          <MetricCard label="Precisam de atenção" value={String(attentionCount)} caption="atrasos e vencimentos" icon={<AlertTriangle />} />
         )}
       </div>
 
@@ -212,15 +221,15 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Saúde da Lumi</CardTitle>
             </CardHeader>
-            <div className="flex flex-col items-center gap-2 py-2">
-              <span className="text-5xl font-semibold text-accent-light">{health.overall}</span>
-              <span className="text-xs text-text-tertiary">de 100</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[48px] font-semibold leading-none tracking-tight text-text-primary">{health.overall}</span>
+              <span className="text-sm text-text-tertiary">de 100</span>
             </div>
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-6 flex flex-col gap-3">
               {Object.entries(health.breakdown).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 text-xs capitalize text-text-tertiary">{key}</span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-elevated">
+                  <span className="w-28 shrink-0 text-sm capitalize text-text-secondary">{key}</span>
+                  <div className="lb-stripes h-2.5 flex-1 overflow-hidden rounded-full">
                     <div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} />
                   </div>
                   <span className="w-8 text-right text-xs text-text-secondary">{value}</span>
@@ -246,7 +255,7 @@ export default async function DashboardPage() {
                 <Link
                   key={row.key}
                   href={row.href}
-                  className="group flex items-center justify-between gap-3 py-2.5 hover:bg-card-elevated -mx-2 px-2 rounded-[8px] transition-colors"
+                  className="group -mx-2 flex items-center justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-card-elevated"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm text-text-primary">{row.label}</p>
@@ -280,7 +289,7 @@ export default async function DashboardPage() {
                 <Link
                   key={r.id}
                   href={`/clientes/${r.client.id}`}
-                  className="flex items-center justify-between rounded-[10px] bg-error/5 px-3 py-2 text-sm transition-colors hover:bg-error/10"
+                  className="flex items-center justify-between rounded-xl bg-error/5 px-3 py-2 text-sm transition-colors hover:bg-error/10"
                 >
                   <span className="text-text-primary">Pagamento atrasado — {r.client.companyName}</span>
                   <Badge tone="error">{formatCurrency(Number(r.amount), currency)}</Badge>
@@ -290,7 +299,7 @@ export default async function DashboardPage() {
                 <Link
                   key={p.id}
                   href={`/projetos/${p.id}`}
-                  className="flex items-center justify-between rounded-[10px] bg-warning/5 px-3 py-2 text-sm transition-colors hover:bg-warning/10"
+                  className="flex items-center justify-between rounded-xl bg-warning/5 px-3 py-2 text-sm transition-colors hover:bg-warning/10"
                 >
                   <span className="text-text-primary">Projeto atrasado — {p.name}</span>
                   <Badge tone="warning">{p.client.companyName}</Badge>
@@ -300,7 +309,7 @@ export default async function DashboardPage() {
                 <Link
                   key={c.id}
                   href={`/clientes/${c.client.id}`}
-                  className="flex items-center justify-between rounded-[10px] bg-info/5 px-3 py-2 text-sm transition-colors hover:bg-info/10"
+                  className="flex items-center justify-between rounded-xl bg-info/5 px-3 py-2 text-sm transition-colors hover:bg-info/10"
                 >
                   <span className="text-text-primary">Contrato vencendo — {c.client.companyName}</span>
                   <Badge tone="info">{formatDate(c.endDate!)}</Badge>
@@ -319,7 +328,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <div className="flex flex-col gap-2">
               {insights.map((insight, idx) => (
-                <div key={idx} className="rounded-[10px] border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-secondary">
+                <div key={idx} className="rounded-xl bg-card-elevated px-4 py-3 text-sm text-text-secondary">
                   {insight.text}
                 </div>
               ))}

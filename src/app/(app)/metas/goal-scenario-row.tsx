@@ -48,7 +48,7 @@ export function GoalScenarioRow({
         action={(fd) => {
           formAction(fd);
         }}
-        className="flex items-end gap-2 rounded-[10px] border border-border bg-bg-secondary p-3"
+        className="flex items-end gap-2 rounded-xl border border-border bg-bg-secondary p-3"
       >
         <Input label={`Meta (${GOAL_SCENARIO_LABELS[scenario as keyof typeof GOAL_SCENARIO_LABELS]})`} name="targetValue" type="number" min={0.01} step="0.01" defaultValue={targetValue} className="flex-1" />
         <Button type="submit" size="sm" disabled={pending}>

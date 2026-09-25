@@ -34,7 +34,7 @@ export function FunctionsPanel({ functions }: { functions: FunctionRow[] }) {
 
       <div className="flex flex-col gap-2">
         {functions.map((f) => (
-          <div key={f.id} className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-2.5">
+          <div key={f.id} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5">
             <div>
               <span className="text-sm font-medium text-text-primary">{f.name}</span>{" "}
               <Badge tone={f.active ? "success" : "neutral"}>{f.active ? "Ativa" : "Inativa"}</Badge>

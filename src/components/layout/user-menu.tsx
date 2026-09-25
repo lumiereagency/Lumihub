@@ -24,10 +24,10 @@ export function UserMenu({ children }: { children: ReactNode }) {
         {children}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-full min-w-[200px] rounded-[10px] border border-border bg-card-elevated p-1 shadow-lg">
+        <div className="absolute bottom-full left-0 mb-2 w-full min-w-[200px] rounded-2xl border border-border bg-card p-1.5 shadow-xl">
           <Link
             href="/configuracoes/perfil"
-            className="flex items-center gap-2 rounded-[8px] px-3 py-2 text-sm text-text-secondary hover:bg-card hover:text-text-primary"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-secondary hover:bg-card-elevated hover:text-text-primary"
             onClick={() => setOpen(false)}
           >
             <UserCircle size={16} />
@@ -36,7 +36,7 @@ export function UserMenu({ children }: { children: ReactNode }) {
           <form action={logoutAction}>
             <button
               type="submit"
-              className="flex w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-sm text-error hover:bg-error/10"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-error hover:bg-error/10"
             >
               <LogOut size={16} />
               Sair

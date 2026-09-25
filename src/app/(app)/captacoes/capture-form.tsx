@@ -113,7 +113,7 @@ export function CaptureForm({
       </div>
 
       {crewAccounts.length > 0 && (
-        <div className="rounded-[10px] border border-dashed border-border p-3">
+        <div className="rounded-xl border border-dashed border-border p-3">
           <p className="mb-3 text-xs font-medium text-text-secondary">
             Vincular a uma conta do sistema (opcional) — a pessoa recebe uma notificação na tela inicial dela e
             precisa aceitar ou recusar a escala.

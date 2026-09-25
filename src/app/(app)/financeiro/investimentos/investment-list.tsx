@@ -46,7 +46,7 @@ export function InvestmentList({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Input placeholder="Buscar descrição ou categoria..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+          <Input placeholder="Buscar descrição ou categoria..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-full sm:w-64" />
           <p className="text-sm text-text-tertiary">
             Total investido: <span className="font-medium text-text-primary">{formatCurrency(total, currency)}</span>
           </p>
@@ -72,7 +72,7 @@ export function InvestmentList({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

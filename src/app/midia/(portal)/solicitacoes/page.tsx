@@ -61,7 +61,7 @@ export default async function MediaPortalRequestsPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {sent.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
+              <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
                 <div>
                   <p className="text-sm text-text-primary">
                     Para {s.targetMember.user.name} — {s.assignment.function.name} em {s.assignment.event.name}

@@ -73,7 +73,7 @@ export function ReassignSwapTargetPicker({ swapId }: { swapId: string }) {
             <p className="text-xs text-text-tertiary">Nenhum outro candidato elegível disponível.</p>
           ) : (
             <>
-              <Select value={selected} onChange={(e) => setSelected(e.target.value)} className="w-64">
+              <Select value={selected} onChange={(e) => setSelected(e.target.value)} className="w-full rounded-full sm:w-64">
                 <option value="">Selecione...</option>
                 {candidates.map((c) => (
                   <option key={c.memberId} value={c.memberId}>

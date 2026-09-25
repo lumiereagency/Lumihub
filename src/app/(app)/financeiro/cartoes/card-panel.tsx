@@ -76,7 +76,7 @@ export function CardPanel({
       ) : (
         <div className="flex flex-col gap-4">
           {invoices.map((invoice) => (
-            <div key={invoice.monthKey} className="rounded-[10px] border border-border p-3">
+            <div key={invoice.monthKey} className="rounded-xl border border-border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium capitalize text-text-primary">{invoice.monthLabel}</span>
                 <Badge tone="accent">{formatCurrency(invoice.total, currency)}</Badge>

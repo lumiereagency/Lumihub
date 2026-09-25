@@ -19,7 +19,7 @@ export function ConfirmPaymentForm({ receivableId, defaultPaymentMethod }: { rec
   const [state, formAction, pending] = useActionState(confirmPaymentAction.bind(null, receivableId), initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-[10px] border border-border bg-bg-secondary p-4">
+    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-border bg-bg-secondary p-4">
       <p className="text-sm font-medium text-text-primary">Confirmar pagamento</p>
       <FormMessage error={state.error} success={state.success} />
 

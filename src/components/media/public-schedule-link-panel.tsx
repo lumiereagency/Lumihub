@@ -34,7 +34,7 @@ export function PublicScheduleLinkPanel({ token: initialToken }: { token: string
         escalado em cada culto do mês. Atualiza sozinho assim que uma escala é publicada ou uma troca é aprovada.
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-border bg-card-elevated px-3 py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-card-elevated px-3 py-2">
           <Link2 size={14} className="shrink-0 text-text-tertiary" />
           <span className="truncate text-sm text-text-primary">{url}</span>
         </div>

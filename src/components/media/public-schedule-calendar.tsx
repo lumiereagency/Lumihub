@@ -54,7 +54,7 @@ export function PublicScheduleCalendar({ events }: { events: PublicCalendarEvent
             setMonth((m) => subMonths(m, 1));
             setSelectedDay(null);
           }}
-          className="rounded-[10px] border border-border bg-card p-2 text-text-secondary hover:text-text-primary"
+          className="rounded-xl border border-border bg-card p-2 text-text-secondary hover:text-text-primary"
         >
           <ChevronLeft size={18} />
         </button>
@@ -65,7 +65,7 @@ export function PublicScheduleCalendar({ events }: { events: PublicCalendarEvent
             setMonth((m) => addMonths(m, 1));
             setSelectedDay(null);
           }}
-          className="rounded-[10px] border border-border bg-card p-2 text-text-secondary hover:text-text-primary"
+          className="rounded-xl border border-border bg-card p-2 text-text-secondary hover:text-text-primary"
         >
           <ChevronRight size={18} />
         </button>

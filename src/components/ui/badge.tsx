@@ -4,27 +4,50 @@ import { cn } from "@/lib/cn";
 type Tone = "neutral" | "success" | "warning" | "error" | "info" | "accent";
 
 const toneClasses: Record<Tone, string> = {
-  neutral: "bg-card-elevated text-text-secondary border-border",
-  success: "bg-success/10 text-success border-success/30",
-  warning: "bg-warning/10 text-warning border-warning/30",
-  error: "bg-error/10 text-error border-error/30",
-  info: "bg-info/10 text-info border-info/30",
-  accent: "bg-accent/10 text-accent-light border-accent/30",
+  neutral: "bg-card-elevated text-text-secondary",
+  success: "bg-success/12 text-success",
+  warning: "bg-warning/12 text-warning",
+  error: "bg-error/12 text-error",
+  info: "bg-info/12 text-info",
+  accent: "bg-accent/12 text-accent-light",
+};
+
+const dotClasses: Record<Tone, string> = {
+  neutral: "bg-text-tertiary",
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-error",
+  info: "bg-info",
+  accent: "bg-accent",
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
+  dot?: boolean;
 }
 
-export function Badge({ className, tone = "neutral", ...props }: BadgeProps) {
+export function Badge({ className, tone = "neutral", dot = false, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-none",
         toneClasses[tone],
         className,
       )}
       {...props}
-    />
+    >
+      {dot && <span className={cn("h-1.5 w-1.5 rounded-full", dotClasses[tone])} />}
+      {children}
+    </span>
+  );
+}
+
+// Status "● Concluído" da referência: ponto colorido + texto neutro, sem fundo.
+export function StatusDot({ tone = "neutral", children, className }: { tone?: Tone; children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-2 whitespace-nowrap text-sm text-text-secondary", className)}>
+      <span className={cn("h-2 w-2 rounded-full", dotClasses[tone])} />
+      {children}
+    </span>
   );
 }

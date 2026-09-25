@@ -93,7 +93,7 @@ export default async function MediaAdesfSettingsPage() {
         </p>
         <div className="flex flex-col gap-2">
           {rolesWithAccess.map((role) => (
-            <div key={role.id} className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-2.5 text-sm">
+            <div key={role.id} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
               <span className="text-text-primary">{role.name}</span>
               <Badge tone="neutral">{role._count.users} usuário(s)</Badge>
             </div>

@@ -25,29 +25,31 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
 
   return (
     <>
-      <div className="flex h-14 items-center justify-between border-b border-border bg-bg-secondary px-4 lg:hidden">
-        <Wordmark />
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
-            aria-label="Abrir menu"
-          >
-            <Menu size={20} />
-          </button>
+      <div className="sticky top-0 z-40 px-3 pt-3 lg:hidden">
+        <div className="flex h-14 items-center justify-between rounded-full border border-border bg-card pl-5 pr-2">
+          <Wordmark />
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-ink-on"
+              aria-label="Abrir menu"
+            >
+              <Menu size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
-          <div className="flex h-14 items-center justify-between border-b border-border px-4">
+          <div className="flex h-16 items-center justify-between px-5">
             <Wordmark />
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-card"
               aria-label="Fechar menu"
             >
               <X size={20} />
@@ -56,10 +58,10 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
           <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
             {groups.map((group) => (
               <div key={group.label} className="mb-5">
-                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+                <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
                   {group.label}
                 </p>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
                   {group.items.map((item) => {
                     const active = item.href === activeHref;
                     const Icon = item.icon;
@@ -69,13 +71,13 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
                         href={item.href}
                         onClick={() => setOpen(false)}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-sm",
+                          "flex items-center gap-3 rounded-full px-4 py-3 text-[15px]",
                           active
-                            ? "bg-card-elevated text-accent-light font-medium"
+                            ? "bg-ink font-medium text-ink-on"
                             : "text-text-secondary hover:bg-card hover:text-text-primary",
                         )}
                       >
-                        <Icon size={16} strokeWidth={1.75} />
+                        <Icon size={18} strokeWidth={1.75} />
                         {item.label}
                       </Link>
                     );

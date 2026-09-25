@@ -8,7 +8,7 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
     <div
       role={isError ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-sm",
+        "flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm",
         isError
           ? "border-error/30 bg-error/10 text-error"
           : "border-success/30 bg-success/10 text-success",

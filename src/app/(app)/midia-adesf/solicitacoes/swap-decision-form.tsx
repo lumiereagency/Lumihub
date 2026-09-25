@@ -18,7 +18,7 @@ export function SwapDecisionForm({ swapId }: { swapId: string }) {
   const pending = approvePending || rejectPending;
 
   return (
-    <div className="flex flex-col gap-3 rounded-[10px] border border-border p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
       <FormMessage error={approveState.error ?? rejectState.error} success={approveState.success ?? rejectState.success} />
       <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observações da decisão (opcional)" rows={2} />
       <div className="flex gap-2">

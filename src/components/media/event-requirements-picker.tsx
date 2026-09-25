@@ -55,7 +55,7 @@ export function RequirementsPickerFields({
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-text-secondary">{label}</p>
-      <div className="flex flex-col gap-2 rounded-[10px] border border-border p-3">
+      <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
         {rows.map((row) => (
           <div key={row.functionId} className="flex items-center gap-3">
             <input

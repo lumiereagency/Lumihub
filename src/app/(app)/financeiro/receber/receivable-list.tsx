@@ -89,11 +89,11 @@ export function ReceivableList({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Input placeholder="Buscar cliente ou descrição..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+          <Input placeholder="Buscar cliente ou descrição..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-full sm:w-64" />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-[10px] border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="h-11 rounded-full border border-border bg-card px-4 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
           >
             <option value="TODOS">Todos os status</option>
             {Object.entries(RECEIVABLE_STATUS_LABELS).map(([value, label]) => (
@@ -150,7 +150,7 @@ export function ReceivableList({
             })}
           </div>
 
-          <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+          <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
@@ -204,7 +204,7 @@ export function ReceivableList({
             )}
             {editing.status === "PAGO" && (
               <>
-                <div className="flex flex-col gap-1 rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
+                <div className="flex flex-col gap-1 rounded-xl border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
                   <span>Pago em {editing.paidAt ? formatDate(new Date(editing.paidAt)) : "—"}</span>
                   {editing.proofUrl && (
                     <a href={editing.proofUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline">

@@ -28,9 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         permissions={permissions}
         user={{ name: user.name, email: user.email, avatarUrl: user.avatarUrl, roleName: user.role.name }}
       />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <MobileNav permissions={permissions} />
-        <main className="scrollbar-thin flex-1 overflow-y-auto px-4 py-6 lg:px-8 lg:py-8">
+        <main className="min-w-0 flex-1 px-4 py-6 lg:py-8 lg:pl-5 lg:pr-8">
           {children}
         </main>
       </div>

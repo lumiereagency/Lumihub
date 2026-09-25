@@ -91,7 +91,7 @@ export function WeeklyAvailabilityForm({
     >
       <input ref={hiddenRef} type="hidden" name="slots" />
       <FormMessage error={state.error} success={state.success} />
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
@@ -185,7 +185,7 @@ export function AvailabilityExceptionsPanel({ exceptions }: { exceptions: Except
       {exceptions.length > 0 && (
         <div className="flex flex-col gap-2">
           {exceptions.map((ex) => (
-            <div key={ex.id} className="flex items-center justify-between rounded-[10px] border border-border bg-card px-4 py-2.5 text-sm">
+            <div key={ex.id} className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
               <div>
                 <span className="font-medium text-text-primary">{new Date(ex.date).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</span>{" "}
                 <span className="text-text-tertiary">
@@ -235,7 +235,7 @@ export function PendingSpecialEventsPanel({ events }: { events: SpecialEvent[] }
       {events.map((event) => {
         const answered = respondedIds.has(event.eventId);
         return (
-          <div key={event.eventId} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3 text-sm">
+          <div key={event.eventId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm">
             <div>
               <span className="font-medium text-text-primary">{event.name}</span>{" "}
               <span className="text-text-tertiary">

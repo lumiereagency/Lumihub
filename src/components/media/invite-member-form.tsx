@@ -52,7 +52,7 @@ export function InviteMemberForm({
       {availableFunctions.length > 0 && (
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-text-secondary">Funções (opcional)</label>
-          <div className="flex flex-col gap-1.5 rounded-[10px] border border-border p-3">
+          <div className="flex flex-col gap-1.5 rounded-xl border border-border p-3">
             {availableFunctions.map((f) => (
               <div key={f.id} className="flex items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-sm text-text-primary">

@@ -64,7 +64,7 @@ export default async function CashFlowPage() {
         {projection.upcoming.length === 0 ? (
           <EmptyState title="Nenhum compromisso lançado para os próximos 90 dias." />
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border">
+          <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

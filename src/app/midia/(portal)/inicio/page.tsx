@@ -189,7 +189,7 @@ export default async function MediaPortalHomePage() {
             {notifications.map((n) => {
               const isSwap = n.title.toLowerCase().includes("troca");
               return (
-                <div key={n.id} className={`rounded-[10px] border px-4 py-3 ${isSwap ? "border-accent/40 bg-card" : "border-border bg-card"}`}>
+                <div key={n.id} className={`rounded-xl border px-4 py-3 ${isSwap ? "border-accent/40 bg-card" : "border-border bg-card"}`}>
                   <p className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
                     {isSwap && <RefreshCcw size={13} className="shrink-0 text-accent-light" />}
                     {n.title}
@@ -247,7 +247,7 @@ export default async function MediaPortalHomePage() {
         )}
         <Link
           href="/midia/disponibilidade"
-          className="inline-flex items-center gap-1.5 rounded-[10px] border border-border bg-card-elevated px-3 py-1.5 text-sm font-medium text-text-primary hover:brightness-110"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card-elevated px-3 py-1.5 text-sm font-medium text-text-primary hover:brightness-110"
         >
           <Clock size={14} /> Atualizar disponibilidade
         </Link>

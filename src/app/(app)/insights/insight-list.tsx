@@ -42,7 +42,7 @@ export function InsightList({ insights, hasProvider }: { insights: InsightRow[];
       </div>
 
       {!hasProvider && (
-        <p className="rounded-[10px] border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+        <p className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
           Nenhum provedor de IA conectado. Conecte OpenAI, Anthropic ou Google Gemini em Configurações → Integrações para
           gerar insights.
         </p>

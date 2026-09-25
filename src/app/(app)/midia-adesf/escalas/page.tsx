@@ -32,7 +32,7 @@ export default async function MediaAdesfSchedulesPage() {
             <Link
               key={s.id}
               href={`/midia-adesf/escalas/${s.id}`}
-              className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3 hover:bg-card-elevated"
+              className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-card-elevated"
             >
               <div>
                 <p className="text-sm font-medium text-text-primary">{s.name}</p>

@@ -37,7 +37,7 @@ function NavLinks({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
               active
                 ? "bg-card-elevated text-accent-light font-medium"
                 : "text-text-secondary hover:bg-card hover:text-text-primary",
@@ -84,7 +84,7 @@ export function MediaPortalShell({
         </nav>
         <div className="border-t border-border p-3">
           <PortalUserMenu>
-            <div className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left hover:bg-card">
+            <div className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-card">
               <Avatar name={user.name} src={user.avatarUrl} size="sm" />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium text-text-primary">{user.name}</span>

@@ -29,7 +29,7 @@ export async function PendingCaptureAssignments({ userId }: { userId: string }) 
         {pending.map((a) => (
           <div
             key={a.id}
-            className="flex flex-col gap-3 rounded-[10px] border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <p className="text-sm font-medium text-text-primary">

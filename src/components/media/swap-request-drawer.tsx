@@ -65,7 +65,7 @@ export function SwapRequestDrawer({
               type="button"
               disabled={pending}
               onClick={() => send(c.memberId)}
-              className="flex items-center gap-3 rounded-[10px] border border-border px-3 py-2.5 text-left hover:bg-card disabled:opacity-50"
+              className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5 text-left hover:bg-card disabled:opacity-50"
             >
               <Avatar name={c.name} src={c.avatarUrl} size="sm" />
               <div className="min-w-0 flex-1">

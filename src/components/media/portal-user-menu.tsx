@@ -29,7 +29,7 @@ export function PortalUserMenu({ children }: { children: ReactNode }) {
         {children}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-full min-w-[200px] rounded-[10px] border border-border bg-card-elevated p-1 shadow-lg">
+        <div className="absolute bottom-full left-0 mb-2 w-full min-w-[200px] rounded-xl border border-border bg-card-elevated p-1 shadow-lg">
           <Link
             href="/midia/perfil"
             className="flex items-center gap-2 rounded-[8px] px-3 py-2 text-sm text-text-secondary hover:bg-card hover:text-text-primary"

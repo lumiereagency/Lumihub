@@ -94,7 +94,7 @@ export function ContractsView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-1 rounded-[10px] border border-border bg-card p-1 w-fit">
+      <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1 w-fit">
         <button
           type="button"
           onClick={() => setTab("contratos")}
@@ -191,7 +191,7 @@ export function ContractsView({
                 ))}
               </div>
 
-              <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+              <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
@@ -336,7 +336,7 @@ export function ContractsView({
 
       <Drawer open={!!preview} onClose={() => setPreviewId(null)} title="Contrato gerado" widthClassName="max-w-[640px]">
         {preview?.generatedBody && (
-          <pre className="scrollbar-thin whitespace-pre-wrap rounded-[10px] border border-border bg-card p-4 text-sm text-text-secondary">
+          <pre className="scrollbar-thin whitespace-pre-wrap rounded-xl border border-border bg-card p-4 text-sm text-text-secondary">
             {preview.generatedBody}
           </pre>
         )}

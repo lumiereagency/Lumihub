@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const sansDisplay = Instrument_Sans({
+const sansDisplay = Inter({
   variable: "--font-sans-display",
-  subsets: ["latin"],
-});
-
-const monoNumeric = IBM_Plex_Mono({
-  variable: "--font-mono-numeric",
-  weight: ["500", "600"],
   subsets: ["latin"],
 });
 
@@ -28,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pt-BR"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${sansDisplay.variable} ${monoNumeric.variable} h-full antialiased`}
+      className={`${sansDisplay.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

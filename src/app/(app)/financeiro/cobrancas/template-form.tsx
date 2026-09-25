@@ -49,7 +49,7 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
 
       <Textarea label="Mensagem" name="body" rows={5} required placeholder="Olá, {{nome}}. Sua cobrança de {{valor}} vence em {{vencimento}}." />
 
-      <div className="rounded-[10px] border border-border bg-card p-3 text-xs text-text-tertiary">
+      <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-tertiary">
         <p className="mb-1.5 font-medium text-text-secondary">Placeholders disponíveis</p>
         <ul className="flex flex-col gap-0.5">
           {TEMPLATE_PLACEHOLDERS.map((p) => (

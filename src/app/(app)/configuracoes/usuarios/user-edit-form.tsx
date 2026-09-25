@@ -51,7 +51,7 @@ export function UserEditForm({
   if (isLocked) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="rounded-[10px] border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-secondary">
+        <p className="rounded-xl border border-border bg-bg-secondary px-3 py-2.5 text-sm text-text-secondary">
           Esta conta é protegida — só o próprio proprietário da organização pode alterá-la, ou só o proprietário pode
           alterar outro administrador.
         </p>

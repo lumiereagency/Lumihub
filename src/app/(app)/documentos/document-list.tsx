@@ -68,7 +68,7 @@ export function DocumentList({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Input placeholder="Buscar por nome ou cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+          <Input placeholder="Buscar por nome ou cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-full sm:w-64" />
           <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-56">
             <option value="">Todas as categorias</option>
             {DOCUMENT_CATEGORIES.map((c) => (
@@ -99,7 +99,7 @@ export function DocumentList({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

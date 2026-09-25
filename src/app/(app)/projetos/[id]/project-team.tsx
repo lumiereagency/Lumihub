@@ -83,7 +83,7 @@ export function ProjectTeam({
                 startTransition(() => addProjectTeamMemberAction(projectId, formData));
                 setFormOpen(false);
               }}
-              className="flex flex-col gap-2 rounded-[10px] border border-border bg-bg-secondary p-3"
+              className="flex flex-col gap-2 rounded-xl border border-border bg-bg-secondary p-3"
             >
               <Select name="teamMemberId" required defaultValue="">
                 <option value="" disabled>

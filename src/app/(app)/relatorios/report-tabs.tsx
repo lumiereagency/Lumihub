@@ -40,7 +40,7 @@ export function ReportTabs({ data, currency, canExport }: { data: ReportsData; c
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-[10px] border border-border bg-card p-1">
+        <div className="flex gap-1 rounded-xl border border-border bg-card p-1">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -76,7 +76,7 @@ export function ReportTabs({ data, currency, canExport }: { data: ReportsData; c
 
 function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">

@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { ChevronDown, Flame, Snowflake, ThermometerSun } from "lucide-react";
 import type { ActionState } from "@/lib/actions/auth-actions";
-import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEMPERATURES, LEAD_TEMPERATURE_LABELS } from "@/lib/validation/crm";
+import { LEAD_STAGES, LEAD_STAGE_LABELS } from "@/lib/validation/crm";
+import { cn } from "@/lib/cn";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,26 +32,49 @@ export interface LeadFormValues {
 
 const initialState: ActionState = {};
 
+const SOURCE_SUGGESTIONS = [
+  "Indicação",
+  "Instagram",
+  "WhatsApp",
+  "Site",
+  "Evento",
+  "Prospecção ativa",
+  "Prospecção IA (YouTube)",
+];
+
+const TEMPERATURE_OPTIONS = [
+  { value: "", label: "Sem classificar", icon: null },
+  { value: "FRIO", label: "Frio", icon: Snowflake },
+  { value: "MORNO", label: "Morno", icon: ThermometerSun },
+  { value: "QUENTE", label: "Quente", icon: Flame },
+];
+
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
   return iso.slice(0, 10);
 }
 
+// No cadastro novo só o essencial aparece (empresa, contato, WhatsApp,
+// origem, temperatura, responsável e próximo contato) — o resto fica em
+// "Mais detalhes", para o comercial registrar um lead em segundos.
 export function LeadForm({
   action,
   defaultValues,
   users,
+  currentUserId,
   onSuccess,
   submitLabel,
 }: {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   defaultValues?: LeadFormValues;
   users: { id: string; name: string }[];
+  currentUserId?: string;
   onSuccess?: () => void;
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const successRef = useRef(state.success);
+  const isEdit = !!defaultValues;
 
   useEffect(() => {
     if (state.success && state.success !== successRef.current) {
@@ -63,69 +88,69 @@ export function LeadForm({
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      <Input label="Empresa" name="company" required defaultValue={defaultValues?.company} placeholder="Nome da empresa" />
-      <Input label="Responsável (contato)" name="contactName" defaultValue={defaultValues?.contactName ?? ""} />
+      <Input label="Empresa ou nome do lead" name="company" required autoFocus={!isEdit} defaultValue={defaultValues?.company} placeholder="Ex: Studio Aurora" />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Telefone" name="phone" defaultValue={defaultValues?.phone ?? ""} />
-        <Input label="WhatsApp" name="whatsapp" defaultValue={defaultValues?.whatsapp ?? ""} />
+        <Input label="Pessoa de contato" name="contactName" defaultValue={defaultValues?.contactName ?? ""} placeholder="Nome de quem responde" />
+        <Input label="WhatsApp" name="whatsapp" type="tel" inputMode="tel" defaultValue={defaultValues?.whatsapp ?? ""} placeholder="(11) 90000-0000" />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Instagram" name="instagram" defaultValue={defaultValues?.instagram ?? ""} />
-        <Input label="Site" name="website" defaultValue={defaultValues?.website ?? ""} />
+        <Input label="Instagram" name="instagram" defaultValue={defaultValues?.instagram ?? ""} placeholder="@perfil" />
+        <div>
+          <Input label="Origem" name="source" list="lead-source-suggestions" defaultValue={defaultValues?.source ?? ""} placeholder="De onde veio?" />
+          <datalist id="lead-source-suggestions">
+            {SOURCE_SUGGESTIONS.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Cidade" name="city" defaultValue={defaultValues?.city ?? ""} />
-        <Input label="Segmento" name="segment" defaultValue={defaultValues?.segment ?? ""} />
-      </div>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium text-text-secondary">Temperatura</legend>
+        <div className="flex flex-wrap gap-2">
+          {TEMPERATURE_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <label key={opt.value || "none"} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="temperature"
+                  value={opt.value}
+                  defaultChecked={(defaultValues?.temperature ?? "") === opt.value}
+                  className="peer sr-only"
+                />
+                <span
+                  className={cn(
+                    "inline-flex h-10 items-center gap-1.5 rounded-full border border-border px-4 text-sm text-text-secondary transition-colors",
+                    "peer-focus-visible:ring-4 peer-focus-visible:ring-accent/15",
+                    opt.value === "" && "peer-checked:bg-ink peer-checked:text-ink-on peer-checked:border-transparent",
+                    opt.value === "FRIO" && "peer-checked:bg-info/15 peer-checked:text-info peer-checked:border-info/40",
+                    opt.value === "MORNO" && "peer-checked:bg-warning/15 peer-checked:text-warning peer-checked:border-warning/40",
+                    opt.value === "QUENTE" && "peer-checked:bg-error/15 peer-checked:text-error peer-checked:border-error/40",
+                  )}
+                >
+                  {Icon && <Icon size={14} />}
+                  {opt.label}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Origem" name="source" defaultValue={defaultValues?.source ?? ""} placeholder="Indicação, Instagram, site..." />
-        <Select label="Temperatura" name="temperature" defaultValue={defaultValues?.temperature ?? ""}>
-          <option value="">Não classificado</option>
-          {LEAD_TEMPERATURES.map((t) => (
-            <option key={t} value={t}>
-              {LEAD_TEMPERATURE_LABELS[t]}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      <Select label="Responsável comercial" name="ownerUserId" defaultValue={defaultValues?.ownerUserId ?? ""}>
-        <option value="">Sem responsável</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.name}
-          </option>
-        ))}
-      </Select>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input
-          label="Valor potencial (R$)"
-          name="potentialValue"
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={defaultValues?.potentialValue ?? ""}
-        />
-        <Input
-          label="Probabilidade (%)"
-          name="probability"
-          type="number"
-          min={0}
-          max={100}
-          defaultValue={defaultValues?.probability ?? 0}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Select label="Estágio" name="stage" defaultValue={defaultValues?.stage ?? "LEAD"}>
-          {LEAD_STAGES.map((s) => (
-            <option key={s} value={s}>
-              {LEAD_STAGE_LABELS[s]}
+        <Select
+          label="Responsável"
+          name="ownerUserId"
+          defaultValue={isEdit ? (defaultValues?.ownerUserId ?? "") : (currentUserId ?? "")}
+        >
+          <option value="">Sem responsável</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+              {u.id === currentUserId ? " (você)" : ""}
             </option>
           ))}
         </Select>
@@ -137,9 +162,50 @@ export function LeadForm({
         />
       </div>
 
-      <Textarea label="Observações" name="notes" defaultValue={defaultValues?.notes ?? ""} />
+      <details open={isEdit} className="group rounded-2xl border border-border">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium text-text-primary [&::-webkit-details-marker]:hidden">
+          Mais detalhes
+          <ChevronDown size={16} className="text-text-tertiary transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-border p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Select label="Estágio" name="stage" defaultValue={defaultValues?.stage ?? "LEAD"}>
+              {LEAD_STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {LEAD_STAGE_LABELS[s]}
+                </option>
+              ))}
+            </Select>
+            <Input label="Telefone" name="phone" type="tel" defaultValue={defaultValues?.phone ?? ""} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Valor potencial (R$)"
+              name="potentialValue"
+              type="number"
+              min={0}
+              step="0.01"
+              defaultValue={defaultValues?.potentialValue ?? ""}
+            />
+            <Input
+              label="Chance de fechar (%)"
+              name="probability"
+              type="number"
+              min={0}
+              max={100}
+              defaultValue={defaultValues?.probability ?? 0}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input label="Cidade" name="city" defaultValue={defaultValues?.city ?? ""} />
+            <Input label="Segmento" name="segment" defaultValue={defaultValues?.segment ?? ""} placeholder="Ex: Restaurante, Clínica..." />
+          </div>
+          <Input label="Site" name="website" defaultValue={defaultValues?.website ?? ""} />
+          <Textarea label="Observações" name="notes" defaultValue={defaultValues?.notes ?? ""} placeholder="O que foi conversado, próximos passos..." />
+        </div>
+      </details>
 
-      <Button type="submit" disabled={pending} className="mt-2 w-full">
+      <Button type="submit" disabled={pending} className="mt-1 w-full">
         {pending ? "Salvando..." : submitLabel}
       </Button>
     </form>

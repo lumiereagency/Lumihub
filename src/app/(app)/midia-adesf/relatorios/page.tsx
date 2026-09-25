@@ -47,7 +47,7 @@ export default async function MediaAdesfReportsPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {openAlerts.map((a) => (
-              <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border bg-card px-4 py-3">
+              <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-text-primary">{a.title}</p>
                   <p className="text-sm text-text-secondary">{a.message}</p>

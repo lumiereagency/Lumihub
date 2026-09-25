@@ -160,6 +160,7 @@ model User {
   passwordResets            PasswordResetToken[]
   auditLogs                 AuditLog[]
   ownedLeads                Lead[]                    @relation("LeadOwner")
+  createdLeads              Lead[]                    @relation("LeadCreator")
   responsibleProjects       Project[]                 @relation("ProjectResponsible")
   assignedTasks             Task[]                    @relation("TaskAssignee")
   teamMemberProfile         TeamMember?
@@ -285,6 +286,7 @@ model Lead {
   source            String?
   temperature       LeadTemperature?
   ownerUserId       String?
+  createdByUserId   String?
   potentialValue    Decimal?         @db.Decimal(14, 2)
   probability       Int              @default(0)
   stage             LeadStage        @default(LEAD)
@@ -298,10 +300,12 @@ model Lead {
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner           User?        @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdBy       User?        @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   convertedClient Client?      @relation(fields: [convertedClientId], references: [id])
   proposals       Proposal[]
 
   @@index([organizationId, stage])
+  @@index([organizationId, createdByUserId])
   @@map("leads")
 }
 

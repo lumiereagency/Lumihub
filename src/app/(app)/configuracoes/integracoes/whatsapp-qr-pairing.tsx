@@ -34,7 +34,7 @@ export function WhatsAppQrPairing() {
 
   if (status.status === "connected") {
     return (
-      <p className="rounded-[10px] border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
+      <p className="rounded-xl border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
         Conectado como +{status.phoneNumber}
       </p>
     );
@@ -48,7 +48,7 @@ export function WhatsAppQrPairing() {
           código abaixo.
         </p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={status.qrDataUrl} alt="QR code de pareamento do WhatsApp" className="h-56 w-56 rounded-[10px] border border-border" />
+        <img src={status.qrDataUrl} alt="QR code de pareamento do WhatsApp" className="h-56 w-56 rounded-xl border border-border" />
         <p className="text-xs text-text-tertiary">O código expira em segundos e é renovado sozinho — não precisa recarregar a página.</p>
       </div>
     );

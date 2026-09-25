@@ -44,7 +44,7 @@ export function ConversationSidebar({ conversations }: { conversations: Conversa
             <div
               key={c.id}
               className={cn(
-                "group flex items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm",
+                "group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm",
                 active ? "bg-card-elevated text-text-primary" : "text-text-secondary hover:bg-card",
               )}
             >

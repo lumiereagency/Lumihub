@@ -17,7 +17,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         window.localStorage.setItem("lb-theme", next);
       }}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-[8px] text-text-secondary hover:bg-card hover:text-text-primary",
+        "flex h-9 w-9 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-card-elevated hover:text-text-primary",
         className,
       )}
       aria-label="Alternar entre modo dia e modo noite"

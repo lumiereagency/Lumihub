@@ -1,27 +1,32 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   LUMIBASE DESIGN SYSTEM — tokens de tema (Fase 2, redesenhado)
-   Acento ancorado no gradiente da marca (vermelho → laranja → pêssego);
-   fundo permanece quase preto para legibilidade dos dados financeiros.
+   LUMIBASE DESIGN SYSTEM — v3 (referência "Finexy")
+   Superfícies neutras em camadas (canvas → card → painel interno), cantos
+   bem arredondados, ação primária em pílula "ink" (escura no claro, clara
+   no escuro) e o laranja da marca reservado para destaques: card em
+   evidência, gráficos, progresso e estados ativos.
    ========================================================================== */
 
 :root {
-  --lh-bg: #0b0908;
-  --lh-bg-secondary: #121010;
-  --lh-card: #181513;
-  --lh-card-elevated: #1f1b18;
-  --lh-border: #2a2521;
+  --lh-bg: #0d0d0e;
+  --lh-bg-secondary: #141415;
+  --lh-card: #171718;
+  --lh-card-elevated: #202022;
+  --lh-border: #27272a;
 
-  --lh-text-primary: #f7f5f3;
-  --lh-text-secondary: #a8a29a;
-  --lh-text-tertiary: #726a62;
+  --lh-text-primary: #f4f4f5;
+  --lh-text-secondary: #a3a3a8;
+  --lh-text-tertiary: #6f6f75;
 
-  --lh-accent-deep: #c41e0a;
-  --lh-accent: #e8540a;
-  --lh-accent-light: #f5a65c;
-  --lh-accent-gradient: linear-gradient(135deg, var(--lh-accent-deep) 0%, var(--lh-accent) 55%, var(--lh-accent-light) 100%);
-  --lh-accent-on: #17100a;
+  --lh-accent-deep: #d9400b;
+  --lh-accent: #f05a1c;
+  --lh-accent-light: #ff9a5c;
+  --lh-accent-gradient: linear-gradient(140deg, #e8470c 0%, #f4662a 55%, #ff9458 100%);
+  --lh-accent-on: #ffffff;
+
+  --lh-ink: #f4f4f5;
+  --lh-ink-on: #111112;
 
   --lh-success: #22c55e;
   --lh-warning: #eab308;
@@ -32,26 +37,25 @@
   --foreground: var(--lh-text-primary);
 }
 
-/* Modo dia — mesmo gradiente de marca, fundo claro e quente em vez de
-   quase-preto. Alternado via [data-theme] em <html> (ver theme-toggle.tsx);
-   aplicado antes da hidratação por um script inline em layout.tsx para
-   não piscar o tema errado no primeiro paint. */
+/* Modo dia — a paleta da referência: canvas cinza-claro, cards brancos,
+   painéis internos em cinza bem suave e tinta quase preta. Alternado via
+   [data-theme] em <html> (ver theme-toggle.tsx). */
 :root[data-theme="light"] {
-  --lh-bg: #faf7f4;
-  --lh-bg-secondary: #f3efe9;
+  --lh-bg: #f1f1f1;
+  --lh-bg-secondary: #f6f6f6;
   --lh-card: #ffffff;
-  --lh-card-elevated: #f8f4f0;
-  --lh-border: #e8e1d8;
+  --lh-card-elevated: #f5f5f5;
+  --lh-border: #e8e8e8;
 
-  --lh-text-primary: #1e1a16;
-  --lh-text-secondary: #5f574d;
-  --lh-text-tertiary: #948a7d;
+  --lh-text-primary: #141414;
+  --lh-text-secondary: #5e5e5e;
+  --lh-text-tertiary: #9a9a9a;
 
-  /* --lh-accent-light também é o texto "destacado" (nav ativo, links, badge) —
-     o pêssego claro do modo noite não tem contraste em fundo claro, então
-     no modo dia ele vira um laranja queimado legível. Ainda funciona como
-     stop final do gradiente (só fica um pouco menos claro na ponta). */
-  --lh-accent-light: #c2410c;
+  /* Também é o texto "destacado" (links, badges) — precisa de contraste no branco. */
+  --lh-accent-light: #d9480f;
+
+  --lh-ink: #161616;
+  --lh-ink-on: #ffffff;
 
   --background: var(--lh-bg);
   --foreground: var(--lh-text-primary);
@@ -73,22 +77,27 @@
   --color-accent-deep: var(--lh-accent-deep);
   --color-accent-on: var(--lh-accent-on);
 
+  --color-ink: var(--lh-ink);
+  --color-ink-on: var(--lh-ink-on);
+
   --color-success: var(--lh-success);
   --color-warning: var(--lh-warning);
   --color-error: var(--lh-error);
   --color-info: var(--lh-info);
 
   --font-sans: var(--font-sans-display);
-  --font-mono: var(--font-mono-numeric);
+  --font-mono: var(--font-sans-display);
 
-  /* Cards mais arredondados — tratamento premium do redesign */
-  --radius-2xl: 20px;
+  --radius-xl: 16px;
+  --radius-2xl: 22px;
+  --radius-3xl: 28px;
 }
 
 body {
   background: var(--lh-bg);
   color: var(--lh-text-primary);
-  font-family: var(--font-sans-display), "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans-display), "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
 }
 
 * {
@@ -100,10 +109,10 @@ body {
   color: var(--lh-accent-on);
 }
 
-/* Números financeiros: tabular, monoespaçado — mesmo tratamento do redesign */
+/* Números: mesma fonte do texto, com algarismos tabulares para alinhar. */
 .lb-figures {
-  font-family: var(--font-mono-numeric), "IBM Plex Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /* Destaque raro: gradiente da marca aplicado ao texto (1-2 usos por tela) */
@@ -112,6 +121,15 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Barra listrada da referência (limite de gastos / progresso). */
+.lb-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--lh-card-elevated) 0 6px,
+    var(--lh-border) 6px 12px
+  );
 }
 
 .scrollbar-thin::-webkit-scrollbar {

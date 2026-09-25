@@ -40,7 +40,7 @@ export function IntegrationForm({
       <FormMessage error={state.error} success={state.success} />
 
       {provider.oauthOnly && oauthRedirectUri && (
-        <div className="rounded-[10px] border border-border bg-card p-3 text-xs text-text-secondary">
+        <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-secondary">
           <p className="mb-1.5">
             Antes de salvar, cadastre este Redirect URI exato no console do provedor (Google Cloud Console ou Azure
             Portal):
@@ -74,7 +74,7 @@ export function IntegrationForm({
       {provider.oauthOnly && currentConfig.clientId && (
         <a
           href={`/api/integrations/oauth/${provider.key}/start`}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary transition-all duration-150 hover:brightness-110"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card-elevated px-4 text-sm font-medium text-text-primary transition-all duration-150 hover:brightness-110"
         >
           Conectar com o provedor
         </a>
