@@ -202,6 +202,17 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
     description: "Busca automática de canais/criadores de conteúdo por nicho em Prospecção (CRM).",
     fields: [{ key: "apiKey", label: "API Key", type: "password", secret: true, required: true }],
   },
+  {
+    key: "AUTENTIQUE",
+    category: "OUTROS",
+    label: "Autentique",
+    description: "Assinatura eletrônica dos contratos gerados a partir dos orçamentos aceitos.",
+    fields: [
+      { key: "apiKey", label: "Chave de API (painel.autentique.com.br → Perfil → API)", type: "password", secret: true, required: true },
+      { key: "webhookSecret", label: "Segredo do webhook (opcional, recomendado)", type: "password", secret: true, required: false },
+      { key: "sandbox", label: "Modo teste (documentos sandbox, sem gastar créditos)", type: "checkbox", secret: false, required: false },
+    ],
+  },
 ];
 
 export const CATEGORY_LABELS: Record<IntegrationCategory, string> = {

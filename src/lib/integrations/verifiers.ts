@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import type { IntegrationProviderKey } from "@/generated/prisma/enums";
+import { verifyAutentiqueKey } from "@/lib/integrations/autentique";
 
 export interface VerifyResult {
   ok: boolean;
@@ -118,6 +119,7 @@ const VERIFIERS: Partial<Record<IntegrationProviderKey, Verifier>> = {
       return { ok: false, message: `Falha ao contatar a YouTube Data API: ${(err as Error).message}` };
     }
   },
+  AUTENTIQUE: (creds) => verifyAutentiqueKey(creds.apiKey),
   N8N: (creds) => pingReachability(creds.webhookUrl),
   MAKE: (creds) => pingReachability(creds.webhookUrl),
   ZAPIER: (creds) => pingReachability(creds.webhookUrl),

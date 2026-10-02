@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import {
   AlertCircle,
@@ -7,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  FileText,
   List,
   MessageCircle,
   Plus,
@@ -1078,6 +1080,14 @@ export function LeadBoard({
             </details>
 
             <div className="flex flex-col gap-2 border-t border-border pt-5">
+              {permissions.canCreate && (
+                <Link
+                  href={`/propostas/nova?lead=${editingLead.id}`}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-ink-on hover:opacity-90"
+                >
+                  <FileText size={16} /> Fazer orçamento
+                </Link>
+              )}
               {permissions.canManage && editingLead.stage === "FECHADO" && !editingLead.convertedClientId && (
                 <Button
                   variant="secondary"

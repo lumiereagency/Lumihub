@@ -41,3 +41,17 @@ export async function requirePermission(permission: string): Promise<CurrentUser
   }
   return user;
 }
+
+// Diretoria = dono da conta ou perfil ADMIN. Preço de tabela, descontos,
+// catálogo de serviços e taxas da maquininha são decisão só dela (§ Guia
+// Comercial: "condição diferente precisa de aprovação da diretoria") — o
+// perfil Comercial tem CRM "gerenciar", então essa permissão não basta.
+export function isDirector(user: CurrentUser): boolean {
+  return user.isOwner || user.role.key === "ADMIN";
+}
+
+export async function requireDirector(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!isDirector(user)) redirect("/acesso-negado");
+  return user;
+}

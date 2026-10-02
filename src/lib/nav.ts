@@ -84,7 +84,7 @@ export function filterTabsForUser(tabs: NavTab[], permissions: Set<string>): { l
 
 export const CRM_TABS: NavTab[] = [
   { label: "Funil", href: "/crm", permission: permKey("CRM", "VIEW") },
-  { label: "Propostas", href: "/propostas", permission: permKey("CRM", "VIEW") },
+  { label: "Orçamentos", href: "/propostas", permission: permKey("CRM", "VIEW") },
   { label: "Serviços", href: "/crm/servicos", permission: permKey("CRM", "VIEW") },
 ];
 

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FolderKanban, MessagesSquare } from "lucide-react";
+import { FileText, FolderKanban, MessagesSquare } from "lucide-react";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -111,7 +111,17 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={client.companyName} description={client.contactName ?? undefined} />
+      <PageHeader
+        title={client.companyName}
+        description={client.contactName ?? undefined}
+        actions={
+          hasPermission(user, permKey("CRM", "CREATE")) && (
+            <Link href={`/propostas/nova?client=${client.id}`} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-ink-on hover:opacity-90">
+              <FileText size={16} /> Novo orçamento
+            </Link>
+          )
+        }
+      />
 
       <ClientDetailHeader client={client} permissions={permissions} />
 

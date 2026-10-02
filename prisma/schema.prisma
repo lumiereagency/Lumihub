@@ -36,6 +36,7 @@ model Organization {
   contractTemplates             ContractTemplate[]
   contracts                     Contract[]
   proposals                     Proposal[]
+  pricingSettings               PricingSettings?
   projects                      Project[]
   tasks                         Task[]
   taskBoards                    TaskBoard[]
@@ -162,6 +163,7 @@ model User {
   auditLogs                 AuditLog[]
   ownedLeads                Lead[]                    @relation("LeadOwner")
   createdLeads              Lead[]                    @relation("LeadCreator")
+  createdProposals          Proposal[]                @relation("ProposalCreator")
   responsibleProjects       Project[]                 @relation("ProjectResponsible")
   assignedTasks             Task[]                    @relation("TaskAssignee")
   createdTasks              Task[]                    @relation("TaskCreator")
@@ -325,25 +327,125 @@ enum ProposalStatus {
   EXPIRADA
 }
 
+enum ProposalResponse {
+  ACEITA
+  AJUSTE
+  RECUSADA
+}
+
 model Proposal {
-  id             String         @id @default(cuid())
-  organizationId String
-  leadId         String?
-  clientId       String?
-  title          String
-  value          Decimal        @db.Decimal(14, 2)
-  status         ProposalStatus @default(RASCUNHO)
-  validUntil     DateTime?
-  sentAt         DateTime?
-  notes          String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id              String            @id @default(cuid())
+  organizationId  String
+  leadId          String?
+  clientId        String?
+  createdByUserId String?
+  title           String
+  // Valor total estimado do contrato (pontual + mensal × meses mínimos) — o
+  // que alimenta o pipeline. O detalhamento fica nos itens.
+  value           Decimal           @db.Decimal(14, 2)
+  status          ProposalStatus    @default(RASCUNHO)
+  validUntil      DateTime?
+  sentAt          DateTime?
+  notes           String?
+  // Orçamento com link (v2): quem recebe, como pagar e a resposta do cliente.
+  publicToken     String?           @unique
+  currency        String            @default("BRL")
+  recipientName   String?
+  recipientPhone  String?
+  intro           String?
+  discountPercent Decimal           @default(0) @db.Decimal(5, 2)
+  maxInstallments Int?
+  oneTimeTotal    Decimal?          @db.Decimal(14, 2)
+  monthlyTotal    Decimal?          @db.Decimal(14, 2)
+  minMonths       Int?
+  pricingSnapshot Json?
+  viewedAt        DateTime?
+  lastViewedAt    DateTime?
+  viewCount       Int               @default(0)
+  response        ProposalResponse?
+  responseMessage String?
+  respondedAt     DateTime?
+  chosenPayment   String?
+  signerData      Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client       Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy    User?          @relation("ProposalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items        ProposalItem[]
+  contract     Contract?
+
+  @@index([organizationId, status])
+  @@map("proposals")
+}
+
+enum ServiceBilling {
+  MENSAL
+  PONTUAL
+}
+
+enum CardPriceMode {
+  AUTO
+  FIXED
+  NONE
+}
+
+// Linha do orçamento: guarda uma cópia do serviço no momento da proposta,
+// para que editar o catálogo depois nunca mude um orçamento já enviado.
+model ProposalItem {
+  id              String         @id @default(cuid())
+  proposalId      String
+  serviceId       String?
+  name            String
+  tagline         String?
+  features        String[]       @default([])
+  billing         ServiceBilling @default(PONTUAL)
+  quantity        Int            @default(1)
+  unitPrice       Decimal        @db.Decimal(14, 2)
+  monthlyFee      Decimal?       @db.Decimal(14, 2)
+  priceIsFrom     Boolean        @default(false)
+  cardMode        CardPriceMode  @default(AUTO)
+  cardPrice       Decimal?       @db.Decimal(14, 2)
+  maxInstallments Int?
+  minMonths       Int?
+  terms           String?
+  position        Int            @default(0)
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  service  Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId])
+  @@map("proposal_items")
+}
+
+// Taxas da maquininha, margem do crédito e dados que entram no contrato —
+// um registro por organização, editado pelo admin.
+model PricingSettings {
+  id                  String   @id @default(cuid())
+  organizationId      String   @unique
+  debitFee            Decimal  @default(0.94) @db.Decimal(6, 3)
+  // [{ n: 1, seller: 2.84, buyer: 0 }, { n: 2, seller: 2.85, buyer: 9.64 }, ...]
+  installmentFees     Json
+  creditMargin        Decimal  @default(5) @db.Decimal(6, 3)
+  maxInstallments     Int      @default(12)
+  validityDays        Int      @default(7)
+  pixKey              String?
+  whatsappTemplate    String?
+  contractTemplateMsg String?
+  companyLegalName    String?
+  companyDocument     String?
+  companyAddress      String?
+  companyCity         String?
+  representativeName  String?
+  representativeEmail String?
+  representativeDoc   String?
+  updatedAt           DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
-  @@map("proposals")
+  @@map("pricing_settings")
 }
 
 // =========================================================================
@@ -436,28 +538,38 @@ enum RecurrenceType {
 }
 
 model Contract {
-  id             String         @id @default(cuid())
-  organizationId String
-  clientId       String
-  templateId     String?
-  title          String
-  type           ContractType
-  value          Decimal        @db.Decimal(14, 2)
-  recurrence     RecurrenceType @default(UNICO)
-  startDate      DateTime
-  endDate        DateTime?
-  paymentDay     Int?
-  status         ContractStatus @default(RASCUNHO)
-  fileUrl        String?
-  generatedBody  String?
-  signedAt       DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?
+  id                  String         @id @default(cuid())
+  organizationId      String
+  clientId            String
+  templateId          String?
+  title               String
+  type                ContractType
+  value               Decimal        @db.Decimal(14, 2)
+  recurrence          RecurrenceType @default(UNICO)
+  startDate           DateTime
+  endDate             DateTime?
+  paymentDay          Int?
+  status              ContractStatus @default(RASCUNHO)
+  fileUrl             String?
+  generatedBody       String?
+  signedAt            DateTime?
+  proposalId          String?        @unique
+  // Assinatura eletrônica (Autentique)
+  signatureProvider   String?
+  signatureDocumentId String?        @unique
+  signatureLink       String?
+  signatureSentAt     DateTime?
+  signatureStatus     String?
+  signatureSigners    Json?
+  signedFileUrl       String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  deletedAt           DateTime?
 
   organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
   template           ContractTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  proposal           Proposal?           @relation(fields: [proposalId], references: [id], onDelete: SetNull)
   projects           Project[]
   accountsReceivable AccountReceivable[]
   financialMovements FinancialMovement[]
@@ -747,10 +859,29 @@ model Service {
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leads        LeadServiceInterest[]
-  clients      ClientService[]
+  // Orçamentos: como o serviço é cobrado e aparece na proposta.
+  billing         ServiceBilling @default(PONTUAL)
+  currency        String         @default("BRL")
+  tagline         String?
+  features        String[]       @default([])
+  badge           String?
+  priceIsFrom     Boolean        @default(false)
+  monthlyFee      Decimal?       @db.Decimal(14, 2)
+  cardMode        CardPriceMode  @default(AUTO)
+  cardPrice       Decimal?       @db.Decimal(14, 2)
+  maxInstallments Int?
+  minMonths       Int?
+  isAddon         Boolean        @default(false)
+  terms           String?
+  position        Int            @default(0)
+  guideKey        String?
 
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads         LeadServiceInterest[]
+  clients       ClientService[]
+  proposalItems ProposalItem[]
+
+  @@unique([organizationId, guideKey])
   @@index([organizationId])
   @@map("services")
 }
@@ -1362,6 +1493,7 @@ enum IntegrationProviderKey {
   WEBHOOK_CUSTOM
   CUSTOM_API
   YOUTUBE_DATA_API
+  AUTENTIQUE
 }
 
 enum IntegrationStatus {

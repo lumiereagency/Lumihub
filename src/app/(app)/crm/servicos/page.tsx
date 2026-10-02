@@ -1,21 +1,22 @@
-import { requirePermission, hasPermission } from "@/lib/auth/guard";
+import { requirePermission, isDirector } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import { CRM_TABS, filterTabsForUser } from "@/lib/nav";
+import { getPricingSettings } from "@/lib/pricing/settings";
 import { ServiceCatalog } from "./service-catalog";
 
 export default async function ServicesPage() {
   const user = await requirePermission(permKey("CRM", "VIEW"));
 
-  const [services, organization] = await Promise.all([
+  const [services, pricing] = await Promise.all([
     db.service.findMany({
       where: { organizationId: user.organizationId },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
+      orderBy: [{ position: "asc" }, { category: "asc" }, { name: "asc" }],
       include: { _count: { select: { leads: true, clients: true } } },
     }),
-    db.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { currency: true } }),
+    getPricingSettings(user.organizationId),
   ]);
 
   return (
@@ -32,9 +33,23 @@ export default async function ServicesPage() {
           active: s.active,
           leadCount: s._count.leads,
           clientCount: s._count.clients,
+          billing: s.billing,
+          currency: s.currency,
+          tagline: s.tagline,
+          features: s.features,
+          badge: s.badge,
+          priceIsFrom: s.priceIsFrom,
+          monthlyFee: s.monthlyFee ? Number(s.monthlyFee) : null,
+          cardMode: s.cardMode,
+          cardPrice: s.cardPrice ? Number(s.cardPrice) : null,
+          maxInstallments: s.maxInstallments,
+          minMonths: s.minMonths,
+          isAddon: s.isAddon,
+          terms: s.terms,
+          fromGuide: !!s.guideKey,
         }))}
-        currency={organization.currency}
-        canManage={hasPermission(user, permKey("CRM", "MANAGE"))}
+        config={pricing.config}
+        canManage={isDirector(user)}
       />
     </div>
   );

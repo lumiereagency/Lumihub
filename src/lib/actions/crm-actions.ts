@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
+import { convertLeadToClient } from "@/lib/crm/convert";
 import { leadSchema, LEAD_STAGES, CONTACT_OUTCOMES, type ContactOutcome } from "@/lib/validation/crm";
 import { findLeadDuplicate } from "@/lib/crm/duplicates";
 import type { ActionState } from "@/lib/actions/auth-actions";
@@ -274,34 +275,12 @@ export async function deleteLeadAction(leadId: string) {
 export async function convertLeadToClientAction(leadId: string) {
   const user = await requirePermission(permKey("CRM", "MANAGE"));
 
-  const lead = await db.lead.findFirst({
-    where: { id: leadId, organizationId: user.organizationId },
-    include: { services: { select: { serviceId: true } } },
-  });
+  const lead = await db.lead.findFirst({ where: { id: leadId, organizationId: user.organizationId } });
   if (!lead || lead.convertedClientId) return;
 
-  const client = await db.$transaction(async (tx) => {
-    const createdClient = await tx.client.create({
-      data: {
-        organizationId: user.organizationId,
-        companyName: lead.company,
-        contactName: lead.contactName,
-        phone: lead.phone ?? lead.whatsapp,
-        instagram: lead.instagram,
-        website: lead.website,
-        status: "ATIVO",
-        notes: lead.notes,
-        services: { create: lead.services.map((s) => ({ serviceId: s.serviceId })) },
-      },
-    });
-
-    await tx.lead.update({
-      where: { id: leadId },
-      data: { stage: "FECHADO", convertedClientId: createdClient.id },
-    });
-
-    return createdClient;
-  });
+  const converted = await convertLeadToClient(user.organizationId, leadId);
+  if (!converted) return;
+  const client = { id: converted.clientId };
 
   await audit({
     organizationId: user.organizationId,

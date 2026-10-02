@@ -51,12 +51,18 @@ export function IntegrationForm({
         </div>
       )}
 
-      {provider.fields.map((field) => (
+      {provider.fields.map((field) =>
+        field.type === "checkbox" ? (
+          <label key={field.key} className="flex items-center gap-2.5 text-sm text-text-secondary">
+            <input type="checkbox" name={field.key} defaultChecked={currentConfig[field.key] === "on"} className="h-4 w-4 accent-[var(--lh-accent)]" />
+            {field.label}
+          </label>
+        ) : (
         <div key={field.key}>
           <Input
             label={field.label}
             name={field.key}
-            type={field.type === "checkbox" ? "text" : field.type}
+            type={field.type}
             required={field.required}
             defaultValue={field.secret ? "" : (currentConfig[field.key] ?? "")}
             placeholder={field.placeholder}
@@ -65,7 +71,8 @@ export function IntegrationForm({
             <p className="mt-1 text-xs text-text-tertiary">Já configurado ({credentialPreviews[field.key]}). Informe um novo valor para substituir.</p>
           )}
         </div>
-      ))}
+        ),
+      )}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Salvando..." : provider.oauthOnly ? "Salvar credenciais" : "Salvar e conectar"}

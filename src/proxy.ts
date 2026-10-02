@@ -20,6 +20,8 @@ const PUBLIC_PATHS = [
   "/midia/login",
   "/midia/acao",
   "/midia/publico",
+  // Orçamento enviado ao cliente por link (token aleatório é a credencial).
+  "/orcamento",
 ];
 
 export function proxy(request: NextRequest) {
