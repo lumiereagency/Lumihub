@@ -4,7 +4,7 @@ import {
   Target,
   Users,
   FileText,
-  FolderKanban,
+  SquareKanban,
   Camera,
   Calendar,
   Wallet,
@@ -35,6 +35,8 @@ export interface NavItem {
   // ex: "Financeiro" cobre Visão Geral/Receber/Cobranças/Pagar, cada uma
   // com sua própria permissão granular).
   permission: string | string[] | null;
+  // Outras rotas que também deixam este item ativo (ex: Projetos dentro de Tarefas).
+  matches?: string[];
 }
 
 export interface NavGroup {
@@ -49,9 +51,11 @@ export function getActiveHref(pathname: string, groups: NavGroup[]): string | nu
   let best: string | null = null;
   for (const group of groups) {
     for (const item of group.items) {
-      const matches = pathname === item.href || pathname.startsWith(`${item.href}/`);
-      if (matches && (!best || item.href.length > best.length)) {
-        best = item.href;
+      for (const href of [item.href, ...(item.matches ?? [])]) {
+        const matches = pathname === href || pathname.startsWith(`${href}/`);
+        if (matches && (!best || href.length > best.length)) {
+          best = item.href;
+        }
       }
     }
   }
@@ -84,8 +88,8 @@ export const CRM_TABS: NavTab[] = [
 ];
 
 export const PROJECT_TABS: NavTab[] = [
-  { label: "Projetos", href: "/projetos", permission: permKey("PROJECTS", "VIEW") },
   { label: "Tarefas", href: "/tarefas", permission: permKey("TASKS", "VIEW") },
+  { label: "Projetos", href: "/projetos", permission: permKey("PROJECTS", "VIEW") },
 ];
 
 export const FINANCE_TABS: NavTab[] = [
@@ -120,7 +124,13 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operação",
     items: [
-      { label: "Projetos", href: "/projetos", icon: FolderKanban, permission: permKey("PROJECTS", "VIEW") },
+      {
+        label: "Tarefas",
+        href: "/tarefas",
+        icon: SquareKanban,
+        permission: permKey("TASKS", "VIEW"),
+        matches: ["/projetos"],
+      },
       { label: "Captações", href: "/captacoes", icon: Camera, permission: permKey("CAPTURES", "VIEW") },
       { label: "Agenda", href: "/agenda", icon: Calendar, permission: permKey("CALENDAR", "VIEW") },
     ],

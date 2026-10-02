@@ -27,7 +27,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
     <>
       <div className="sticky top-0 z-40 px-3 pt-3 lg:hidden">
         <div className="flex h-14 items-center justify-between rounded-full border border-border bg-card pl-5 pr-2">
-          <Wordmark />
+          <Wordmark gradientId="lb-logo-mark-mobile" />
           <div className="flex items-center gap-1.5">
             <ThemeToggle />
             <button
@@ -45,7 +45,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden">
           <div className="flex h-16 items-center justify-between px-5">
-            <Wordmark />
+            <Wordmark gradientId="lb-logo-mark-mobile" />
             <button
               type="button"
               onClick={() => setOpen(false)}

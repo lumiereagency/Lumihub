@@ -7,6 +7,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { taskSchema, TASK_STATUSES } from "@/lib/validation/tasks";
 import type { ActionState } from "@/lib/actions/auth-actions";
+import { syncTaskPlacement } from "@/lib/tasks/board-service";
 
 function parseTaskForm(formData: FormData) {
   return taskSchema.safeParse({
@@ -33,7 +34,15 @@ export async function createTaskAction(_prev: ActionState, formData: FormData): 
     return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
   }
 
-  const task = await db.task.create({ data: { organizationId: user.organizationId, ...parsed.data } });
+  const task = await db.task.create({
+    data: {
+      organizationId: user.organizationId,
+      ...parsed.data,
+      createdByUserId: user.id,
+      completedAt: parsed.data.status === "CONCLUIDA" ? new Date() : null,
+    },
+  });
+  await syncTaskPlacement(task.id);
 
   await audit({
     organizationId: user.organizationId,
@@ -60,8 +69,12 @@ export async function updateTaskAction(taskId: string, _prev: ActionState, formD
 
   await db.task.update({
     where: { id: taskId },
-    data: { ...parsed.data, completedAt: parsed.data.status === "CONCLUIDA" ? new Date() : null },
+    data: {
+      ...parsed.data,
+      completedAt: parsed.data.status === "CONCLUIDA" ? (existing.completedAt ?? new Date()) : null,
+    },
   });
+  await syncTaskPlacement(taskId);
 
   await audit({
     organizationId: user.organizationId,
@@ -87,9 +100,10 @@ export async function updateTaskStatusAction(taskId: string, status: string) {
     where: { id: taskId },
     data: {
       status: status as (typeof TASK_STATUSES)[number],
-      completedAt: status === "CONCLUIDA" ? new Date() : null,
+      completedAt: status === "CONCLUIDA" ? (task.completedAt ?? new Date()) : null,
     },
   });
+  await syncTaskPlacement(taskId);
 
   revalidateTaskPaths(task.projectId);
 }

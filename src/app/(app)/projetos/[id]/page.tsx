@@ -21,7 +21,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     include: {
       client: { select: { id: true, companyName: true } },
       responsible: { select: { id: true, name: true } },
-      tasks: { orderBy: { createdAt: "desc" }, include: { assignee: { select: { name: true } } } },
+      tasks: { where: { archivedAt: null }, orderBy: { createdAt: "desc" }, include: { assignee: { select: { name: true } } } },
       team: { include: { teamMember: { select: { id: true, name: true, role: true } } } },
       captures: { orderBy: { date: "asc" } },
     },

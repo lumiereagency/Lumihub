@@ -38,6 +38,7 @@ model Organization {
   proposals                     Proposal[]
   projects                      Project[]
   tasks                         Task[]
+  taskBoards                    TaskBoard[]
   teamMembers                   TeamMember[]
   services                      Service[]
   captures                      Capture[]
@@ -163,6 +164,11 @@ model User {
   createdLeads              Lead[]                    @relation("LeadCreator")
   responsibleProjects       Project[]                 @relation("ProjectResponsible")
   assignedTasks             Task[]                    @relation("TaskAssignee")
+  createdTasks              Task[]                    @relation("TaskCreator")
+  taskBoardsCreated         TaskBoard[]               @relation("TaskBoardCreator")
+  taskMemberships           TaskMember[]              @relation("TaskMembership")
+  taskComments              TaskComment[]             @relation("TaskCommentAuthor")
+  taskAttachments           TaskAttachment[]          @relation("TaskAttachmentCreator")
   teamMemberProfile         TeamMember?
   calendarEvents            CalendarEvent[]           @relation("EventResponsible")
   notifications             Notification[]
@@ -377,6 +383,7 @@ model Client {
   accountsReceivable AccountReceivable[]
   financialMovements FinancialMovement[]
   documents          Document[]
+  tasks              Task[]
 
   @@index([organizationId, status])
   @@map("clients")
@@ -518,25 +525,163 @@ enum TaskPriority {
 }
 
 model Task {
-  id             String       @id @default(cuid())
-  organizationId String
-  projectId      String?
-  title          String
-  description    String?
-  assigneeUserId String?
-  status         TaskStatus   @default(A_FAZER)
-  priority       TaskPriority @default(MEDIA)
-  dueDate        DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  completedAt    DateTime?
+  id              String       @id @default(cuid())
+  organizationId  String
+  projectId       String?
+  boardId         String?
+  listId          String?
+  position        Float        @default(0)
+  title           String
+  description     String?
+  assigneeUserId  String?
+  status          TaskStatus   @default(A_FAZER)
+  priority        TaskPriority @default(MEDIA)
+  coverColor      String?
+  startDate       DateTime?
+  dueDate         DateTime?
+  clientId        String?
+  createdByUserId String?
+  archivedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  completedAt     DateTime?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee     User?        @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  board        TaskBoard?            @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  list         TaskList?             @relation(fields: [listId], references: [id], onDelete: SetNull)
+  client       Client?               @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  assignee     User?                 @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  createdBy    User?                 @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  labels       TaskLabelAssignment[]
+  members      TaskMember[]
+  checklist    TaskChecklistItem[]
+  comments     TaskComment[]
+  attachments  TaskAttachment[]
 
   @@index([organizationId, status])
+  @@index([boardId, listId, position])
   @@map("tasks")
+}
+
+// Quadros estilo Trello: cada quadro tem listas (colunas) livres; cada lista
+// diz a qual status ela "conta" para relatórios e para o dashboard.
+model TaskBoard {
+  id              String    @id @default(cuid())
+  organizationId  String
+  name            String
+  description     String?
+  color           String    @default("orange")
+  position        Float     @default(0)
+  createdByUserId String?
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("TaskBoardCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lists        TaskList[]
+  tasks        Task[]
+  labels       TaskLabel[]
+
+  @@index([organizationId])
+  @@map("task_boards")
+}
+
+model TaskList {
+  id        String     @id @default(cuid())
+  boardId   String
+  name      String
+  status    TaskStatus @default(A_FAZER)
+  position  Float      @default(0)
+  createdAt DateTime   @default(now())
+
+  board TaskBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([boardId])
+  @@map("task_lists")
+}
+
+model TaskLabel {
+  id        String   @id @default(cuid())
+  boardId   String
+  name      String   @default("")
+  color     String
+  createdAt DateTime @default(now())
+
+  board       TaskBoard             @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  assignments TaskLabelAssignment[]
+
+  @@index([boardId])
+  @@map("task_labels")
+}
+
+model TaskLabelAssignment {
+  taskId  String
+  labelId String
+
+  task  Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label TaskLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@map("task_label_assignments")
+}
+
+model TaskMember {
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation("TaskMembership", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_members")
+}
+
+model TaskChecklistItem {
+  id        String   @id @default(cuid())
+  taskId    String
+  text      String
+  done      Boolean  @default(false)
+  position  Float    @default(0)
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_checklist_items")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User? @relation("TaskCommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id              String   @id @default(cuid())
+  taskId          String
+  name            String
+  url             String
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  task      Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("TaskAttachmentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@map("task_attachments")
 }
 
 enum TeamMemberType {

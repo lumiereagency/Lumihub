@@ -16,7 +16,7 @@ export default async function ProjectsPage() {
       include: {
         client: { select: { id: true, companyName: true } },
         responsible: { select: { id: true, name: true } },
-        _count: { select: { tasks: true, team: true } },
+        _count: { select: { tasks: { where: { archivedAt: null } }, team: true } },
       },
     }),
     db.client.findMany({
