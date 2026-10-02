@@ -395,23 +395,25 @@ enum CardPriceMode {
 // Linha do orçamento: guarda uma cópia do serviço no momento da proposta,
 // para que editar o catálogo depois nunca mude um orçamento já enviado.
 model ProposalItem {
-  id              String         @id @default(cuid())
-  proposalId      String
-  serviceId       String?
-  name            String
-  tagline         String?
-  features        String[]       @default([])
-  billing         ServiceBilling @default(PONTUAL)
-  quantity        Int            @default(1)
-  unitPrice       Decimal        @db.Decimal(14, 2)
-  monthlyFee      Decimal?       @db.Decimal(14, 2)
-  priceIsFrom     Boolean        @default(false)
-  cardMode        CardPriceMode  @default(AUTO)
-  cardPrice       Decimal?       @db.Decimal(14, 2)
-  maxInstallments Int?
-  minMonths       Int?
-  terms           String?
-  position        Int            @default(0)
+  id                String         @id @default(cuid())
+  proposalId        String
+  serviceId         String?
+  name              String
+  tagline           String?
+  features          String[]       @default([])
+  billing           ServiceBilling @default(PONTUAL)
+  quantity          Int            @default(1)
+  unitPrice         Decimal        @db.Decimal(14, 2)
+  monthlyFee        Decimal?       @db.Decimal(14, 2)
+  priceIsFrom       Boolean        @default(false)
+  cardMode          CardPriceMode  @default(AUTO)
+  cardPrice         Decimal?       @db.Decimal(14, 2)
+  maxInstallments   Int?
+  minMonths         Int?
+  terms             String?
+  position          Int            @default(0)
+  commissionPercent Decimal?       @db.Decimal(5, 2)
+  commissionFixed   Decimal?       @db.Decimal(14, 2)
 
   proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   service  Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
@@ -860,21 +862,25 @@ model Service {
   createdAt      DateTime @default(now())
 
   // Orçamentos: como o serviço é cobrado e aparece na proposta.
-  billing         ServiceBilling @default(PONTUAL)
-  currency        String         @default("BRL")
-  tagline         String?
-  features        String[]       @default([])
-  badge           String?
-  priceIsFrom     Boolean        @default(false)
-  monthlyFee      Decimal?       @db.Decimal(14, 2)
-  cardMode        CardPriceMode  @default(AUTO)
-  cardPrice       Decimal?       @db.Decimal(14, 2)
-  maxInstallments Int?
-  minMonths       Int?
-  isAddon         Boolean        @default(false)
-  terms           String?
-  position        Int            @default(0)
-  guideKey        String?
+  billing           ServiceBilling @default(PONTUAL)
+  currency          String         @default("BRL")
+  tagline           String?
+  features          String[]       @default([])
+  badge             String?
+  priceIsFrom       Boolean        @default(false)
+  monthlyFee        Decimal?       @db.Decimal(14, 2)
+  cardMode          CardPriceMode  @default(AUTO)
+  cardPrice         Decimal?       @db.Decimal(14, 2)
+  maxInstallments   Int?
+  minMonths         Int?
+  isAddon           Boolean        @default(false)
+  terms             String?
+  position          Int            @default(0)
+  guideKey          String?
+  // Comissão de quem vende: % sobre o valor de tabela (1ª mensalidade nos
+  // planos mensais) ou valor fixo. Paga de uma vez, mesmo se o cliente parcelar.
+  commissionPercent Decimal?       @db.Decimal(5, 2)
+  commissionFixed   Decimal?       @db.Decimal(14, 2)
 
   organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   leads         LeadServiceInterest[]

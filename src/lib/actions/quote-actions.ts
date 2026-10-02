@@ -146,6 +146,20 @@ export async function saveQuoteAction(proposalId: string | null, input: QuoteInp
     return { ok: false, error: "Não dá para misturar serviços em real e em dólar no mesmo orçamento." };
   }
 
+  // Comissão congelada no orçamento (vem sempre do catálogo, nunca do
+  // formulário). Adicional sem comissão própria segue a maior % dos planos.
+  const ownPercent = (sid: string | null) => {
+    const sv = sid ? services.get(sid) : undefined;
+    return sv?.commissionPercent != null ? Number(sv.commissionPercent) : null;
+  };
+  const planPercent = Math.max(0, ...items.filter((i) => !(i.serviceId && services.get(i.serviceId)?.isAddon)).map((i) => ownPercent(i.serviceId) ?? 0));
+  const itemsWithCommission = items.map((i) => {
+    const sv = i.serviceId ? services.get(i.serviceId) : undefined;
+    const fixed = sv?.commissionFixed != null ? Number(sv.commissionFixed) : null;
+    const percent = fixed ? null : (ownPercent(i.serviceId) ?? (sv?.isAddon && planPercent > 0 ? planPercent : null));
+    return { ...i, commissionPercent: percent, commissionFixed: fixed };
+  });
+
   const discountPercent = canManage ? d.discountPercent : Number(existing?.discountPercent ?? 0);
   const settings = await getPricingSettings(org);
   const quote = computeQuote(
@@ -192,7 +206,7 @@ export async function saveQuoteAction(proposalId: string | null, input: QuoteInp
         data: {
           ...data,
           publicToken: existing.publicToken ?? newToken(),
-          items: { create: items },
+          items: { create: itemsWithCommission },
           // Reabrir para nova resposta quando o cliente pediu ajuste.
           ...(existing.response === "AJUSTE" ? { response: null, respondedAt: null } : {}),
         },
@@ -201,7 +215,7 @@ export async function saveQuoteAction(proposalId: string | null, input: QuoteInp
     id = existing.id;
   } else {
     const created = await db.proposal.create({
-      data: { organizationId: org, createdByUserId: user.id, publicToken: newToken(), ...data, items: { create: items } },
+      data: { organizationId: org, createdByUserId: user.id, publicToken: newToken(), ...data, items: { create: itemsWithCommission } },
     });
     id = created.id;
   }
@@ -345,6 +359,8 @@ export async function duplicateQuoteAction(proposalId: string): Promise<{ ok: tr
           minMonths: i.minMonths,
           terms: i.terms,
           position: i.position,
+          commissionPercent: i.commissionPercent,
+          commissionFixed: i.commissionFixed,
         })),
       },
     },

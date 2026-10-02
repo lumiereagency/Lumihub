@@ -47,6 +47,8 @@ export default async function ServicesPage() {
           isAddon: s.isAddon,
           terms: s.terms,
           fromGuide: !!s.guideKey,
+          commissionPercent: s.commissionPercent != null ? Number(s.commissionPercent) : null,
+          commissionFixed: s.commissionFixed != null ? Number(s.commissionFixed) : null,
         }))}
         config={pricing.config}
         canManage={isDirector(user)}

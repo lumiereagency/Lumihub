@@ -23,6 +23,10 @@ export interface GuideService {
   badge?: string;
   isAddon?: boolean;
   terms?: string;
+  // Comissão do comercial (Guia, página de cada produto). Adicional sem valor
+  // próprio segue a % do plano vendido junto.
+  commissionPercent?: number;
+  commissionFixed?: number;
 }
 
 const LOCOMOCAO = "Locomoção por conta do cliente.";
@@ -31,6 +35,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Captação Mobile ----------
   {
     guideKey: "captacao-mobile-essencial",
+    commissionPercent: 15,
     category: "Captação Mobile",
     name: "Captação Mobile · Essencial",
     tagline: "Presença constante · 5 vídeos por mês",
@@ -42,6 +47,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "captacao-mobile-crescimento",
+    commissionPercent: 20,
     category: "Captação Mobile",
     name: "Captação Mobile · Crescimento",
     tagline: "Ritmo de 2 posts por semana · 8 vídeos por mês",
@@ -54,6 +60,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "captacao-mobile-premium",
+    commissionPercent: 30,
     category: "Captação Mobile",
     name: "Captação Mobile · Premium",
     tagline: "Dominar o feed · 12 vídeos por mês",
@@ -66,6 +73,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Captação Câmera ----------
   {
     guideKey: "captacao-camera-essencial",
+    commissionPercent: 15,
     category: "Captação Câmera",
     name: "Captação Câmera · Essencial",
     tagline: "Imagem que posiciona · 5 vídeos por mês",
@@ -77,6 +85,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "captacao-camera-crescimento",
+    commissionPercent: 20,
     category: "Captação Câmera",
     name: "Captação Câmera · Crescimento",
     tagline: "Marca forte e consistente · 8 vídeos por mês",
@@ -89,6 +98,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "captacao-camera-premium",
+    commissionPercent: 30,
     category: "Captação Câmera",
     name: "Captação Câmera · Premium",
     tagline: "Produção de marca grande · 12 vídeos por mês",
@@ -167,6 +177,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Produções sob projeto ----------
   {
     guideKey: "producao-mobile",
+    commissionPercent: 15,
     category: "Produções sob projeto",
     name: "Produção Mobile",
     tagline: "Conteúdo ágil, produção inteligente",
@@ -178,6 +189,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "producao-producao",
+    commissionPercent: 20,
     category: "Produções sob projeto",
     name: "Produção",
     tagline: "Mais controle, mais possibilidades",
@@ -190,6 +202,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "producao-cinema",
+    commissionPercent: 30,
     category: "Produções sob projeto",
     name: "Produção Cinema",
     tagline: "Campanhas e brand films",
@@ -201,6 +214,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "producao-cobertura-evento",
+    commissionPercent: 15,
     category: "Produções sob projeto",
     name: "Cobertura de evento",
     tagline: "Até 4 horas, com câmera",
@@ -223,6 +237,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "producao-logo-animada",
+    commissionPercent: 15,
     category: "Produções sob projeto",
     name: "Logo animada / vinheta",
     features: ["Animação da marca para abertura e encerramento de vídeos"],
@@ -233,6 +248,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Sites ----------
   {
     guideKey: "site-essencial",
+    commissionFixed: 500,
     category: "Sites",
     name: "Site Essencial",
     tagline: "Presença profissional + WhatsApp",
@@ -247,6 +263,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "site-formulario",
+    commissionFixed: 100,
     category: "Sites",
     name: "Formulário Inteligente",
     tagline: "CRM antes do WhatsApp",
@@ -258,6 +275,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "site-cardapio-delivery",
+    commissionFixed: 500,
     category: "Sites",
     name: "Site Cardápio Delivery",
     tagline: "Modelo pronto para delivery",
@@ -272,6 +290,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "site-internacional-premium",
+    commissionFixed: 1000,
     category: "Sites",
     name: "Site Internacional Premium",
     tagline: "Para negócios fora do Brasil",
@@ -286,6 +305,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Cutlist ----------
   {
     guideKey: "cutlist-simples",
+    commissionFixed: 80,
     category: "Cutlist",
     name: "Cutlist · Simples",
     tagline: "Sistema de agendamento",
@@ -295,6 +315,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "cutlist-pro",
+    commissionFixed: 100,
     category: "Cutlist",
     name: "Cutlist · Pro",
     tagline: "Sistema de agendamento",
@@ -306,6 +327,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Consultoria ----------
   {
     guideKey: "consultoria-perfil-ia",
+    commissionPercent: 15,
     category: "Consultoria",
     name: "Consultoria de Perfil com IA",
     tagline: "Posicionamento para quem está começando",
@@ -320,6 +342,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- UGC ----------
   {
     guideKey: "ugc-portfolio-casting",
+    commissionFixed: 100,
     category: "UGC",
     name: "Portfólio UGC + Casting",
     tagline: "Agenciado Lumi para sempre",
@@ -339,6 +362,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Figuras Públicas ----------
   {
     guideKey: "figuras-publicas-tabela",
+    commissionPercent: 15,
     category: "Figuras Públicas",
     name: "Conteúdo para Figuras Públicas",
     tagline: "Qualidade, não quantidade",
@@ -350,6 +374,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "figuras-publicas-oferta-decisao",
+    commissionPercent: 15,
     category: "Figuras Públicas",
     name: "Figuras Públicas · Fechamento no ato",
     tagline: "Condição válida apenas no momento da negociação",
@@ -361,6 +386,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   },
   {
     guideKey: "figuras-publicas-parceria",
+    commissionPercent: 15,
     category: "Figuras Públicas",
     name: "Parceria Lumi · Figuras Públicas",
     tagline: "Contrato de 6 meses",
@@ -379,6 +405,7 @@ export const GUIDE_CATALOG: GuideService[] = [
   // ---------- Gestão Completa ----------
   {
     guideKey: "gestao-completa",
+    commissionPercent: 15,
     category: "Gestão Completa",
     name: "Gestão Completa",
     tagline: "Social media, tráfego e audiovisual",

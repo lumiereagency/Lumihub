@@ -30,6 +30,8 @@ const serviceSchema = z.object({
   minMonths: z.number().int().min(1).max(60).nullable().optional(),
   isAddon: z.boolean().default(false),
   terms: z.string().trim().max(1000).optional(),
+  commissionPercent: z.number().min(0).max(100, "A comissão em % vai de 0 a 100.").nullable().optional(),
+  commissionFixed: money.nullable().optional(),
 });
 
 function done() {
@@ -63,6 +65,8 @@ export async function saveServiceAction(serviceId: string | null, input: z.input
     minMonths: d.minMonths ?? null,
     isAddon: d.isAddon,
     terms: d.terms || null,
+    commissionPercent: d.commissionFixed ? null : (d.commissionPercent ?? null),
+    commissionFixed: d.commissionFixed ?? null,
   };
 
   if (serviceId) {
@@ -141,6 +145,8 @@ export async function loadGuideCatalogAction(): Promise<{ ok: true; created: num
       minMonths: g.minMonths ?? null,
       isAddon: g.isAddon ?? false,
       terms: g.terms ?? null,
+      commissionPercent: g.commissionPercent ?? null,
+      commissionFixed: g.commissionFixed ?? null,
       position: index,
     };
     await db.service.upsert({

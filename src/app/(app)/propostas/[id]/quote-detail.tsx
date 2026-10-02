@@ -113,6 +113,7 @@ export function QuoteDetail({
   autentique,
   companyReady,
   permissions,
+  commission,
 }: {
   proposal: DetailProposal;
   quote: QuoteBreakdown;
@@ -123,6 +124,7 @@ export function QuoteDetail({
   autentique: { connected: boolean; sandbox: boolean };
   companyReady: boolean;
   permissions: { canEdit: boolean; canCreate: boolean; canDelete: boolean; canContract: boolean; canManage: boolean };
+  commission: { total: number; seller: string | null; lines: { name: string; rule: string; base: number | null; amount: number }[] } | null;
 }) {
   const router = useRouter();
   const [phone, setPhone] = useState(proposal.recipientPhone ?? "");
@@ -566,6 +568,39 @@ export function QuoteDetail({
             </ol>
             {proposal.validUntil && <p className="text-xs text-text-tertiary">Válido até {new Date(proposal.validUntil).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>}
           </section>
+
+          {commission && !proposal.legacy && (
+            <section className={card}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[17px] font-semibold tracking-tight text-text-primary">Comissão</h2>
+                  {commission.seller && <p className="text-sm text-text-tertiary">{commission.seller}</p>}
+                </div>
+                <p className="lb-figures text-xl font-semibold tracking-tight text-text-primary">{money(commission.total)}</p>
+              </div>
+              {commission.lines.length > 0 ? (
+                <ul className="flex flex-col gap-2 text-sm">
+                  {commission.lines.map((l, idx) => (
+                    <li key={idx} className="flex items-start justify-between gap-3">
+                      <span className="min-w-0 text-text-secondary">
+                        {l.name}
+                        <span className="block text-xs text-text-tertiary">
+                          {l.rule}
+                          {l.base != null ? ` (${money(l.base)})` : ""}
+                        </span>
+                      </span>
+                      <span className="lb-figures shrink-0 text-text-primary">{money(l.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-text-tertiary">Nenhum item com comissão definida no catálogo.</p>
+              )}
+              <p className="rounded-2xl bg-card-elevated/60 px-3 py-2.5 text-xs text-text-secondary">
+                Paga de uma vez, depois que o pagamento do cliente é confirmado, mesmo que ele parcele no cartão. Base: valor de tabela (Pix).
+              </p>
+            </section>
+          )}
 
           {!proposal.legacy && (
             <section className={card}>

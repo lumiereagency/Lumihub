@@ -54,6 +54,8 @@ export interface ServiceRow {
   isAddon: boolean;
   terms: string | null;
   fromGuide: boolean;
+  commissionPercent: number | null;
+  commissionFixed: number | null;
 }
 
 const SUGGESTED_CATEGORIES = [
@@ -262,6 +264,8 @@ export function ServiceCatalog({
       minMonths: num(formData.get("minMonths")),
       isAddon: formData.get("isAddon") === "on",
       terms: String(formData.get("terms") ?? ""),
+      commissionPercent: formData.get("commissionType") === "PERCENT" ? num(formData.get("commissionValue")) : null,
+      commissionFixed: formData.get("commissionType") === "FIXED" ? num(formData.get("commissionValue")) : null,
     };
     startTransition(async () => {
       const result = await saveServiceAction(
@@ -424,6 +428,16 @@ export function ServiceCatalog({
                       {s.isAddon && (
                         <span className="rounded-full bg-card-elevated px-2.5 py-1 text-xs text-text-secondary">
                           Adicional
+                        </span>
+                      )}
+                      {canManage && (s.commissionPercent != null || s.commissionFixed != null || s.isAddon) && (
+                        <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs text-success">
+                          Comissão{" "}
+                          {s.commissionFixed != null
+                            ? formatCurrency(s.commissionFixed)
+                            : s.commissionPercent != null
+                              ? `${s.commissionPercent.toLocaleString("pt-BR")}%`
+                              : "do plano"}
                         </span>
                       )}
                     </div>
@@ -680,6 +694,28 @@ export function ServiceCatalog({
                 />
                 É um adicional
               </label>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+              <label className="flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
+                Comissão do comercial
+                <select
+                  name="commissionType"
+                  defaultValue={current?.commissionFixed != null ? "FIXED" : current?.commissionPercent != null ? "PERCENT" : "NONE"}
+                  className="h-11 rounded-xl border border-border bg-card px-3 text-sm text-text-primary focus:outline-none focus:ring-4 focus:ring-accent/15"
+                >
+                  <option value="PERCENT">% do valor</option>
+                  <option value="FIXED">Valor fixo (R$)</option>
+                  <option value="NONE">Sem comissão / segue o plano</option>
+                </select>
+              </label>
+              <Input
+                label="Valor"
+                name="commissionValue"
+                inputMode="decimal"
+                defaultValue={current?.commissionFixed ?? current?.commissionPercent ?? ""}
+                placeholder="Ex: 20 (para 20%) ou 500"
+                hint="Paga de uma vez após o pagamento do cliente, mesmo parcelado. Nos mensais, a % é sobre a 1ª mensalidade."
+              />
             </div>
             <Textarea
               label="Anotações internas (não aparecem para o cliente)"

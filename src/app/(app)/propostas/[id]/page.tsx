@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { describeChoice, parseChoice } from "@/lib/pricing/engine";
 import { fillTemplate, getPricingSettings } from "@/lib/pricing/settings";
 import { quoteForProposal } from "@/lib/pricing/quote";
+import { computeCommission } from "@/lib/pricing/commission";
 import { isChannelConnected } from "@/lib/integrations/messaging";
 import { getAutentiqueCredentials } from "@/lib/integrations/autentique";
 import type { StoredSigner } from "@/lib/contracts/signature-sync";
@@ -54,6 +55,20 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
     validade: "",
   });
 
+  const showCommission = isDirector(user) || proposal.createdByUserId === user.id;
+  const commission = showCommission
+    ? computeCommission(
+        proposal.items.map((i) => ({
+          name: i.name,
+          billing: i.billing,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          commissionPercent: i.commissionPercent != null ? Number(i.commissionPercent) : null,
+          commissionFixed: i.commissionFixed != null ? Number(i.commissionFixed) : null,
+        })),
+        Number(proposal.discountPercent),
+      )
+    : null;
   const canContract = hasPermission(user, permKey("CONTRACTS", "CREATE")) || hasPermission(user, permKey("CRM", "MANAGE"));
 
   return (
@@ -124,6 +139,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
             : null,
         }}
         quote={quote}
+        commission={commission && { ...commission, seller: proposal.createdBy?.name ?? null }}
         link={link}
         quoteMessage={quoteMessage}
         contractMessage={contractMessage}
