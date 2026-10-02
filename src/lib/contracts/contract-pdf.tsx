@@ -2,6 +2,7 @@ import "server-only";
 import path from "node:path";
 import { Circle, Document, Font, Page, StyleSheet, Svg, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import type { ContractData } from "@/lib/contracts/contract-data";
+import { documentLabel, formatDocument } from "@/lib/documents";
 
 // Contrato A4 na identidade do Guia Comercial, adaptada para impressão:
 // faixa preta com a marca dourada no topo, corpo claro para leitura e
@@ -193,7 +194,11 @@ function ContractDocument({ d }: { d: ContractData }) {
     <View style={s.party}>
       <Text style={s.partyRole}>{role}</Text>
       <Text style={s.partyName}>{p.name}</Text>
-      {p.document && <Text style={s.small}>{p.document.replace(/\D/g, "").length === 11 ? "CPF" : "CNPJ"} {p.document}</Text>}
+      {p.document && (
+        <Text style={s.small}>
+          {documentLabel(p.document)} {formatDocument(p.document)}
+        </Text>
+      )}
       {p.address && <Text style={s.small}>{p.address}</Text>}
       {(p.email || p.phone) && <Text style={s.small}>{[p.email, p.phone].filter(Boolean).join(" · ")}</Text>}
       {p.representative && (
@@ -285,7 +290,7 @@ function ContractDocument({ d }: { d: ContractData }) {
                 {d.paymentLines.join(" · ")}
               </Text>
             )}
-            <Text style={[s.small, { marginTop: 2 }]}>Valor total do contrato no período mínimo (base Pix): {money(d.quote.contractValue)}.</Text>
+            <Text style={[s.small, { marginTop: 2 }]}>{d.hasMonthly && d.minMonths ? "Valor total do contrato no período mínimo (base Pix)" : "Valor total do contrato (base Pix)"}: {money(d.quote.contractValue)}.</Text>
           </View>
 
           <Label>Cláusulas</Label>

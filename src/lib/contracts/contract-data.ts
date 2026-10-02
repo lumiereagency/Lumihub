@@ -47,6 +47,8 @@ export interface ContractData {
 }
 
 interface SignerData {
+  personType?: "PF" | "PJ";
+  representativeDoc?: string | null;
   name?: string;
   document?: string;
   representative?: string;
@@ -104,7 +106,9 @@ export async function loadContractData(organizationId: string, proposalId: strin
       address: signer.address || proposal.client?.address || null,
       email: signer.email || proposal.client?.email || null,
       phone: signer.phone || proposal.recipientPhone || proposal.client?.phone || null,
-      representative: signer.representative || proposal.recipientName || proposal.client?.contactName || null,
+      // Pessoa física assina por si: sem linha de representante no contrato.
+      representative: signer.personType === "PF" ? null : signer.representative || proposal.recipientName || proposal.client?.contactName || null,
+      representativeDoc: signer.personType === "PF" ? null : (signer.representativeDoc ?? null),
     },
     items,
     quote,

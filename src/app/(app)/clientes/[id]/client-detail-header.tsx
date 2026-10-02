@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Mail, Phone, MapPin, AtSign, Globe } from "lucide-react";
 import { updateClientAction, deleteClientAction } from "@/lib/actions/client-actions";
 import { CLIENT_STATUS_LABELS } from "@/lib/validation/clients";
+import { documentLabel, formatDocument } from "@/lib/documents";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export function ClientDetailHeader({
             <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>
               {CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}
             </Badge>
-            {client.cnpj && <span className="text-xs text-text-tertiary">CNPJ {client.cnpj}</span>}
+            {client.cnpj && <span className="text-xs text-text-tertiary">{documentLabel(client.cnpj)} {formatDocument(client.cnpj)}</span>}
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-text-secondary">
             {client.email && (

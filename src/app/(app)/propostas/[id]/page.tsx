@@ -80,6 +80,8 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
           paymentLines: describeChoice(parseChoice(proposal.chosenPayment), quote, money),
           signer: signer
             ? {
+                personType: signer.personType === "PF" ? "PF" : signer.personType === "PJ" ? "PJ" : null,
+                representativeDoc: signer.representativeDoc ? String(signer.representativeDoc) : null,
                 name: String(signer.name ?? ""),
                 document: String(signer.document ?? ""),
                 representative: signer.representative ? String(signer.representative) : null,

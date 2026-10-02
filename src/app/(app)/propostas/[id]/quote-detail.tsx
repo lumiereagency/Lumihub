@@ -24,6 +24,7 @@ import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/format";
 import type { QuoteBreakdown } from "@/lib/pricing/engine";
 import { PROPOSAL_STATUS_LABELS } from "@/lib/validation/proposals";
+import { documentLabel } from "@/lib/documents";
 import { duplicateQuoteAction, markQuoteSentAction, sendQuoteWhatsAppAction, setQuoteStatusAction } from "@/lib/actions/quote-actions";
 import { deleteProposalAction } from "@/lib/actions/proposal-actions";
 import { generateContractAction, refreshContractSignatureAction, sendContractForSignatureAction } from "@/lib/actions/quote-contract-actions";
@@ -62,7 +63,7 @@ interface DetailProposal {
   responseMessage: string | null;
   respondedAt: string | null;
   paymentLines: string[];
-  signer: { name: string; document: string; representative: string | null; email: string; phone: string; address: string; paymentDay: number | null } | null;
+  signer: { personType: "PF" | "PJ" | null; representativeDoc: string | null; name: string; document: string; representative: string | null; email: string; phone: string; address: string; paymentDay: number | null } | null;
   notes: string | null;
   legacy: boolean;
   legacyValue: number;
@@ -236,7 +237,7 @@ export function QuoteDetail({
               <Link href={proposal.party.kind === "client" ? `/clientes/${proposal.party.id}` : "/crm"} className="text-text-secondary underline-offset-2 hover:underline">
                 {proposal.party.name}
               </Link>
-              {proposal.recipientName ? ` · ${proposal.recipientName}` : ""}
+              {proposal.recipientName && proposal.recipientName.trim().toLowerCase() !== proposal.party.name.trim().toLowerCase() ? ` · ${proposal.recipientName}` : ""}
             </p>
           )}
         </div>
@@ -327,9 +328,11 @@ export function QuoteDetail({
               {proposal.signer && (
                 <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                   {[
-                    ["Nome / razão social", proposal.signer.name],
-                    ["CPF / CNPJ", proposal.signer.document],
-                    ["Responsável", proposal.signer.representative],
+                    ["Contratante", proposal.signer.personType === "PF" ? "Pessoa física" : proposal.signer.personType === "PJ" ? "Empresa" : null],
+                    [proposal.signer.personType === "PF" ? "Nome completo" : "Nome / razão social", proposal.signer.name],
+                    [documentLabel(proposal.signer.document), proposal.signer.document],
+                    ["Quem assina", proposal.signer.representative],
+                    ["CPF de quem assina", proposal.signer.representativeDoc],
                     ["E-mail", proposal.signer.email],
                     ["WhatsApp", proposal.signer.phone],
                     ["Endereço", proposal.signer.address],

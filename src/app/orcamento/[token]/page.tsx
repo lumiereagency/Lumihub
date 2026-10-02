@@ -33,17 +33,25 @@ async function loadProposal(token: string) {
 export default async function PublicQuotePage({ params }: PageProps<"/orcamento/[token]">) {
   const { token } = await params;
   const proposal = await loadProposal(token);
-  if (!proposal || proposal.status === "RASCUNHO") notFound();
+  if (!proposal) notFound();
 
   // Visualização conta só quando quem abre não é alguém logado da equipe.
   const viewer = await getCurrentUser().catch(() => null);
   const isTeam = viewer?.organizationId === proposal.organizationId;
   if (!isTeam && proposal.status !== "ACEITA") {
     const now = new Date();
+    // Rascunho aberto por alguém de fora: o link já saiu, então conta como enviado.
+    const wasDraft = proposal.status === "RASCUNHO";
     await db.proposal.update({
       where: { id: proposal.id },
-      data: { viewCount: { increment: 1 }, lastViewedAt: now, ...(proposal.viewedAt ? {} : { viewedAt: now }) },
+      data: {
+        viewCount: { increment: 1 },
+        lastViewedAt: now,
+        ...(proposal.viewedAt ? {} : { viewedAt: now }),
+        ...(wasDraft ? { status: "ENVIADA", sentAt: proposal.sentAt ?? now } : {}),
+      },
     });
+    if (wasDraft) proposal.status = "ENVIADA";
     if (!proposal.viewedAt && proposal.createdByUserId) {
       await db.notification.create({
         data: {

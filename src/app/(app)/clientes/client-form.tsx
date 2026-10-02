@@ -53,7 +53,7 @@ export function ClientForm({
       <Input label="Empresa" name="companyName" required defaultValue={defaultValues?.companyName} placeholder="Nome da empresa" />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="CNPJ" name="cnpj" defaultValue={defaultValues?.cnpj ?? ""} />
+        <Input label="CPF ou CNPJ" name="cnpj" defaultValue={defaultValues?.cnpj ?? ""} />
         <Select label="Status" name="status" defaultValue={defaultValues?.status ?? "ATIVO"}>
           {CLIENT_STATUSES.map((s) => (
             <option key={s} value={s}>

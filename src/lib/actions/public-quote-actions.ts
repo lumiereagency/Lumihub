@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { convertLeadToClient, fillClientGaps } from "@/lib/crm/convert";
 import { LEAD_STAGES } from "@/lib/validation/crm";
+import { formatDocument, isValidCnpj, isValidCpf, onlyDigits } from "@/lib/documents";
 
 // Ações da página pública do orçamento (/orcamento/[token]): sem login. O
 // token de 24 caracteres aleatórios é a única credencial, e ele só permite
@@ -13,22 +14,30 @@ import { LEAD_STAGES } from "@/lib/validation/crm";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-const signerSchema = z.object({
-  name: z.string().trim().min(3, "Informe o nome completo ou a razão social.").max(160),
-  document: z
-    .string()
-    .trim()
-    .transform((v) => v.replace(/\D/g, ""))
-    .refine((v) => v.length === 11 || v.length === 14, "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos)."),
-  representative: z.string().trim().max(120).optional(),
-  email: z.string().trim().email("Informe um e-mail válido."),
-  phone: z
-    .string()
-    .trim()
-    .refine((v) => v.replace(/\D/g, "").length >= 10, "Informe o WhatsApp com DDD."),
-  address: z.string().trim().min(8, "Informe o endereço completo.").max(300),
-  paymentDay: z.number().int().min(1).max(28).nullable().optional(),
-});
+const signerSchema = z
+  .object({
+    personType: z.enum(["PF", "PJ"]),
+    name: z.string().trim().min(3, "Informe o nome completo.").max(160),
+    document: z.string().trim().transform(onlyDigits),
+    representative: z.string().trim().max(120).optional(),
+    representativeDoc: z.string().trim().transform(onlyDigits).optional(),
+    email: z.string().trim().email("Informe um e-mail válido."),
+    phone: z
+      .string()
+      .trim()
+      .refine((v) => v.replace(/\D/g, "").length >= 10, "Informe o WhatsApp com DDD."),
+    address: z.string().trim().min(8, "Informe o endereço completo.").max(300),
+    paymentDay: z.number().int().min(1).max(28).nullable().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.personType === "PF") {
+      if (!isValidCpf(v.document)) ctx.addIssue({ code: "custom", path: ["document"], message: "Confira o CPF: os números não batem." });
+      return;
+    }
+    if (!isValidCnpj(v.document)) ctx.addIssue({ code: "custom", path: ["document"], message: "Confira o CNPJ: os números não batem." });
+    if (!v.representative || v.representative.length < 3) ctx.addIssue({ code: "custom", path: ["representative"], message: "Informe quem vai assinar pela empresa." });
+    if (v.representativeDoc && !isValidCpf(v.representativeDoc)) ctx.addIssue({ code: "custom", path: ["representativeDoc"], message: "Confira o CPF de quem assina." });
+  });
 
 const responseSchema = z.discriminatedUnion("response", [
   z.object({
@@ -42,12 +51,6 @@ const responseSchema = z.discriminatedUnion("response", [
 ]);
 
 export type QuoteResponseInput = z.input<typeof responseSchema>;
-
-function formatDoc(digits: string): string {
-  return digits.length === 11
-    ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-    : digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-}
 
 async function notifyTeam(organizationId: string, proposal: { id: string; createdByUserId: string | null; leadId: string | null }, title: string, body: string) {
   const [admins, lead] = await Promise.all([
@@ -73,7 +76,6 @@ export async function respondToQuoteAction(token: string, input: QuoteResponseIn
   const proposal = await db.proposal.findUnique({ where: { publicToken: token } });
   if (!proposal) return { ok: false, error: "Este orçamento não está mais disponível." };
   if (proposal.status === "ACEITA") return { ok: false, error: "Este orçamento já foi aceito. Se quiser mudar algo, fale com a gente pelo WhatsApp." };
-  if (proposal.status === "RASCUNHO") return { ok: false, error: "Este orçamento ainda está sendo preparado." };
   if (proposal.validUntil && proposal.validUntil.getTime() < Date.now() && d.response === "ACEITA") {
     return { ok: false, error: "A validade deste orçamento terminou. Peça uma atualização pelo botão \"Quero ajustar\" ou fale com a gente." };
   }
@@ -82,7 +84,14 @@ export async function respondToQuoteAction(token: string, input: QuoteResponseIn
   const who = proposal.recipientName?.split(" ")[0] ?? "O cliente";
 
   if (d.response === "ACEITA") {
-    const signer = { ...d.signer, document: formatDoc(d.signer.document) };
+    const pf = d.signer.personType === "PF";
+    const signer = {
+      ...d.signer,
+      document: formatDocument(d.signer.document),
+      // Pessoa física assina por si mesma; só empresa tem representante.
+      representative: pf ? null : d.signer.representative,
+      representativeDoc: pf || !d.signer.representativeDoc ? null : formatDocument(d.signer.representativeDoc),
+    };
     await db.proposal.update({
       where: { id: proposal.id },
       data: {
@@ -98,7 +107,7 @@ export async function respondToQuoteAction(token: string, input: QuoteResponseIn
     // Fechou: o lead vira cliente já com os dados que ele mesmo preencheu.
     const extras = {
       companyName: signer.name,
-      contactName: signer.representative || proposal.recipientName,
+      contactName: pf ? signer.name : signer.representative || proposal.recipientName,
       cnpj: signer.document,
       email: signer.email,
       phone: signer.phone,
