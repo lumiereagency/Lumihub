@@ -7,6 +7,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { searchYoutubeProspects, type YoutubeProspect } from "@/lib/integrations/youtube";
 import type { ActionState } from "@/lib/actions/auth-actions";
+import { findLeadDuplicate } from "@/lib/crm/duplicates";
 
 export async function searchYoutubeProspectsAction(
   query: string,
@@ -31,6 +32,8 @@ export async function importYoutubeProspectAction(prospect: YoutubeProspect): Pr
     where: { organizationId: user.organizationId, deletedAt: null, website: prospect.channelUrl },
   });
   if (existing) return { error: "Este canal já está cadastrado no funil." };
+  const duplicate = await findLeadDuplicate(user.organizationId, { company: prospect.title });
+  if (duplicate) return { error: duplicate };
 
   const uploadNote =
     prospect.daysSinceLastUpload === null

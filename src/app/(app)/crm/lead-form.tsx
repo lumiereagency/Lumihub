@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { ChevronDown, Flame, Snowflake, ThermometerSun } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown, Flame, Snowflake, ThermometerSun } from "lucide-react";
+import { checkLeadDuplicateAction } from "@/lib/actions/crm-actions";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { LEAD_STAGES, LEAD_STAGE_LABELS } from "@/lib/validation/crm";
 import { cn } from "@/lib/cn";
@@ -28,6 +29,13 @@ export interface LeadFormValues {
   stage: string;
   nextContactAt: string | null;
   notes: string | null;
+  serviceIds?: string[];
+}
+
+export interface ServiceOption {
+  id: string;
+  name: string;
+  category: string | null;
 }
 
 const initialState: ActionState = {};
@@ -61,6 +69,8 @@ export function LeadForm({
   action,
   defaultValues,
   users,
+  services = [],
+  leadId,
   currentUserId,
   onSuccess,
   submitLabel,
@@ -68,6 +78,8 @@ export function LeadForm({
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   defaultValues?: LeadFormValues;
   users: { id: string; name: string }[];
+  services?: ServiceOption[];
+  leadId?: string;
   currentUserId?: string;
   onSuccess?: () => void;
   submitLabel: string;
@@ -75,6 +87,30 @@ export function LeadForm({
   const [state, formAction, pending] = useActionState(action, initialState);
   const successRef = useRef(state.success);
   const isEdit = !!defaultValues;
+  const [identity, setIdentity] = useState({ company: defaultValues?.company ?? "", instagram: defaultValues?.instagram ?? "" });
+  const [duplicate, setDuplicate] = useState<string | null>(null);
+  const servicesByCategory = services.reduce<Record<string, ServiceOption[]>>((acc, s) => {
+    const key = s.category || "Outros";
+    (acc[key] ??= []).push(s);
+    return acc;
+  }, {});
+
+  // Avisa antes de salvar se outra pessoa já cadastrou esse negócio.
+  useEffect(() => {
+    const unchanged = isEdit && identity.company === (defaultValues?.company ?? "") && identity.instagram === (defaultValues?.instagram ?? "");
+    if (unchanged || (identity.company.trim().length < 3 && identity.instagram.trim().length < 3)) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      checkLeadDuplicateAction(identity.company, identity.instagram, leadId).then((message) => {
+        if (!cancelled) setDuplicate(message);
+      });
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity.company, identity.instagram]);
 
   useEffect(() => {
     if (state.success && state.success !== successRef.current) {
@@ -88,7 +124,18 @@ export function LeadForm({
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      <Input label="Empresa ou nome do lead" name="company" required autoFocus={!isEdit} defaultValue={defaultValues?.company} placeholder="Ex: Studio Aurora" />
+      <Input
+        label="Empresa ou nome do lead"
+        name="company"
+        required
+        autoFocus={!isEdit}
+        defaultValue={defaultValues?.company}
+        placeholder="Ex: Studio Aurora"
+        onChange={(e) => {
+          setDuplicate(null);
+          setIdentity((v) => ({ ...v, company: e.target.value }));
+        }}
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label="Pessoa de contato" name="contactName" defaultValue={defaultValues?.contactName ?? ""} placeholder="Nome de quem responde" />
@@ -96,7 +143,16 @@ export function LeadForm({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Input label="Instagram" name="instagram" defaultValue={defaultValues?.instagram ?? ""} placeholder="@perfil" />
+        <Input
+          label="Instagram"
+          name="instagram"
+          defaultValue={defaultValues?.instagram ?? ""}
+          placeholder="@perfil ou link"
+          onChange={(e) => {
+            setDuplicate(null);
+            setIdentity((v) => ({ ...v, instagram: e.target.value }));
+          }}
+        />
         <div>
           <Input label="Origem" name="source" list="lead-source-suggestions" defaultValue={defaultValues?.source ?? ""} placeholder="De onde veio?" />
           <datalist id="lead-source-suggestions">
@@ -106,6 +162,13 @@ export function LeadForm({
           </datalist>
         </div>
       </div>
+
+      {duplicate && (
+        <div role="alert" className="flex items-start gap-2.5 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-text-primary">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" />
+          <span>{duplicate} Combine com a responsável antes de cadastrar de novo.</span>
+        </div>
+      )}
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm font-medium text-text-secondary">Temperatura</legend>
@@ -138,6 +201,40 @@ export function LeadForm({
             );
           })}
         </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium text-text-secondary">Serviços de interesse</legend>
+        <input type="hidden" name="servicesField" value="1" />
+        {services.length === 0 ? (
+          <p className="rounded-2xl bg-card-elevated px-4 py-3 text-sm text-text-tertiary">
+            Nenhum serviço cadastrado ainda — o administrador cadastra na aba <strong className="text-text-secondary">Serviços</strong> do CRM.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {Object.entries(servicesByCategory).map(([category, items]) => (
+              <div key={category} className="flex flex-col gap-1.5">
+                {Object.keys(servicesByCategory).length > 1 && <p className="text-xs font-medium text-text-tertiary">{category}</p>}
+                <div className="flex flex-wrap gap-2">
+                  {items.map((service) => (
+                    <label key={service.id} className="cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="serviceIds"
+                        value={service.id}
+                        defaultChecked={defaultValues?.serviceIds?.includes(service.id)}
+                        className="peer sr-only"
+                      />
+                      <span className="inline-flex h-9 items-center rounded-full border border-border px-3.5 text-sm text-text-secondary transition-colors peer-checked:border-transparent peer-checked:bg-ink peer-checked:text-ink-on peer-focus-visible:ring-4 peer-focus-visible:ring-accent/15">
+                        {service.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </fieldset>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

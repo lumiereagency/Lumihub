@@ -18,11 +18,15 @@ export interface SectionTab {
 export function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
   const pathname = usePathname();
   if (tabs.length <= 1) return null;
+  // A aba mais específica vence: em /crm/servicos só "Serviços" fica ativa, não "Funil" (/crm).
+  const activeHref = tabs
+    .filter((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="scrollbar-thin mb-6 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-card p-1">
       {tabs.map((tab) => {
-        const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+        const active = tab.href === activeHref;
         return (
           <Link
             key={tab.href}

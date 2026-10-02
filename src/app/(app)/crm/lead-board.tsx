@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import {
   AlertCircle,
   Building2,
@@ -13,8 +13,10 @@ import {
   Search,
   Target,
   TrendingUp,
+  Upload,
   UserPlus,
   Wallet,
+  X,
 } from "lucide-react";
 import { LEAD_STAGES, LEAD_STAGE_LABELS, LEAD_TEMPERATURE_LABELS } from "@/lib/validation/crm";
 import {
@@ -33,12 +35,15 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LeadForm, type LeadFormValues } from "./lead-form";
+import { LeadForm, type LeadFormValues, type ServiceOption } from "./lead-form";
+import { LeadImport } from "./lead-import";
+import { LeadContactPanel } from "./lead-contact-panel";
+import { MyDaySection, NewLeadsStrip } from "./crm-today";
 
 type Stage = (typeof LEAD_STAGES)[number];
 type Tone = "neutral" | "success" | "warning" | "error" | "info" | "accent";
 
-interface LeadRow {
+export interface LeadRow {
   id: string;
   company: string;
   contactName: string | null;
@@ -61,6 +66,7 @@ interface LeadRow {
   notes: string | null;
   convertedClientId: string | null;
   createdAt: string;
+  serviceIds: string[];
 }
 
 export interface LeadActivity {
@@ -155,6 +161,7 @@ function toFormValues(lead: LeadRow): LeadFormValues {
     stage: lead.stage,
     nextContactAt: lead.nextContactAt,
     notes: lead.notes,
+    serviceIds: lead.serviceIds,
   };
 }
 
@@ -222,6 +229,8 @@ function describeActivity(a: LeadActivity): string {
       return `atualizou ${a.company}`;
     case "LEAD_DELETED":
       return `excluiu ${a.company}`;
+    case "LEAD_CONTACTED":
+      return `registrou contato com ${a.company}`;
     case "LEAD_CONVERTED_TO_CLIENT":
       return `converteu ${a.company} em cliente`;
     default:
@@ -239,6 +248,7 @@ export function LeadBoard({
   currency,
   permissions,
   activity,
+  services,
   now,
 }: {
   leads: LeadRow[];
@@ -247,9 +257,20 @@ export function LeadBoard({
   currency: string;
   permissions: Permissions;
   activity: LeadActivity[];
+  services: ServiceOption[];
   now: number;
 }) {
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [focusContact, setFocusContact] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [serviceFilter, setServiceFilter] = useState("TODOS");
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -327,6 +348,7 @@ export function LeadBoard({
       if (ownerFilter === "NENHUM" ? l.ownerUserId : ownerFilter !== "TODOS" && l.ownerUserId !== ownerFilter) return false;
       if (creatorFilter !== "TODOS" && l.createdBy?.id !== creatorFilter) return false;
       if (temperatureFilter !== "TODAS" && (l.temperature ?? "") !== (temperatureFilter === "NENHUMA" ? "" : temperatureFilter)) return false;
+      if (serviceFilter !== "TODOS" && !l.serviceIds.includes(serviceFilter)) return false;
       if (!q) return true;
       return [l.company, l.contactName, l.whatsapp, l.phone, l.instagram, l.city, l.segment, l.source]
         .filter(Boolean)
@@ -341,7 +363,7 @@ export function LeadBoard({
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [leads, search, groupFilter, onlyFollowUp, ownerFilter, creatorFilter, temperatureFilter, sort]);
+  }, [leads, search, groupFilter, onlyFollowUp, ownerFilter, creatorFilter, temperatureFilter, serviceFilter, sort]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -362,9 +384,8 @@ export function LeadBoard({
       .sort((a, b) => b.created30 - a.created30 || b.openOwned - a.openOwned);
   }, [permissions.canSeeTeam, users, leads, activity, now]);
 
-  const leadHistory = editingLead ? activity.filter((a) => a.leadId === editingLead.id).slice(0, 10) : [];
   const hasActiveFilters =
-    !!search || !!groupFilter || onlyFollowUp || ownerFilter !== "TODOS" || creatorFilter !== "TODOS" || temperatureFilter !== "TODAS";
+    !!search || !!groupFilter || onlyFollowUp || ownerFilter !== "TODOS" || creatorFilter !== "TODOS" || temperatureFilter !== "TODAS" || serviceFilter !== "TODOS";
 
   function handleStageChange(leadId: string, stage: string) {
     startTransition(() => updateLeadStageAction(leadId, stage));
@@ -377,6 +398,7 @@ export function LeadBoard({
     setOwnerFilter("TODOS");
     setCreatorFilter("TODOS");
     setTemperatureFilter("TODAS");
+    setServiceFilter("TODOS");
     setPage(1);
   }
 
@@ -529,6 +551,28 @@ export function LeadBoard({
         })}
       </div>
 
+      <MyDaySection
+        leads={leads}
+        users={users}
+        currentUserId={currentUserId}
+        canSeeTeam={permissions.canSeeTeam}
+        canEdit={permissions.canEdit}
+        now={now}
+        onOpen={(id, contact) => {
+          setFocusContact(contact);
+          setEditingLeadId(id);
+        }}
+      />
+
+      <NewLeadsStrip
+        leads={leads}
+        onOpen={(id) => {
+          setFocusContact(false);
+          setEditingLeadId(id);
+        }}
+        onSeeAll={() => withPageReset(setGroupFilter)("novos")}
+      />
+
       {permissions.canSeeTeam && (
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-5">
           <section className="rounded-2xl border border-border bg-card p-5 lg:col-span-3">
@@ -627,7 +671,7 @@ export function LeadBoard({
             <h2 className="text-[17px] font-semibold tracking-tight text-text-primary">Leads</h2>
             <span className="rounded-full bg-card-elevated px-2.5 py-0.5 text-xs font-medium text-text-secondary">{filtered.length}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex rounded-full border border-border bg-card-elevated p-1" role="group" aria-label="Modo de visualização">
               {(
                 [
@@ -646,10 +690,15 @@ export function LeadBoard({
                   )}
                 >
                   <Icon size={14} />
-                  {label}
+                  <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
             </div>
+            {permissions.canCreate && (
+              <Button variant="outline" onClick={() => setImporting(true)} className="h-10 whitespace-nowrap">
+                <Upload size={15} /> <span className="hidden sm:inline">Importar planilha</span>
+              </Button>
+            )}
             {permissions.canCreate && (
               <Button onClick={() => setCreating(true)} className="h-10 whitespace-nowrap">
                 <Plus size={16} /> Novo lead
@@ -698,6 +747,16 @@ export function LeadBoard({
             <option value="FRIO">Frios</option>
             <option value="NENHUMA">Sem classificação</option>
           </select>
+          {services.length > 0 && (
+            <select value={serviceFilter} onChange={(e) => withPageReset(setServiceFilter)(e.target.value)} aria-label="Filtrar por serviço de interesse" className={selectClass}>
+              <option value="TODOS">Todos os serviços</option>
+              {services.map((sv) => (
+                <option key={sv.id} value={sv.id}>
+                  {sv.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select value={sort} onChange={(e) => withPageReset(setSort)(e.target.value as typeof sort)} aria-label="Ordenar" className={selectClass}>
             <option value="recentes">Mais recentes</option>
             <option value="proximo">Próximo contato</option>
@@ -955,6 +1014,7 @@ export function LeadBoard({
         <LeadForm
           action={createLeadAction}
           users={users}
+          services={services}
           currentUserId={currentUserId}
           submitLabel="Cadastrar lead"
           onSuccess={() => setCreating(false)}
@@ -986,32 +1046,36 @@ export function LeadBoard({
               )}
             </div>
 
-            <LeadForm
-              key={editingLead.id}
-              action={updateLeadAction.bind(null, editingLead.id)}
-              defaultValues={toFormValues(editingLead)}
-              users={users}
-              currentUserId={currentUserId}
-              submitLabel="Salvar alterações"
+            <LeadContactPanel
+              key={`contact-${editingLead.id}`}
+              leadId={editingLead.id}
+              canEdit={permissions.canEdit}
+              autoFocus={focusContact}
+              onLogged={(message) => {
+                setToast(message);
+                setFocusContact(false);
+              }}
             />
 
-            {permissions.canSeeTeam && leadHistory.length > 0 && (
-              <div className="flex flex-col gap-3 border-t border-border pt-5">
-                <h3 className="text-sm font-semibold text-text-primary">Histórico deste lead</h3>
-                <ol className="flex flex-col gap-2.5">
-                  {leadHistory.map((a) => (
-                    <li key={a.id} className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="text-text-secondary">
-                        <span className="font-medium text-text-primary">{a.userName}</span> {describeActivity(a).replace(` ${a.company}`, "")}
-                      </span>
-                      <span className="shrink-0 text-xs text-text-tertiary" suppressHydrationWarning>
-                        {relativeTime(a.createdAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+            <details className="group rounded-3xl border border-border" open={!focusContact}>
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-text-primary [&::-webkit-details-marker]:hidden">
+                Dados do lead
+                <ChevronRight size={16} className="text-text-tertiary transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="border-t border-border p-4">
+                <LeadForm
+                  key={editingLead.id}
+                  action={updateLeadAction.bind(null, editingLead.id)}
+                  defaultValues={toFormValues(editingLead)}
+                  users={users}
+                  services={services}
+                  leadId={editingLead.id}
+                  currentUserId={currentUserId}
+                  submitLabel="Salvar alterações"
+                  onSuccess={() => setToast("Lead atualizado.")}
+                />
               </div>
-            )}
+            </details>
 
             <div className="flex flex-col gap-2 border-t border-border pt-5">
               {permissions.canManage && editingLead.stage === "FECHADO" && !editingLead.convertedClientId && (
@@ -1045,6 +1109,26 @@ export function LeadBoard({
           </div>
         )}
       </Drawer>
+
+      <Drawer open={importing} onClose={() => setImporting(false)} title="Importar planilha" description="Traga leads de um Excel ou CSV sem digitar de novo." widthClassName="max-w-[760px]">
+        {importing && (
+          <LeadImport
+            onDone={(message) => {
+              setImporting(false);
+              setToast(message);
+            }}
+          />
+        )}
+      </Drawer>
+
+      {toast && (
+        <div role="status" className="fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-3 rounded-full bg-ink px-5 py-3 text-sm font-medium text-ink-on shadow-2xl">
+          {toast}
+          <button type="button" onClick={() => setToast(null)} aria-label="Fechar aviso" className="opacity-70 hover:opacity-100">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -32,6 +32,17 @@ export const LEAD_TEMPERATURE_LABELS: Record<(typeof LEAD_TEMPERATURES)[number],
   FRIO: "Frio",
 };
 
+export const CONTACT_OUTCOMES = ["SEM_RESPOSTA", "CONVERSOU", "REUNIAO", "PROPOSTA", "SEM_INTERESSE"] as const;
+export type ContactOutcome = (typeof CONTACT_OUTCOMES)[number];
+
+export const CONTACT_OUTCOME_LABELS: Record<ContactOutcome, string> = {
+  SEM_RESPOSTA: "Não respondeu",
+  CONVERSOU: "Conversamos",
+  REUNIAO: "Marcou reunião",
+  PROPOSTA: "Pediu proposta",
+  SEM_INTERESSE: "Sem interesse",
+};
+
 export const leadSchema = z.object({
   company: z.string().trim().min(1, "Informe o nome da empresa."),
   contactName: z.preprocess(emptyToUndefined, z.string().trim().optional()),

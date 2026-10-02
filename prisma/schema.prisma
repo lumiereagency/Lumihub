@@ -304,11 +304,12 @@ model Lead {
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
 
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner           User?        @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  createdBy       User?        @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  convertedClient Client?      @relation(fields: [convertedClientId], references: [id])
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?                 @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdBy       User?                 @relation("LeadCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  convertedClient Client?               @relation(fields: [convertedClientId], references: [id])
   proposals       Proposal[]
+  services        LeadServiceInterest[]
 
   @@index([organizationId, stage])
   @@index([organizationId, createdByUserId])
@@ -384,6 +385,7 @@ model Client {
   financialMovements FinancialMovement[]
   documents          Document[]
   tasks              Task[]
+  services           ClientService[]
 
   @@index([organizationId, status])
   @@map("clients")
@@ -740,12 +742,40 @@ model Service {
   organizationId String
   name           String
   category       String?
+  description    String?
   defaultPrice   Decimal? @db.Decimal(14, 2)
+  active         Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        LeadServiceInterest[]
+  clients      ClientService[]
 
+  @@index([organizationId])
   @@map("services")
+}
+
+model LeadServiceInterest {
+  leadId    String
+  serviceId String
+
+  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, serviceId])
+  @@map("lead_service_interests")
+}
+
+model ClientService {
+  clientId  String
+  serviceId String
+  createdAt DateTime @default(now())
+
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, serviceId])
+  @@map("client_services")
 }
 
 enum CaptureStatus {

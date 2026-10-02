@@ -1,16 +1,20 @@
 import { notFound } from "next/navigation";
-import { FolderKanban } from "lucide-react";
+import Link from "next/link";
+import { FolderKanban, MessagesSquare } from "lucide-react";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { CONTRACT_STATUS_LABELS } from "@/lib/validation/contracts";
+import { CONTACT_OUTCOME_LABELS, type ContactOutcome } from "@/lib/validation/crm";
+import { PROJECT_STATUS_LABELS } from "@/lib/validation/projects";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/ui/metric-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClientDetailHeader } from "./client-detail-header";
+import { ClientServices } from "./client-services";
 
 const STATUS_TONE: Record<string, "success" | "neutral" | "info" | "error"> = {
   ATIVO: "success",
@@ -41,7 +45,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   });
   if (!client) notFound();
 
-  const [contracts, receivables, receivedTotal, organization] = await Promise.all([
+  const [contracts, receivables, receivedTotal, organization, services, clientServices, projects, tasks, sourceLead] = await Promise.all([
     db.contract.findMany({ where: { clientId: client.id, deletedAt: null }, orderBy: { createdAt: "desc" } }),
     db.accountReceivable.findMany({
       where: { clientId: client.id },
@@ -53,7 +57,34 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       _sum: { amount: true },
     }),
     db.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { currency: true } }),
+    db.service.findMany({
+      where: { organizationId: user.organizationId, active: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, category: true },
+    }),
+    db.clientService.findMany({ where: { clientId: client.id }, select: { serviceId: true } }),
+    db.project.findMany({
+      where: { clientId: client.id, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, status: true, dueDate: true },
+    }),
+    db.task.findMany({
+      where: { organizationId: user.organizationId, clientId: client.id, archivedAt: null, status: { not: "CONCLUIDA" } },
+      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      take: 8,
+      select: { id: true, title: true, boardId: true, dueDate: true, list: { select: { name: true } } },
+    }),
+    db.lead.findFirst({ where: { convertedClientId: client.id }, select: { id: true } }),
   ]);
+
+  const salesHistory = sourceLead
+    ? await db.auditLog.findMany({
+        where: { organizationId: user.organizationId, entityType: "Lead", entityId: sourceLead.id, action: "LEAD_CONTACTED" },
+        orderBy: { createdAt: "desc" },
+        take: 15,
+        include: { user: { select: { name: true } } },
+      })
+    : [];
 
   const contractIds = contracts.map((c) => c.id);
   const timeline = await db.auditLog.findMany({
@@ -141,17 +172,73 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderKanban size={16} className="text-text-tertiary" /> Projetos
-          </CardTitle>
-        </CardHeader>
-        <EmptyState
-          title="Módulo de Projetos ainda não implementado"
-          description="Projetos, equipe e captações vinculados a este cliente aparecerão aqui na Fase 6 do roadmap."
-        />
-      </Card>
+      <ClientServices
+        clientId={client.id}
+        services={services}
+        selectedIds={clientServices.map((cs) => cs.serviceId)}
+        canEdit={permissions.canEdit}
+      />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderKanban size={16} className="text-text-tertiary" /> Projetos e tarefas
+            </CardTitle>
+          </CardHeader>
+          {projects.length === 0 && tasks.length === 0 ? (
+            <EmptyState title="Nada em andamento para este cliente" description="Projetos e cartões de Tarefas ligados a este cliente aparecem aqui." />
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {projects.map((p) => (
+                <Link key={p.id} href={`/projetos/${p.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-accent-light">
+                  <span className="text-text-primary">{p.name}</span>
+                  <Badge tone="neutral">{PROJECT_STATUS_LABELS[p.status as keyof typeof PROJECT_STATUS_LABELS] ?? p.status}</Badge>
+                </Link>
+              ))}
+              {tasks.map((t) => (
+                <Link key={t.id} href={`/tarefas?quadro=${t.boardId ?? ""}&cartao=${t.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-accent-light">
+                  <span className="min-w-0 truncate text-text-primary">{t.title}</span>
+                  <span className="shrink-0 text-xs text-text-tertiary">
+                    {t.list?.name}
+                    {t.dueDate && ` · ${formatDate(t.dueDate)}`}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessagesSquare size={16} className="text-text-tertiary" /> Histórico comercial
+            </CardTitle>
+          </CardHeader>
+          {salesHistory.length === 0 ? (
+            <EmptyState
+              title={sourceLead ? "Nenhum contato registrado no CRM" : "Cliente não veio do CRM"}
+              description="Os contatos registrados enquanto era lead (o que foi conversado, objeções, próximos passos) aparecem aqui."
+            />
+          ) : (
+            <ol className="flex flex-col gap-3">
+              {salesHistory.map((h) => {
+                const meta = (h.metadata ?? {}) as Record<string, unknown>;
+                return (
+                  <li key={h.id} className="text-sm">
+                    <p className="text-text-secondary">
+                      <span className="font-medium text-text-primary">{h.user?.name ?? "Sistema"}</span> —{" "}
+                      {CONTACT_OUTCOME_LABELS[meta.outcome as ContactOutcome] ?? "contato"}
+                      <span className="text-xs text-text-tertiary"> · {formatDateTime(h.createdAt)}</span>
+                    </p>
+                    {typeof meta.note === "string" && <p className="mt-1 whitespace-pre-wrap rounded-2xl bg-card-elevated px-3 py-2 text-text-secondary">{meta.note}</p>}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

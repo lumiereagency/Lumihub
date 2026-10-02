@@ -12,13 +12,14 @@ export default async function CrmPage() {
   const user = await requirePermission(permKey("CRM", "VIEW"));
   const canSeeTeam = user.isOwner || user.role.key === "ADMIN";
 
-  const [leads, users, organization, auditLogs] = await Promise.all([
+  const [leads, users, organization, auditLogs, services] = await Promise.all([
     db.lead.findMany({
       where: { organizationId: user.organizationId, deletedAt: null },
       orderBy: { createdAt: "desc" },
       include: {
         owner: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
+        services: { select: { serviceId: true } },
       },
     }),
     db.user.findMany({
@@ -45,6 +46,11 @@ export default async function CrmPage() {
           },
         })
       : Promise.resolve([]),
+    db.service.findMany({
+      where: { organizationId: user.organizationId, active: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, category: true },
+    }),
   ]);
 
   // Leads já excluídos continuam aparecendo no histórico pelo nome.
@@ -120,12 +126,14 @@ export default async function CrmPage() {
           nextContactAt: l.nextContactAt?.toISOString() ?? null,
           lastContactAt: l.lastContactAt?.toISOString() ?? null,
           createdAt: l.createdAt.toISOString(),
+          serviceIds: l.services.map((sv) => sv.serviceId),
         }))}
         users={users}
         currentUserId={user.id}
         currency={organization.currency}
         permissions={permissions}
         activity={activity}
+        services={services}
         now={new Date().getTime()}
       />
     </div>
