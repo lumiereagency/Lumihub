@@ -110,7 +110,9 @@ function buildClauses(d: ContractData): { title: string; text: string }[] {
   if (d.hasOneTime)
     payParts.push(
       d.currency === "BRL"
-        ? "Os serviços pontuais têm início após a confirmação do pagamento ou da primeira parcela."
+        ? d.hasEvent
+          ? "Para eventos, o sinal de 50% reserva a data — sem sinal, a data não fica garantida — e o restante deve ser quitado até 7 dias antes do evento; no cartão, o parcelamento é de até 3x, quitado antes da data. Os demais serviços pontuais têm início após a confirmação do pagamento."
+          : "Os serviços pontuais têm início após a confirmação do pagamento."
         : "Os serviços pontuais são pagos 50% na contratação, para início do projeto, e 50% na entrega.",
     );
   if (d.pixKey) payParts.push(`Pagamentos via Pix devem ser feitos para a chave ${d.pixKey}.`);
@@ -135,7 +137,9 @@ function buildClauses(d: ContractData): { title: string; text: string }[] {
     text: recurring
       ? `${min ? `Se o CONTRATANTE cancelar antes de completar o prazo mínimo de ${min} meses, pagará multa compensatória de 30% sobre a soma das mensalidades restantes até o fim desse prazo. ` : ""}` +
         "Em qualquer caso, são devidos os serviços já executados e as despesas já realizadas. A CONTRATADA pode rescindir em caso de descumprimento contratual, com aviso por escrito."
-      : "Desistindo o CONTRATANTE após a assinatura, serão devidos os serviços já executados e as despesas realizadas, e 30% do valor total ficarão retidos a título de reserva de agenda e planejamento.",
+      : d.hasEvent
+        ? "Em caso de desistência do evento pelo CONTRATANTE, o sinal não é devolvido; a data pode ser remarcada uma única vez, conforme a disponibilidade da agenda. Para os demais serviços, são devidos os já executados e as despesas realizadas."
+        : "Desistindo o CONTRATANTE após a assinatura, serão devidos os serviços já executados e as despesas realizadas, e 30% do valor total ficarão retidos a título de reserva de agenda e planejamento.",
   });
 
   clauses.push({

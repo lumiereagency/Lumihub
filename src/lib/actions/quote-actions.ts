@@ -157,7 +157,9 @@ export async function saveQuoteAction(proposalId: string | null, input: QuoteInp
     const sv = i.serviceId ? services.get(i.serviceId) : undefined;
     const fixed = sv?.commissionFixed != null ? Number(sv.commissionFixed) : null;
     const percent = fixed ? null : (ownPercent(i.serviceId) ?? (sv?.isAddon && planPercent > 0 ? planPercent : null));
-    return { ...i, commissionPercent: percent, commissionFixed: fixed };
+    // Adicional que herda a % do plano herda também a forma de pagamento dele.
+    const split = sv?.commissionSplit ?? false;
+    return { ...i, commissionPercent: percent, commissionFixed: fixed, commissionSplit: split };
   });
 
   const discountPercent = canManage ? d.discountPercent : Number(existing?.discountPercent ?? 0);
@@ -361,6 +363,7 @@ export async function duplicateQuoteAction(proposalId: string): Promise<{ ok: tr
           position: i.position,
           commissionPercent: i.commissionPercent,
           commissionFixed: i.commissionFixed,
+          commissionSplit: i.commissionSplit,
         })),
       },
     },

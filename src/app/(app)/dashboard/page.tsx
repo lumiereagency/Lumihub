@@ -12,7 +12,7 @@ import {
   Plus,
   ArrowRight,
 } from "lucide-react";
-import { requirePermission, hasPermission } from "@/lib/auth/guard";
+import { requirePermission, hasPermission, isDirector } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import {
@@ -25,6 +25,7 @@ import {
 } from "@/lib/dashboard/queries";
 import { buildDashboardInsights } from "@/lib/dashboard/insights";
 import { PendingCaptureAssignments } from "./pending-captures";
+import { CommissionsSummary } from "./commissions-summary";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/page-header";
 import { MetricCard } from "@/components/ui/metric-card";
@@ -181,6 +182,8 @@ export default async function DashboardPage() {
       />
 
       <PendingCaptureAssignments userId={user.id} />
+
+      {canViewCRM && <CommissionsSummary organizationId={user.organizationId} userId={user.id} director={isDirector(user)} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {canViewFinance && (

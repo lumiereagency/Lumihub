@@ -27,11 +27,13 @@ export interface GuideService {
   // próprio segue a % do plano vendido junto.
   commissionPercent?: number;
   commissionFixed?: number;
+  // Eventos: 50% da comissão quando o sinal entra e 50% na quitação.
+  commissionSplit?: boolean;
 }
 
 const LOCOMOCAO = "Locomoção por conta do cliente.";
 
-export const GUIDE_CATALOG: GuideService[] = [
+const COMMERCIAL_GUIDE: GuideService[] = [
   // ---------- Captação Mobile ----------
   {
     guideKey: "captacao-mobile-essencial",
@@ -422,3 +424,297 @@ export const GUIDE_CATALOG: GuideService[] = [
     terms: "Verba de anúncios paga à parte pelo cliente. Escopo e valor final definidos após diagnóstico.",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Plano de Tráfego Pago (outubro/2026). Comissão só sobre o serviço, nunca
+// sobre a verba de anúncio — a verba o cliente paga direto ao Meta/Google.
+// ---------------------------------------------------------------------------
+const VERBA = "Investimento em anúncios (verba) pago pelo cliente direto às plataformas, à parte deste valor.";
+
+const TRAFFIC: GuideService[] = [
+  {
+    guideKey: "trf-start",
+    category: "Tráfego Pago",
+    name: "Tráfego Start",
+    tagline: "Primeiros anúncios · investimento recomendado de R$ 600 a R$ 1.500/mês",
+    features: ["1 objetivo · Meta (Instagram e Facebook)", "Até 2 campanhas ativas", "3 artes estáticas por mês", "Relatório mensal simples"],
+    billing: "MENSAL",
+    price: 990,
+    minMonths: 3,
+    commissionPercent: 15,
+    terms: `${VERBA} Contrato mínimo de 3 meses.`,
+  },
+  {
+    guideKey: "trf-cresc",
+    category: "Tráfego Pago",
+    name: "Tráfego Crescimento",
+    tagline: "Mais contatos, mais canais · investimento recomendado de R$ 1.500 a R$ 5.000/mês",
+    features: ["Até 2 objetivos · Meta + Google Pesquisa", "Até 4 campanhas + remarketing", "6 artes por mês", "Relatório quinzenal + reunião mensal"],
+    billing: "MENSAL",
+    price: 1790,
+    minMonths: 3,
+    badge: "Mais vendido",
+    commissionPercent: 20,
+    terms: `${VERBA} Contrato mínimo de 3 meses.`,
+  },
+  {
+    guideKey: "trf-perf",
+    category: "Tráfego Pago",
+    name: "Tráfego Performance",
+    tagline: "Escala com medição de vendas · investimento recomendado de R$ 5.000 a R$ 15.000/mês",
+    features: ["Objetivos e campanhas sem limite", "Meta + Google + TikTok", "10 artes + 2 vídeos curtos editados", "Pixel e API de conversões · relatório semanal"],
+    billing: "MENSAL",
+    price: 2990,
+    minMonths: 3,
+    commissionPercent: 25,
+    terms: `${VERBA} Contrato mínimo de 3 meses.`,
+  },
+  {
+    guideKey: "trf-escala",
+    category: "Tráfego Pago",
+    name: "Tráfego Escala",
+    tagline: "Para investimento acima de R$ 15.000/mês · 15% da verba",
+    features: ["Tudo do Performance", "Serviço de 15% da verba mensal (mínimo R$ 2.990)", "Escopo definido com a diretoria"],
+    billing: "MENSAL",
+    price: 2990,
+    priceIsFrom: true,
+    minMonths: 3,
+    commissionPercent: 20,
+    terms: `${VERBA} Contrato mínimo de 3 meses.`,
+  },
+  {
+    guideKey: "trf-impl",
+    category: "Tráfego Pago",
+    name: "Taxa de implantação do tráfego",
+    tagline: "Pagamento único",
+    features: ["Configuração da conta de anúncios", "Pixel e públicos", "Primeiras campanhas"],
+    billing: "PONTUAL",
+    price: 490,
+    isAddon: true,
+    terms: "Isenta para contrato de 6 meses ou para clientes de Captação ou Site — nesses casos, não inclua no orçamento.",
+  },
+  {
+    guideKey: "trf-lp",
+    category: "Tráfego Pago",
+    name: "Landing page de campanha",
+    features: ["Página de destino para a campanha"],
+    billing: "PONTUAL",
+    price: 900,
+    isAddon: true,
+    commissionPercent: 10,
+  },
+  {
+    guideKey: "trf-vid",
+    category: "Tráfego Pago",
+    name: "Vídeo extra para anúncio",
+    features: ["Vídeo adicional editado para anúncio"],
+    billing: "PONTUAL",
+    price: 250,
+    isAddon: true,
+    commissionPercent: 10,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Eventos & Ensaios (outubro/2026). Eventos: sinal de 50% para reservar a
+// data, restante até 7 dias antes, parcelamento em até 3x. Ensaios: à vista.
+// ---------------------------------------------------------------------------
+const EVENT_TERMS =
+  "Sinal de 50% para reservar a data; restante até 7 dias antes do evento. Cancelamento: o sinal não é devolvido e a data pode ser remarcada uma vez. Locomoção, estacionamento e taxas do local por conta do cliente.";
+const SHOOT_TERMS = "Pagamento à vista. Locomoção e taxas de local por conta do cliente.";
+
+function hourly(
+  key: string,
+  category: string,
+  label: string,
+  tagline: string,
+  features: string[],
+  prices: [number, number, number],
+  extraHour: number,
+  badge?: string,
+): GuideService[] {
+  const packs: GuideService[] = prices.map((price, i) => ({
+    guideKey: `${key}-${i + 3}h`,
+    category,
+    name: `${label} · ${i + 3} horas`,
+    tagline,
+    features: [`Cobertura de ${i + 3} horas`, ...features],
+    billing: "PONTUAL",
+    price,
+    maxInstallments: 3,
+    commissionPercent: 10,
+    commissionSplit: true,
+    badge: i === 0 ? badge : undefined,
+    terms: EVENT_TERMS,
+  }));
+  packs.push({
+    guideKey: `${key}-hora-extra`,
+    category,
+    name: `Hora extra · ${label}`,
+    tagline: "Contratada antes do evento",
+    features: ["1 hora além do pacote"],
+    billing: "PONTUAL",
+    price: extraHour,
+    isAddon: true,
+    maxInstallments: 3,
+    commissionPercent: 10,
+    commissionSplit: true,
+    terms: "Hora extra pedida no dia do evento é cobrada à parte e não gera comissão.",
+  });
+  return packs;
+}
+
+const EVENTS: GuideService[] = [
+  ...hourly("evt-foto-cel", "Eventos · Fotografia", "Fotografia celular", "Rápida, leve e acessível", ["Mínimo de 20 fotos tratadas por hora", "Galeria online em até 15 dias"], [450, 560, 670], 130),
+  ...hourly("evt-foto-cam", "Eventos · Fotografia", "Fotografia câmera", "Qualidade de câmera", ["Mínimo de 30 fotos tratadas por hora", "Câmera e lentes profissionais", "Galeria online em até 15 dias"], [750, 950, 1150], 220, "Mais escolhido"),
+  ...hourly("evt-vid-mob", "Eventos · Vídeo", "Vídeo mobile", "Pronto para as redes", ["1 reels resumo (até 60s) + 2 cortes verticais", "Reels em até 7 dias"], [600, 760, 920], 170),
+  ...hourly("evt-vid-cam", "Eventos · Vídeo", "Vídeo câmera", "Filme do evento", ["Filme resumo de 3 a 5 min + 1 reels (60s)", "Reels em até 7 dias, filme em até 30 dias"], [1100, 1400, 1700], 320, "Mais escolhido"),
+  ...hourly("evt-combo-mob", "Eventos · Combos", "Combo Mobile", "Foto celular + vídeo mobile · dois profissionais", ["Fotografia celular + vídeo mobile", "Reels resumo + cortes verticais", "Galeria online"], [950, 1190, 1430], 270),
+  ...hourly("evt-combo-mix", "Eventos · Combos", "Combo Misto", "Foto câmera + vídeo mobile · dois profissionais", ["Fotografia câmera + vídeo mobile", "Reels resumo + cortes verticais", "Galeria online"], [1250, 1570, 1890], 350),
+  ...hourly("evt-combo-cam", "Eventos · Combos", "Combo Câmera", "Foto câmera + vídeo câmera · dois profissionais", ["Fotografia câmera + vídeo câmera", "Filme resumo + reels", "Galeria online"], [1690, 2150, 2590], 490),
+  {
+    guideKey: "cas-ess",
+    category: "Casamento",
+    name: "Casamento Essencial",
+    tagline: "Fotografia do grande dia",
+    features: ["Fotografia câmera · até 6 horas", "Cerimônia e recepção", "Mínimo de 250 fotos tratadas", "Galeria online em até 30 dias"],
+    billing: "PONTUAL",
+    price: 2490,
+    maxInstallments: 3,
+    commissionFixed: 250,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  {
+    guideKey: "cas-comp",
+    category: "Casamento",
+    name: "Casamento Completo",
+    tagline: "Foto + filme",
+    features: ["Fotografia + vídeo câmera · até 8 horas", "Making of, cerimônia e festa", "Mínimo de 400 fotos tratadas", "Filme de 8 a 12 min + trailer de 3 min + reels"],
+    billing: "PONTUAL",
+    price: 5490,
+    maxInstallments: 3,
+    badge: "Mais vendido",
+    commissionFixed: 500,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  {
+    guideKey: "cas-prem",
+    category: "Casamento",
+    name: "Casamento Premium",
+    tagline: "A experiência completa",
+    features: ["2 fotógrafos + vídeo câmera · até 10 horas", "Tudo do Completo + pré-wedding incluso", "Drone (quando permitido no local)", "Reels entregue em até 7 dias"],
+    billing: "PONTUAL",
+    price: 8990,
+    maxInstallments: 3,
+    commissionFixed: 900,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  {
+    guideKey: "cas-prew",
+    category: "Casamento",
+    name: "Pré-wedding",
+    tagline: "Ensaio do casal",
+    features: ["Ensaio câmera de 2 horas", "30 fotos tratadas", "Vídeo save the date de 60s"],
+    billing: "PONTUAL",
+    price: 1190,
+    maxInstallments: 3,
+    commissionFixed: 100,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  {
+    guideKey: "pkg-15anos",
+    category: "Ocasiões",
+    name: "Pacote 15 anos",
+    tagline: "A festa + um ensaio antes",
+    features: ["Combo Câmera 5h", "Ensaio câmera da debutante com 20 fotos", "Cobertura completa da festa", "Filme resumo + reels + galeria"],
+    billing: "PONTUAL",
+    price: 2890,
+    maxInstallments: 3,
+    commissionPercent: 10,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  {
+    guideKey: "pkg-cha-revelacao",
+    category: "Ocasiões",
+    name: "Chá revelação",
+    tagline: "O momento da surpresa",
+    features: ["Combo Mobile 3h", "Foto celular + vídeo mobile", "Reels do momento da revelação"],
+    billing: "PONTUAL",
+    price: 950,
+    maxInstallments: 3,
+    commissionPercent: 10,
+    commissionSplit: true,
+    terms: EVENT_TERMS,
+  },
+  ...[
+    { k: "ens-cel-10", n: "Ensaio celular · 10 fotos", d: "Até 40 min", p: 150, c: 20 },
+    { k: "ens-cel-20", n: "Ensaio celular · 20 fotos", d: "Até 1h", p: 270, c: 30 },
+    { k: "ens-cel-30", n: "Ensaio celular · 30 fotos", d: "Até 1h30", p: 370, c: 40 },
+    { k: "ens-cam-10", n: "Ensaio câmera · 10 fotos", d: "Até 1h", p: 290, c: 40 },
+    { k: "ens-cam-20", n: "Ensaio câmera · 20 fotos", d: "Até 1h30", p: 490, c: 60 },
+    { k: "ens-cam-30", n: "Ensaio câmera · 30 fotos", d: "Até 2h", p: 690, c: 80 },
+  ].map(
+    (e): GuideService => ({
+      guideKey: e.k,
+      category: "Ensaios",
+      name: e.n,
+      tagline: e.k.includes("cel") ? "Ideal para redes sociais e presentes" : "Para quem quer qualidade de quadro",
+      features: [`${e.d} de ensaio`, "Interno ou externo", "Fotos tratadas"],
+      billing: "PONTUAL",
+      price: e.p,
+      maxInstallments: 1,
+      commissionFixed: e.c,
+      badge: e.k.endsWith("-20") ? "Mais escolhido" : undefined,
+      terms: SHOOT_TERMS,
+    }),
+  ),
+  {
+    guideKey: "ens-foto-adicional-cel",
+    category: "Ensaios",
+    name: "Foto adicional · ensaio celular",
+    features: ["Oferecida na entrega, quando o cliente vê a seleção"],
+    billing: "PONTUAL",
+    price: 15,
+    isAddon: true,
+    maxInstallments: 1,
+    terms: "Fotos adicionais não geram comissão.",
+  },
+  {
+    guideKey: "ens-foto-adicional-cam",
+    category: "Ensaios",
+    name: "Foto adicional · ensaio câmera",
+    features: ["Oferecida na entrega, quando o cliente vê a seleção"],
+    billing: "PONTUAL",
+    price: 25,
+    isAddon: true,
+    maxInstallments: 1,
+    terms: "Fotos adicionais não geram comissão.",
+  },
+  ...[
+    { k: "add-drone", n: "Drone no evento", f: "Imagens aéreas (quando permitido no local)", p: 600 },
+    { k: "add-reels-dia", n: "Reels editado no mesmo dia", f: "Reels entregue no dia do evento", p: 350 },
+    { k: "add-expressa", n: "Entrega expressa das fotos", f: "Fotos entregues em até 72h", p: 250 },
+    { k: "add-2foto", n: "Segundo fotógrafo câmera (3h)", f: "Mais um fotógrafo com câmera por 3 horas", p: 600 },
+  ].map(
+    (a): GuideService => ({
+      guideKey: a.k,
+      category: "Adicionais de eventos",
+      name: a.n,
+      features: [a.f],
+      billing: "PONTUAL",
+      price: a.p,
+      isAddon: true,
+      maxInstallments: 3,
+      commissionPercent: 10,
+      commissionSplit: true,
+      terms: EVENT_TERMS,
+    }),
+  ),
+];
+
+export const GUIDE_CATALOG: GuideService[] = [...COMMERCIAL_GUIDE, ...TRAFFIC, ...EVENTS];

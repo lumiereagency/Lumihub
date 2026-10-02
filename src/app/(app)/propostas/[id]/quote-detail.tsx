@@ -124,7 +124,13 @@ export function QuoteDetail({
   autentique: { connected: boolean; sandbox: boolean };
   companyReady: boolean;
   permissions: { canEdit: boolean; canCreate: boolean; canDelete: boolean; canContract: boolean; canManage: boolean };
-  commission: { total: number; seller: string | null; lines: { name: string; rule: string; base: number | null; amount: number }[] } | null;
+  commission: {
+    total: number;
+    split: number;
+    seller: string | null;
+    lines: { name: string; rule: string; base: number | null; amount: number; split: boolean }[];
+    entries: { id: string; description: string; amount: number; status: "AGUARDANDO_CLIENTE" | "A_PAGAR" | "PAGA" | "CANCELADA" }[];
+  } | null;
 }) {
   const router = useRouter();
   const [phone, setPhone] = useState(proposal.recipientPhone ?? "");
@@ -596,8 +602,31 @@ export function QuoteDetail({
               ) : (
                 <p className="text-sm text-text-tertiary">Nenhum item com comissão definida no catálogo.</p>
               )}
+              {commission.entries.length > 0 && (
+                <ul className="flex flex-col gap-1.5 border-t border-border pt-3">
+                  {commission.entries.map((e) => (
+                    <li key={e.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-text-secondary">{e.description}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="lb-figures text-text-primary">{money(e.amount)}</span>
+                        <Badge tone={e.status === "PAGA" ? "success" : e.status === "A_PAGAR" ? "accent" : e.status === "CANCELADA" ? "neutral" : "warning"}>
+                          {e.status === "PAGA" ? "Paga" : e.status === "A_PAGAR" ? "A pagar" : e.status === "CANCELADA" ? "Estornada" : "Aguardando cliente"}
+                        </Badge>
+                      </span>
+                    </li>
+                  ))}
+                  <li>
+                    <Link href="/comissoes" className="text-xs text-text-tertiary underline-offset-2 hover:text-text-primary hover:underline">
+                      Ver todas as comissões
+                    </Link>
+                  </li>
+                </ul>
+              )}
               <p className="rounded-2xl bg-card-elevated/60 px-3 py-2.5 text-xs text-text-secondary">
-                Paga de uma vez, depois que o pagamento do cliente é confirmado, mesmo que ele parcele no cartão. Base: valor de tabela (Pix).
+                {commission.split > 0
+                  ? "Eventos: 50% da comissão quando o sinal entra e 50% na quitação. Demais itens: de uma vez, após o pagamento do cliente."
+                  : "Paga de uma vez, depois que o pagamento do cliente é confirmado, mesmo que ele parcele no cartão."}{" "}
+                Base: valor de tabela (Pix).
               </p>
             </section>
           )}

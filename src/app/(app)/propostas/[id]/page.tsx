@@ -7,6 +7,7 @@ import { describeChoice, parseChoice } from "@/lib/pricing/engine";
 import { fillTemplate, getPricingSettings } from "@/lib/pricing/settings";
 import { quoteForProposal } from "@/lib/pricing/quote";
 import { computeCommission } from "@/lib/pricing/commission";
+import { byStage } from "@/lib/commissions/service";
 import { isChannelConnected } from "@/lib/integrations/messaging";
 import { getAutentiqueCredentials } from "@/lib/integrations/autentique";
 import type { StoredSigner } from "@/lib/contracts/signature-sync";
@@ -25,6 +26,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
       client: { select: { id: true, companyName: true } },
       createdBy: { select: { name: true } },
       contract: true,
+      commissions: { select: { id: true, stage: true, description: true, amount: true, status: true } },
     },
   });
   if (!proposal) notFound();
@@ -65,6 +67,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
           unitPrice: Number(i.unitPrice),
           commissionPercent: i.commissionPercent != null ? Number(i.commissionPercent) : null,
           commissionFixed: i.commissionFixed != null ? Number(i.commissionFixed) : null,
+          commissionSplit: i.commissionSplit,
         })),
         Number(proposal.discountPercent),
       )
@@ -139,7 +142,13 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
             : null,
         }}
         quote={quote}
-        commission={commission && { ...commission, seller: proposal.createdBy?.name ?? null }}
+        commission={
+          commission && {
+            ...commission,
+            seller: proposal.createdBy?.name ?? null,
+            entries: [...proposal.commissions].sort(byStage).map((c) => ({ id: c.id, description: c.description, amount: Number(c.amount), status: c.status })),
+          }
+        }
         link={link}
         quoteMessage={quoteMessage}
         contractMessage={contractMessage}

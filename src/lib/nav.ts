@@ -23,6 +23,7 @@ import {
   UserCircle,
   Clapperboard,
   CalendarClock,
+  HandCoins,
 } from "lucide-react";
 import { permKey } from "@/lib/auth/permissions";
 
@@ -113,7 +114,10 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Comercial",
-    items: [{ label: "CRM", href: "/crm", icon: Target, permission: permKey("CRM", "VIEW") }],
+    items: [
+      { label: "CRM", href: "/crm", icon: Target, permission: permKey("CRM", "VIEW"), matches: ["/propostas"] },
+      { label: "Comissões", href: "/comissoes", icon: HandCoins, permission: permKey("CRM", "VIEW") },
+    ],
   },
   {
     label: "Clientes",

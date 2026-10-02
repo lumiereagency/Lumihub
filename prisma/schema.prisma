@@ -37,6 +37,7 @@ model Organization {
   contracts                     Contract[]
   proposals                     Proposal[]
   pricingSettings               PricingSettings?
+  commissions                   Commission[]
   projects                      Project[]
   tasks                         Task[]
   taskBoards                    TaskBoard[]
@@ -164,6 +165,8 @@ model User {
   ownedLeads                Lead[]                    @relation("LeadOwner")
   createdLeads              Lead[]                    @relation("LeadCreator")
   createdProposals          Proposal[]                @relation("ProposalCreator")
+  commissions               Commission[]              @relation("CommissionSeller")
+  paidCommissions           Commission[]              @relation("CommissionPayer")
   responsibleProjects       Project[]                 @relation("ProjectResponsible")
   assignedTasks             Task[]                    @relation("TaskAssignee")
   createdTasks              Task[]                    @relation("TaskCreator")
@@ -376,6 +379,7 @@ model Proposal {
   createdBy    User?          @relation("ProposalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   items        ProposalItem[]
   contract     Contract?
+  commissions  Commission[]
 
   @@index([organizationId, status])
   @@map("proposals")
@@ -414,12 +418,53 @@ model ProposalItem {
   position          Int            @default(0)
   commissionPercent Decimal?       @db.Decimal(5, 2)
   commissionFixed   Decimal?       @db.Decimal(14, 2)
+  // Eventos: metade da comissão no sinal, metade na quitação.
+  commissionSplit   Boolean        @default(false)
 
   proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   service  Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
   @@index([proposalId])
   @@map("proposal_items")
+}
+
+enum CommissionStatus {
+  AGUARDANDO_CLIENTE
+  A_PAGAR
+  PAGA
+  CANCELADA
+}
+
+// Comissão do comercial gerada quando o cliente aceita o orçamento. Fica
+// "aguardando cliente" até a diretoria confirmar o pagamento, vira "a pagar"
+// e depois "paga". Valor integral, de uma vez; só eventos dividem em
+// sinal/quitação (stage).
+model Commission {
+  id             String           @id @default(cuid())
+  organizationId String
+  proposalId     String
+  sellerUserId   String?
+  stage          String           @default("INTEGRAL")
+  description    String
+  amount         Decimal          @db.Decimal(14, 2)
+  breakdown      Json?
+  status         CommissionStatus @default(AGUARDANDO_CLIENTE)
+  releasedAt     DateTime?
+  paidAt         DateTime?
+  paidByUserId   String?
+  cancelReason   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposal     Proposal     @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  seller       User?        @relation("CommissionSeller", fields: [sellerUserId], references: [id], onDelete: SetNull)
+  paidBy       User?        @relation("CommissionPayer", fields: [paidByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([proposalId, stage])
+  @@index([organizationId, status])
+  @@index([sellerUserId, status])
+  @@map("commissions")
 }
 
 // Taxas da maquininha, margem do crédito e dados que entram no contrato —
@@ -881,6 +926,8 @@ model Service {
   // planos mensais) ou valor fixo. Paga de uma vez, mesmo se o cliente parcelar.
   commissionPercent Decimal?       @db.Decimal(5, 2)
   commissionFixed   Decimal?       @db.Decimal(14, 2)
+  // Eventos: metade da comissão no sinal, metade na quitação.
+  commissionSplit   Boolean        @default(false)
 
   organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   leads         LeadServiceInterest[]

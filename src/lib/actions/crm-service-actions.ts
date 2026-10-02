@@ -32,6 +32,7 @@ const serviceSchema = z.object({
   terms: z.string().trim().max(1000).optional(),
   commissionPercent: z.number().min(0).max(100, "A comissão em % vai de 0 a 100.").nullable().optional(),
   commissionFixed: money.nullable().optional(),
+  commissionSplit: z.boolean().default(false),
 });
 
 function done() {
@@ -67,6 +68,7 @@ export async function saveServiceAction(serviceId: string | null, input: z.input
     terms: d.terms || null,
     commissionPercent: d.commissionFixed ? null : (d.commissionPercent ?? null),
     commissionFixed: d.commissionFixed ?? null,
+    commissionSplit: d.commissionSplit,
   };
 
   if (serviceId) {
@@ -147,6 +149,7 @@ export async function loadGuideCatalogAction(): Promise<{ ok: true; created: num
       terms: g.terms ?? null,
       commissionPercent: g.commissionPercent ?? null,
       commissionFixed: g.commissionFixed ?? null,
+      commissionSplit: g.commissionSplit ?? false,
       position: index,
     };
     await db.service.upsert({

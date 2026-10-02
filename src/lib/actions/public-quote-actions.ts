@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { convertLeadToClient, fillClientGaps } from "@/lib/crm/convert";
+import { createCommissionsForProposal } from "@/lib/commissions/service";
 import { LEAD_STAGES } from "@/lib/validation/crm";
 import { formatDocument, isValidCnpj, isValidCpf, onlyDigits } from "@/lib/documents";
 
@@ -122,6 +123,9 @@ export async function respondToQuoteAction(token: string, input: QuoteResponseIn
     }
     if (clientId && clientId !== proposal.clientId) await db.proposal.update({ where: { id: proposal.id }, data: { clientId } });
 
+    // Venda fechada: a comissão entra no painel de quem vendeu (aguardando o pagamento do cliente).
+    await createCommissionsForProposal(proposal.id);
+
     await notifyTeam(proposal.organizationId, proposal, "Orçamento aceito! 🎉", `${who} aceitou "${proposal.title}". Já dá para gerar o contrato.`);
   } else {
     await db.proposal.update({
@@ -160,5 +164,7 @@ export async function respondToQuoteAction(token: string, input: QuoteResponseIn
   revalidatePath("/propostas");
   revalidatePath(`/propostas/${proposal.id}`);
   revalidatePath("/crm");
+  revalidatePath("/comissoes");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

@@ -44,6 +44,8 @@ export interface ContractData {
   hasTravel: boolean;
   hasAds: boolean;
   hasImageCapture: boolean;
+  // Evento com sinal de 50% (tabela de Eventos & Ensaios).
+  hasEvent: boolean;
 }
 
 interface SignerData {
@@ -121,6 +123,7 @@ export async function loadContractData(organizationId: string, proposalId: strin
     hasOneTime: !!quote.oneTime,
     hasTravel: /locomo|diária|captação|evento|drone/.test(text),
     hasAds: /tráfego|anúncio|anuncio/.test(text),
-    hasImageCapture: /vídeo|video|foto|captação|produção|filme|evento|drone/.test(text),
+    hasImageCapture: /vídeo|video|foto|captação|produção|filme|evento|drone|ensaio|casamento/.test(text),
+    hasEvent: items.some((i) => (i.terms ?? "").includes("Sinal de 50%")),
   };
 }

@@ -56,6 +56,7 @@ export interface ServiceRow {
   fromGuide: boolean;
   commissionPercent: number | null;
   commissionFixed: number | null;
+  commissionSplit: boolean;
 }
 
 const SUGGESTED_CATEGORIES = [
@@ -266,6 +267,7 @@ export function ServiceCatalog({
       terms: String(formData.get("terms") ?? ""),
       commissionPercent: formData.get("commissionType") === "PERCENT" ? num(formData.get("commissionValue")) : null,
       commissionFixed: formData.get("commissionType") === "FIXED" ? num(formData.get("commissionValue")) : null,
+      commissionSplit: formData.get("commissionSplit") === "on",
     };
     startTransition(async () => {
       const result = await saveServiceAction(
@@ -438,6 +440,7 @@ export function ServiceCatalog({
                             : s.commissionPercent != null
                               ? `${s.commissionPercent.toLocaleString("pt-BR")}%`
                               : "do plano"}
+                          {s.commissionSplit ? " · 50/50" : ""}
                         </span>
                       )}
                     </div>
@@ -717,6 +720,18 @@ export function ServiceCatalog({
                 hint="Paga de uma vez após o pagamento do cliente, mesmo parcelado. Nos mensais, a % é sobre a 1ª mensalidade."
               />
             </div>
+            <label className="flex items-start gap-2.5 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                name="commissionSplit"
+                defaultChecked={current?.commissionSplit ?? false}
+                className="mt-0.5 h-4 w-4 accent-[var(--lh-accent)]"
+              />
+              <span>
+                Evento com sinal: pagar 50% da comissão quando o sinal entra e 50% na quitação
+                <span className="block text-xs text-text-tertiary">Desmarcado, a comissão é paga inteira de uma vez.</span>
+              </span>
+            </label>
             <Textarea
               label="Anotações internas (não aparecem para o cliente)"
               name="description"
