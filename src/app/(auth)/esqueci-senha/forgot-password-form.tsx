@@ -13,17 +13,17 @@ export function ForgotPasswordForm() {
   const [state, formAction, pending] = useActionState(requestPasswordResetAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6">
-      <p className="text-sm text-text-secondary">
-        Informe o e-mail da sua conta. Se ele estiver cadastrado, enviaremos instruções para
-        redefinir sua senha.
-      </p>
+    <form action={formAction} className="flex flex-col gap-5">
+      <div className="mb-1 flex flex-col gap-1.5">
+        <h1 className="text-[28px] font-semibold tracking-tight text-text-primary">Esqueci minha senha</h1>
+        <p className="text-sm text-text-tertiary">Informe o e-mail da sua conta. Se ele estiver cadastrado, enviamos as instruções para criar uma nova senha.</p>
+      </div>
       <FormMessage error={state.error} success={state.success} />
       {!state.success && (
         <>
           <Input label="E-mail" name="email" type="email" autoComplete="email" required placeholder="voce@lumiere.com" />
-          <Button type="submit" disabled={pending} className="mt-2 w-full">
-            {pending ? "Enviando..." : "Enviar instruções"}
+          <Button type="submit" disabled={pending} className="mt-1 h-12 w-full">
+            {pending ? "Enviando…" : "Enviar instruções"}
           </Button>
         </>
       )}

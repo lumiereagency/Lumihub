@@ -108,7 +108,7 @@ export function PayableList({
         </div>
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Nova Conta a Pagar
+            <Plus size={16} /> Nova conta a pagar
           </Button>
         )}
       </div>
@@ -158,7 +158,7 @@ export function PayableList({
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Descrição</th>
                   <th className="px-4 py-3 font-medium">Categoria</th>
                   <th className="px-4 py-3 font-medium">Valor</th>
@@ -171,7 +171,7 @@ export function PayableList({
                 {filtered.map((p) => {
                   const status = effectiveStatus(p);
                   return (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card">
+                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                       <td className="px-4 py-3">
                         <p className="text-text-primary">{p.description}</p>
                         {p.supplier && <p className="text-xs text-text-tertiary">{p.supplier}</p>}
@@ -200,7 +200,7 @@ export function PayableList({
         </>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Conta a Pagar">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova conta a pagar">
         <PayableForm
           action={createPayableAction}
           categories={categories}

@@ -1,6 +1,7 @@
 import "server-only";
 import path from "node:path";
-import { Circle, Document, Font, Page, StyleSheet, Svg, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { Circle, Document, Font, Page, Path, StyleSheet, Svg, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { RING } from "@/lib/brand/rings";
 import type { ContractData } from "@/lib/contracts/contract-data";
 import { documentLabel, formatDocument } from "@/lib/documents";
 
@@ -65,12 +66,30 @@ const s = StyleSheet.create({
   footer: { position: "absolute", bottom: 18, left: 42, right: 42, flexDirection: "row", justifyContent: "space-between", fontSize: 6.8, color: MUTED, letterSpacing: 1.2 },
 });
 
+function ringArc(cx: number, cy: number, r: number, px: number, py: number, spread: number): string {
+  const a = Math.atan2(py - cy, px - cx);
+  const p = (t: number) => `${(cx + r * Math.cos(t)).toFixed(2)} ${(cy + r * Math.sin(t)).toFixed(2)}`;
+  return `M ${p(a - spread)} A ${r} ${r} 0 0 1 ${p(a + spread)}`;
+}
+
 function Mark({ size = 22 }: { size?: number }) {
-  // Gradiente em traço não é suportado pelo react-pdf: dourado sólido.
+  // Alianças entrelaçadas. O react-pdf não tem máscara nem gradiente em
+  // traço: dourado sólido, e o "por cima" é redesenhado sobre uma faixa da
+  // cor do fundo (a fresta) em cada cruzamento.
+  const { r, stroke: w, gap, cy, left: L, right: R, crossTop: T, crossBottom: B } = RING;
+  // O arco dourado passa um pouco da faixa escura para não deixar emenda.
+  const top = ringArc(L, cy, r, 60, T, 0.32);
+  const bottom = ringArc(R, cy, r, 60, B, 0.32);
+  const topOver = ringArc(L, cy, r, 60, T, 0.4);
+  const bottomOver = ringArc(R, cy, r, 60, B, 0.4);
   return (
-    <Svg width={size * 1.66} height={size} viewBox="0 0 120 72">
-      <Circle cx="36" cy="36" r="27" stroke={GOLD_LIGHT} strokeWidth={9} fill="none" />
-      <Circle cx="84" cy="36" r="27" stroke="#C9A04E" strokeWidth={9} fill="none" />
+    <Svg width={size * 1.47} height={size} viewBox="4 -2 112 76">
+      <Circle cx={String(L)} cy={String(cy)} r={String(r)} stroke={GOLD_LIGHT} strokeWidth={w} fill="none" />
+      <Circle cx={String(R)} cy={String(cy)} r={String(r)} stroke="#C9A04E" strokeWidth={w} fill="none" />
+      <Path d={top} stroke={INK} strokeWidth={w + 2 * gap} fill="none" />
+      <Path d={topOver} stroke={GOLD_LIGHT} strokeWidth={w} fill="none" />
+      <Path d={bottom} stroke={INK} strokeWidth={w + 2 * gap} fill="none" />
+      <Path d={bottomOver} stroke="#C9A04E" strokeWidth={w} fill="none" />
     </Svg>
   );
 }

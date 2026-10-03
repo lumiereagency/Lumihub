@@ -90,7 +90,7 @@ export function CardPanel({
                         checked={item.paid}
                         disabled={!canEdit}
                         onChange={(e) => startTransition(() => toggleInstallmentPaidAction(item.id, e.target.checked))}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
                       />
                       {item.description}
                     </span>

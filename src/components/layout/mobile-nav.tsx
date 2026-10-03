@@ -49,7 +49,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-card"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-text-secondary hover:bg-card-elevated/50"
               aria-label="Fechar menu"
             >
               <X size={20} />

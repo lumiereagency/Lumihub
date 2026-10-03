@@ -26,7 +26,7 @@ const DEFAULT_NEXT: Record<ContactOutcome, number | null> = {
 const OUTCOME_TONE: Record<ContactOutcome, string> = {
   SEM_RESPOSTA: "peer-checked:bg-text-secondary peer-checked:text-card",
   CONVERSOU: "peer-checked:bg-info peer-checked:text-white",
-  REUNIAO: "peer-checked:bg-accent peer-checked:text-white",
+  REUNIAO: "peer-checked:bg-accent peer-checked:text-accent-on",
   PROPOSTA: "peer-checked:bg-success peer-checked:text-white",
   SEM_INTERESSE: "peer-checked:bg-error peer-checked:text-white",
 };

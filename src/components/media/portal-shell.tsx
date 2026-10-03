@@ -84,7 +84,7 @@ export function MediaPortalShell({
         </nav>
         <div className="border-t border-border p-3">
           <PortalUserMenu>
-            <div className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-card">
+            <div className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-card-elevated/50">
               <Avatar name={user.name} src={user.avatarUrl} size="sm" />
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium text-text-primary">{user.name}</span>
@@ -103,7 +103,7 @@ export function MediaPortalShell({
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
+              className="rounded-[8px] p-2 text-text-secondary hover:bg-card-elevated/50"
               aria-label="Abrir menu"
             >
               <Menu size={20} />
@@ -118,7 +118,7 @@ export function MediaPortalShell({
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-[8px] p-2 text-text-secondary hover:bg-card"
+                className="rounded-[8px] p-2 text-text-secondary hover:bg-card-elevated/50"
                 aria-label="Fechar menu"
               >
                 <X size={20} />

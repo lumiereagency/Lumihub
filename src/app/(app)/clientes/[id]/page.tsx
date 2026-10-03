@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileText, FolderKanban, MessagesSquare } from "lucide-react";
+import { FolderKanban, MessagesSquare } from "lucide-react";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -8,7 +8,6 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { CONTRACT_STATUS_LABELS } from "@/lib/validation/contracts";
 import { CONTACT_OUTCOME_LABELS, type ContactOutcome } from "@/lib/validation/crm";
 import { PROJECT_STATUS_LABELS } from "@/lib/validation/projects";
-import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/ui/metric-card";
@@ -45,7 +44,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   });
   if (!client) notFound();
 
-  const [contracts, receivables, receivedTotal, organization, services, clientServices, projects, tasks, sourceLead] = await Promise.all([
+  const [contracts, receivables, receivedTotal, organization, services, clientServices, projects, tasks, sourceLead, quotes] = await Promise.all([
     db.contract.findMany({ where: { clientId: client.id, deletedAt: null }, orderBy: { createdAt: "desc" } }),
     db.accountReceivable.findMany({
       where: { clientId: client.id },
@@ -75,6 +74,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       select: { id: true, title: true, boardId: true, dueDate: true, list: { select: { name: true } } },
     }),
     db.lead.findFirst({ where: { convertedClientId: client.id }, select: { id: true } }),
+    db.proposal.findMany({ where: { clientId: client.id }, select: { status: true, value: true } }),
   ]);
 
   const salesHistory = sourceLead
@@ -111,25 +111,21 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title={client.companyName}
-        description={client.contactName ?? undefined}
-        actions={
-          hasPermission(user, permKey("CRM", "CREATE")) && (
-            <Link href={`/propostas/nova?client=${client.id}`} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-ink-on hover:opacity-90">
-              <FileText size={16} /> Novo orçamento
-            </Link>
-          )
-        }
+      <ClientDetailHeader
+        client={client}
+        permissions={permissions}
+        quoteHref={hasPermission(user, permKey("CRM", "CREATE")) ? `/propostas/nova?client=${client.id}` : null}
       />
-
-      <ClientDetailHeader client={client} permissions={permissions} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricCard label="Contratos" value={String(contracts.length)} />
         <MetricCard label="Receita recebida" value={formatCurrency(Number(receivedTotal._sum.amount ?? 0), currency)} tone="accent" />
         <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} />
-        <MetricCard label="Margem / Rentabilidade" value="Indisponível" />
+        <MetricCard
+          label="Orçamentos"
+          value={String(quotes.length)}
+          caption={quotes.some((q) => q.status === "ACEITA") ? `${formatCurrency(quotes.filter((q) => q.status === "ACEITA").reduce((s, q) => s + Number(q.value), 0), currency)} aceitos` : "nenhum aceito ainda"}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

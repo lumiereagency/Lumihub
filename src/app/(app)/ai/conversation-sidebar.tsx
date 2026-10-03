@@ -29,7 +29,7 @@ export function ConversationSidebar({ conversations }: { conversations: Conversa
   }
 
   return (
-    <div className="flex min-h-0 w-72 shrink-0 flex-col gap-3 border-r border-border pr-4">
+    <div className="flex max-h-56 min-h-0 shrink-0 flex-col gap-3 rounded-3xl border border-border bg-card p-3 md:max-h-none md:w-72">
       <form action={createConversationAction}>
         <Button type="submit" className="w-full">
           <Plus size={16} /> Nova conversa
@@ -45,7 +45,7 @@ export function ConversationSidebar({ conversations }: { conversations: Conversa
               key={c.id}
               className={cn(
                 "group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm",
-                active ? "bg-card-elevated text-text-primary" : "text-text-secondary hover:bg-card",
+                active ? "bg-card-elevated text-text-primary" : "text-text-secondary hover:bg-card-elevated/60",
               )}
             >
               <MessageSquare size={14} className="shrink-0 text-text-tertiary" />
@@ -56,7 +56,7 @@ export function ConversationSidebar({ conversations }: { conversations: Conversa
               <button
                 type="button"
                 onClick={() => handleDelete(c.id)}
-                className="shrink-0 text-text-tertiary opacity-0 hover:text-error group-hover:opacity-100"
+                className="shrink-0 text-text-tertiary opacity-0 hover:text-error focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label="Excluir conversa"
               >
                 <Trash2 size={14} />

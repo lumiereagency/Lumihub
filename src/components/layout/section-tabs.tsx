@@ -24,7 +24,7 @@ export function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <div className="scrollbar-thin mb-6 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-card p-1">
+    <div className="scrollbar-thin mb-6 flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-card p-1 [:where(.gap-4,.gap-5,.gap-6,.gap-8)>&]:mb-0">
       {tabs.map((tab) => {
         const active = tab.href === activeHref;
         return (

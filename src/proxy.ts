@@ -58,5 +58,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Ícones, manifesto e telas de abertura do app precisam abrir sem login
+  // (o navegador busca antes de existir sessão, inclusive na tela de login).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|icons/|splash/).*)"],
 };

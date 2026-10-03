@@ -13,7 +13,11 @@ export function ResetPasswordForm({ token, loginHref = "/login" }: { token: stri
   const [state, formAction, pending] = useActionState(resetPasswordAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6">
+    <form action={formAction} className="flex flex-col gap-5">
+      <div className="mb-1 flex flex-col gap-1.5">
+        <h1 className="text-[28px] font-semibold tracking-tight text-text-primary">Nova senha</h1>
+        <p className="text-sm text-text-tertiary">Crie a senha que você vai usar para entrar na base.</p>
+      </div>
       <input type="hidden" name="token" value={token} />
       <FormMessage error={state.error} success={state.success} />
       {!state.success && (
@@ -33,7 +37,7 @@ export function ResetPasswordForm({ token, loginHref = "/login" }: { token: stri
             autoComplete="new-password"
             required
           />
-          <Button type="submit" disabled={pending} className="mt-2 w-full">
+          <Button type="submit" disabled={pending} className="mt-1 h-12 w-full">
             {pending ? "Salvando..." : "Redefinir senha"}
           </Button>
         </>

@@ -50,7 +50,7 @@ export function CardsView({
       {permissions.canCreate && (
         <div className="flex justify-end">
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Novo Cartão
+            <Plus size={16} /> Novo cartão
           </Button>
         </div>
       )}
@@ -76,7 +76,7 @@ export function CardsView({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Cartão">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo cartão">
         <CardForm onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

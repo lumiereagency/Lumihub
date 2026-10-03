@@ -25,7 +25,7 @@ export function GoalList({
       {permissions.canCreate && (
         <div className="flex justify-end">
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Nova Meta
+            <Plus size={16} /> Nova meta
           </Button>
         </div>
       )}
@@ -51,7 +51,7 @@ export function GoalList({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Meta">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova meta">
         <GoalForm onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

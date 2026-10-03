@@ -82,7 +82,7 @@ export default async function MediaAdesfSettingsPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-text-primary">Link público da escala</h2>
-        <PublicScheduleLinkPanel token={publicLink.token} />
+        <PublicScheduleLinkPanel token={publicLink.token} baseUrl={process.env.APP_URL ?? "http://localhost:3000"} />
       </section>
 
       <section>

@@ -15,11 +15,11 @@ export default async function AiLayout({ children }: { children: ReactNode }) {
   });
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col">
+    <div className="flex h-[calc(100dvh-8rem)] min-h-[560px] flex-col">
       <PageHeader title="Lumi AI" description="Assistente com contexto real do sistema, respeitando as permissões do seu perfil." />
-      <div className="flex min-h-0 flex-1 gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
         <ConversationSidebar conversations={conversations.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() }))} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-card">{children}</div>
       </div>
     </div>
   );

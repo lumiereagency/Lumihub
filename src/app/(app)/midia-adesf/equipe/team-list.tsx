@@ -149,7 +149,7 @@ export function MediaTeamList({
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Função principal</th>
                 <th className="px-4 py-3 font-medium">Funções habilitadas</th>
@@ -160,7 +160,7 @@ export function MediaTeamList({
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m.id} className="border-b border-border last:border-0 hover:bg-card">
+                <tr key={m.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                   <td className="px-4 py-3">
                     <Link href={`/midia-adesf/equipe/${m.id}`} className="flex items-center gap-2.5">
                       <Avatar name={m.name} src={m.avatarUrl} size="sm" />

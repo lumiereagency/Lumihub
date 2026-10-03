@@ -103,7 +103,7 @@ export function TeamList({
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
                 <th className="px-4 py-3 font-medium">Pagamento</th>
@@ -114,7 +114,7 @@ export function TeamList({
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m.id} className="border-b border-border last:border-0 hover:bg-card">
+                <tr key={m.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-text-primary">{m.name}</p>
                     <p className="text-xs text-text-tertiary">{m.role}</p>

@@ -4,8 +4,9 @@
    LUMIBASE DESIGN SYSTEM — v3 (referência "Finexy")
    Superfícies neutras em camadas (canvas → card → painel interno), cantos
    bem arredondados, ação primária em pílula "ink" (escura no claro, clara
-   no escuro) e o laranja da marca reservado para destaques: card em
-   evidência, gráficos, progresso e estados ativos.
+   no escuro) e o dourado da marca (o mesmo do Guia, do orçamento e do
+   contrato) reservado para destaques: card em evidência, gráficos,
+   progresso e estados ativos. Sobre o dourado, o texto é escuro.
    ========================================================================== */
 
 :root {
@@ -19,11 +20,11 @@
   --lh-text-secondary: #a3a3a8;
   --lh-text-tertiary: #6f6f75;
 
-  --lh-accent-deep: #d9400b;
-  --lh-accent: #f05a1c;
-  --lh-accent-light: #ff9a5c;
-  --lh-accent-gradient: linear-gradient(140deg, #e8470c 0%, #f4662a 55%, #ff9458 100%);
-  --lh-accent-on: #ffffff;
+  --lh-accent-deep: #9e7b37;
+  --lh-accent: #d4ad5e;
+  --lh-accent-light: #ebcb86;
+  --lh-accent-gradient: linear-gradient(140deg, #a9802f 0%, #d9b568 52%, #f3d99a 100%);
+  --lh-accent-on: #1a1408;
 
   --lh-ink: #f4f4f5;
   --lh-ink-on: #111112;
@@ -52,7 +53,8 @@
   --lh-text-tertiary: #9a9a9a;
 
   /* Também é o texto "destacado" (links, badges) — precisa de contraste no branco. */
-  --lh-accent-light: #d9480f;
+  --lh-accent: #c9a14f;
+  --lh-accent-light: #8a6a24;
 
   --lh-ink: #161616;
   --lh-ink-on: #ffffff;
@@ -102,6 +104,13 @@ body {
 
 * {
   border-color: var(--lh-border);
+}
+
+/* Caixas de seleção e rádios nativos seguem a cor da marca. */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--lh-accent);
 }
 
 ::selection {

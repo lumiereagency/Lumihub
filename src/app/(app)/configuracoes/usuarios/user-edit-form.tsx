@@ -83,7 +83,7 @@ export function UserEditForm({
             name="isActive"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
+            className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
           />
           Usuário ativo
         </label>

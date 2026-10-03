@@ -71,11 +71,11 @@ export function MediaCalendarView({ events, emptyMessage }: { events: MediaCalen
         </div>
         {view === "mes" && (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setMonth((m) => subMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card">
+            <button type="button" onClick={() => setMonth((m) => subMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card-elevated/50">
               <ChevronLeft size={18} />
             </button>
             <span className="w-36 text-center text-sm font-medium capitalize text-text-primary">{format(month, "MMMM yyyy", { locale: ptBR })}</span>
-            <button type="button" onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card">
+            <button type="button" onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card-elevated/50">
               <ChevronRight size={18} />
             </button>
             <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
@@ -131,7 +131,7 @@ export function MediaCalendarView({ events, emptyMessage }: { events: MediaCalen
       ) : (
         <div className="flex flex-col divide-y divide-border rounded-2xl border border-border">
           {listEvents.map((e) => (
-            <Link key={e.id} href={e.detailHref} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-card">
+            <Link key={e.id} href={e.detailHref} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-card-elevated/50">
               <div className="flex items-center gap-3">
                 {e.isMine && <Badge tone="accent">Você está escalado</Badge>}
                 <div>

@@ -53,7 +53,7 @@ export function InvestmentList({
         </div>
         {canCreate && (
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Novo Investimento
+            <Plus size={16} /> Novo investimento
           </Button>
         )}
       </div>
@@ -75,7 +75,7 @@ export function InvestmentList({
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Descrição</th>
                 <th className="px-4 py-3 font-medium">Categoria</th>
                 <th className="px-4 py-3 font-medium">Valor</th>
@@ -85,7 +85,7 @@ export function InvestmentList({
             </thead>
             <tbody>
               {filtered.map((i) => (
-                <tr key={i.id} className="border-b border-border last:border-0 hover:bg-card">
+                <tr key={i.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                   <td className="px-4 py-3">
                     <p className="text-text-primary">{i.description}</p>
                     {i.objective && <p className="text-xs text-text-tertiary">{i.objective}</p>}
@@ -103,7 +103,7 @@ export function InvestmentList({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Investimento">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo investimento">
         <InvestmentForm onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

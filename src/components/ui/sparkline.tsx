@@ -24,9 +24,10 @@ export function Sparkline({ values, labels, formatValue = String, inverted = fal
   const area = `${line} L${points[points.length - 1][0].toFixed(1)},${H - PAD} L${PAD},${H - PAD} Z`;
   const [lastX, lastY] = points[points.length - 1];
 
-  const stroke = inverted ? "rgba(255,255,255,0.75)" : "var(--lh-text-tertiary)";
-  const wash = inverted ? "rgba(255,255,255,0.14)" : "var(--lh-text-tertiary)";
-  const dot = inverted ? "#ffffff" : "var(--lh-accent)";
+  // "inverted" = desenhado sobre o card em destaque: usa a cor de texto sobre destaque.
+  const stroke = inverted ? "color-mix(in srgb, var(--lh-accent-on) 70%, transparent)" : "var(--lh-text-tertiary)";
+  const wash = inverted ? "color-mix(in srgb, var(--lh-accent-on) 12%, transparent)" : "var(--lh-text-tertiary)";
+  const dot = inverted ? "var(--lh-accent-on)" : "var(--lh-accent)";
   const ring = inverted ? "var(--lh-accent)" : "var(--lh-card)";
 
   return (

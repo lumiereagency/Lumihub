@@ -5,12 +5,12 @@ import { Copy, Check, RefreshCw, Link2 } from "lucide-react";
 import { rotatePublicScheduleLinkAction } from "@/lib/actions/media-public-link-actions";
 import { Button } from "@/components/ui/button";
 
-export function PublicScheduleLinkPanel({ token: initialToken }: { token: string }) {
+export function PublicScheduleLinkPanel({ token: initialToken, baseUrl }: { token: string; baseUrl: string }) {
   const [token, setToken] = useState(initialToken);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const url = typeof window !== "undefined" ? `${window.location.origin}/midia/publico/${token}` : `/midia/publico/${token}`;
+  const url = `${baseUrl}/midia/publico/${token}`;
 
   function copy() {
     navigator.clipboard.writeText(url).then(() => {

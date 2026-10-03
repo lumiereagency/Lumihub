@@ -182,7 +182,7 @@ export function CalendarView({
         </div>
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Novo Evento
+            <Plus size={16} /> Novo evento
           </Button>
         )}
       </div>
@@ -207,13 +207,13 @@ export function CalendarView({
 
         {view === "mes" && (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setMonth((m) => subMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card">
+            <button type="button" onClick={() => setMonth((m) => subMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card-elevated/50">
               <ChevronLeft size={18} />
             </button>
             <span className="w-36 text-center text-sm font-medium capitalize text-text-primary">
               {format(month, "MMMM yyyy", { locale: ptBR })}
             </span>
-            <button type="button" onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card">
+            <button type="button" onClick={() => setMonth((m) => addMonths(m, 1))} className="rounded-[8px] p-1.5 text-text-secondary hover:bg-card-elevated/50">
               <ChevronRight size={18} />
             </button>
             <Button variant="outline" size="sm" onClick={() => setMonth(new Date())}>
@@ -274,7 +274,7 @@ export function CalendarView({
               key={e.id}
               type="button"
               onClick={() => setEditingId(e.id)}
-              className="flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-card"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-card-elevated/50"
             >
               <div className="flex items-center gap-3">
                 <Badge tone={TYPE_TONE[e.type] ?? "neutral"}>{CALENDAR_EVENT_TYPE_LABELS[e.type as keyof typeof CALENDAR_EVENT_TYPE_LABELS] ?? e.type}</Badge>
@@ -291,7 +291,7 @@ export function CalendarView({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Evento">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo evento">
         <EventForm action={createEventAction} clients={clients} projects={projects} users={users} submitLabel="Criar evento" onSuccess={() => setCreating(false)} />
       </Drawer>
 

@@ -94,7 +94,7 @@ export function WeeklyAvailabilityForm({
       <div className="overflow-x-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+            <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
               <th className="px-4 py-3 font-medium">Dia</th>
               <th className="px-4 py-3 font-medium">Disponível</th>
               <th className="px-4 py-3 font-medium">Início</th>

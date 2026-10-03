@@ -100,7 +100,7 @@ export function CapturesView({
       <div className="flex justify-end">
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)} disabled={clients.length === 0}>
-            <Plus size={16} /> Nova Captação
+            <Plus size={16} /> Nova captação
           </Button>
         )}
       </div>
@@ -124,7 +124,7 @@ export function CapturesView({
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Data</th>
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Local</th>
@@ -135,7 +135,7 @@ export function CapturesView({
             </thead>
             <tbody>
               {captures.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-card">
+                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                   <td className="px-4 py-3 text-text-secondary">{formatDateTime(new Date(c.date))}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-text-primary">{c.clientName}</p>
@@ -187,7 +187,7 @@ export function CapturesView({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Captação">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova captação">
         <CaptureForm
           action={createCaptureAction}
           clients={clients}

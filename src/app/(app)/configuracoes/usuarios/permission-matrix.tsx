@@ -31,7 +31,7 @@ export function PermissionMatrix({ name, defaultKeys = [] }: { name: string; def
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+          <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
             <th className="px-4 py-2.5 font-medium">Módulo</th>
             {ACTIONS.map((a) => (
               <th key={a} className="px-3 py-2.5 text-center font-medium">
@@ -60,7 +60,7 @@ export function PermissionMatrix({ name, defaultKeys = [] }: { name: string; def
                         value={key}
                         checked={selected.has(key)}
                         onChange={() => toggle(key)}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
                       />
                     </td>
                   );

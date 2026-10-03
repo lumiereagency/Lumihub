@@ -96,7 +96,7 @@ export function UsersView({
           <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Nome</th>
                   <th className="px-4 py-3 font-medium">E-mail</th>
                   <th className="px-4 py-3 font-medium">Perfil</th>
@@ -106,7 +106,7 @@ export function UsersView({
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} onClick={() => setEditingUserId(u.id)} className="cursor-pointer border-b border-border last:border-0 hover:bg-card">
+                  <tr key={u.id} onClick={() => setEditingUserId(u.id)} className="cursor-pointer border-b border-border last:border-0 hover:bg-card-elevated/50">
                     <td className="px-4 py-3 text-text-primary">
                       {u.name}
                       {u.id === currentUserId && <span className="ml-1.5 text-xs text-text-tertiary">(você)</span>}
@@ -151,11 +151,11 @@ export function UsersView({
           </div>
         ))}
 
-      <Drawer open={creatingUser} onClose={() => setCreatingUser(false)} title="Novo Usuário">
+      <Drawer open={creatingUser} onClose={() => setCreatingUser(false)} title="Novo usuário">
         <UserForm roles={assignableRoles.map((r) => ({ id: r.id, name: r.name }))} onSuccess={() => setCreatingUser(false)} />
       </Drawer>
 
-      <Drawer open={creatingRole} onClose={() => setCreatingRole(false)} title="Novo Perfil" widthClassName="max-w-[640px]">
+      <Drawer open={creatingRole} onClose={() => setCreatingRole(false)} title="Novo perfil" widthClassName="max-w-[640px]">
         <RoleForm onSuccess={() => setCreatingRole(false)} />
       </Drawer>
 

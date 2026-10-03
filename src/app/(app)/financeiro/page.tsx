@@ -43,13 +43,14 @@ export default async function FinancePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <MetricCard label="Margem" value={`${indicators.margem.toFixed(1)}%`} />
+        <MetricCard label="Margem" value={`${indicators.margem.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`} />
         <MetricCard label="Ponto de equilíbrio" value={formatCurrency(indicators.pontoEquilibrio, currency)} />
         <MetricCard label="Burn rate" value={formatCurrency(indicators.burnRate, currency)} />
         <MetricCard label="Reserva operacional" value={formatCurrency(indicators.reservaAtual, currency)} />
         <MetricCard
           label="Meses de cobertura"
-          value={indicators.mesesCobertura == null ? "Sem burn rate" : indicators.mesesCobertura.toFixed(1)}
+          value={indicators.mesesCobertura == null ? "Sem despesas no período" : indicators.mesesCobertura.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
+          caption={indicators.mesesCobertura == null ? undefined : "meses que a reserva cobre"}
         />
       </div>
 

@@ -31,12 +31,14 @@ export default async function CashFlowPage() {
       <SectionTabs tabs={filterTabsForUser(ASSETS_TABS, user.permissions)} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {projection.horizons.map((h) => (
+        {/* Só o horizonte de 30 dias em destaque: cinco cartões dourados seguidos perdem a hierarquia. */}
+        {projection.horizons.map((h, i) => (
           <MetricCard
             key={h.key}
-            label={`Saldo projetado — ${h.label}`}
+            label={h.label}
+            caption="saldo projetado"
             value={formatCurrency(h.projectedBalance, currency)}
-            tone={h.projectedBalance < 0 ? "default" : "accent"}
+            tone={i === 1 && h.projectedBalance >= 0 ? "accent" : "default"}
           />
         ))}
       </div>
@@ -67,7 +69,7 @@ export default async function CashFlowPage() {
           <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Descrição</th>
                   <th className="px-4 py-3 font-medium">Data</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
@@ -76,7 +78,7 @@ export default async function CashFlowPage() {
               </thead>
               <tbody>
                 {projection.upcoming.map((e, idx) => (
-                  <tr key={idx} className="border-b border-border last:border-0 hover:bg-card">
+                  <tr key={idx} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                     <td className="px-4 py-3 text-text-primary">{e.description}</td>
                     <td className="px-4 py-3 text-text-secondary">{formatDate(e.date)}</td>
                     <td className="px-4 py-3">

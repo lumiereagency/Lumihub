@@ -696,6 +696,7 @@ export function TaskWorkspace({
       {/* Quadro */}
       {view === "quadro" ? (
         <DndContext
+          id="task-board-dnd"
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}

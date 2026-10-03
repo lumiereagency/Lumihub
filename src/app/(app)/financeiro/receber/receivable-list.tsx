@@ -105,7 +105,7 @@ export function ReceivableList({
         </div>
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)} disabled={clients.length === 0}>
-            <Plus size={16} /> Nova Cobrança
+            <Plus size={16} /> Nova cobrança
           </Button>
         )}
       </div>
@@ -153,7 +153,7 @@ export function ReceivableList({
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Cliente</th>
                   <th className="px-4 py-3 font-medium">Descrição</th>
                   <th className="px-4 py-3 font-medium">Valor</th>
@@ -166,7 +166,7 @@ export function ReceivableList({
                 {filtered.map((r) => {
                   const status = effectiveStatus(r);
                   return (
-                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-card">
+                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                       <td className="px-4 py-3 text-text-primary">{r.clientName}</td>
                       <td className="px-4 py-3 text-text-secondary">{r.description}</td>
                       <td className="px-4 py-3 text-text-secondary">{formatCurrency(r.amount, currency)}</td>
@@ -192,7 +192,7 @@ export function ReceivableList({
         </>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova Cobrança">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Nova cobrança">
         <ReceivableForm action={createReceivableAction} clients={clients} contracts={contracts} submitLabel="Criar cobrança" onSuccess={() => setCreating(false)} />
       </Drawer>
 

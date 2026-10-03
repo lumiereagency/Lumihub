@@ -95,7 +95,7 @@ export function CobrancasView({
                         type="checkbox"
                         defaultChecked={t.active}
                         onChange={(e) => toggleMessageTemplateAction(t.id, e.target.checked)}
-                        className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
+                        className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
                       />
                       Ativo
                     </label>
@@ -138,7 +138,7 @@ export function CobrancasView({
           <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Cliente</th>
                   <th className="px-4 py-3 font-medium">Canal</th>
                   <th className="px-4 py-3 font-medium">Agendado para</th>
@@ -165,7 +165,7 @@ export function CobrancasView({
         )}
       </Card>
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Modelo de Mensagem">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo modelo de Mensagem">
         <TemplateForm onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

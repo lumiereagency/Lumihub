@@ -273,7 +273,7 @@ export function QuoteBuilder({
                   <p className="text-xs text-text-tertiary">{party.kind === "client" ? "Cliente" : "Lead"}</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setParty(null)} className="h-9 rounded-full px-3 text-sm text-text-secondary hover:bg-card">
+              <button type="button" onClick={() => setParty(null)} className="h-9 rounded-full px-3 text-sm text-text-secondary hover:bg-card-elevated/50">
                 Trocar
               </button>
             </div>
@@ -513,7 +513,7 @@ export function QuoteBuilder({
                           {s.badge ? ` · ${s.badge}` : ""}
                         </span>
                       </span>
-                      <span className={cn("flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold", count ? "bg-accent text-white" : "bg-card-elevated text-text-secondary")}>
+                      <span className={cn("flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold", count ? "bg-accent text-accent-on" : "bg-card-elevated text-text-secondary")}>
                         {count || <Plus size={14} />}
                       </span>
                     </button>

@@ -61,7 +61,7 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
       </div>
 
       <label className="flex items-center gap-2 text-sm text-text-secondary">
-        <input type="checkbox" name="active" defaultChecked className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]" />
+        <input type="checkbox" name="active" defaultChecked className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]" />
         Ativo
       </label>
 

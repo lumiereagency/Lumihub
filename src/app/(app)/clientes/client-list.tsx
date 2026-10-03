@@ -10,6 +10,8 @@ import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { MetricCard } from "@/components/ui/metric-card";
+import { cn } from "@/lib/cn";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClientForm } from "./client-form";
 
@@ -53,10 +55,26 @@ export function ClientList({
     });
   }, [clients, search, statusFilter]);
 
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { TODOS: clients.length };
+    for (const c of clients) map[c.status] = (map[c.status] ?? 0) + 1;
+    return map;
+  }, [clients]);
+  const pendingTotal = clients.reduce((sum, c) => sum + c.pendingAmount, 0);
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      {clients.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard label="Clientes ativos" value={String(counts.ATIVO ?? 0)} icon={<Users />} tone="accent" caption={`${clients.length} no total`} />
+          <MetricCard label="Inadimplentes" value={String(counts.INADIMPLENTE ?? 0)} caption="com cobrança atrasada" />
+          <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} caption="cobranças pendentes" />
+          <MetricCard label="Prospectos" value={String(counts.PROSPECTO ?? 0)} caption="ainda sem contrato" />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <div className="relative">
             <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-text-tertiary" />
             <Input
@@ -66,22 +84,27 @@ export function ClientList({
               className="w-full rounded-full pl-10 sm:w-64"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 rounded-full border border-border bg-card px-4 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/40"
-          >
-            <option value="TODOS">Todos os status</option>
-            {Object.entries(CLIENT_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
+          <div className="scrollbar-thin -mx-1 flex max-w-[calc(100%+0.5rem)] gap-1.5 overflow-x-auto px-1">
+            {[["TODOS", "Todos"], ...Object.entries(CLIENT_STATUS_LABELS)].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={statusFilter === value}
+                onClick={() => setStatusFilter(value)}
+                className={cn(
+                  "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors",
+                  statusFilter === value ? "border-transparent bg-ink text-ink-on" : "border-border bg-card text-text-secondary hover:text-text-primary",
+                )}
+              >
                 {label}
-              </option>
+                <span className={cn("lb-figures text-xs", statusFilter === value ? "opacity-70" : "text-text-tertiary")}>{counts[value] ?? 0}</span>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> Novo Cliente
+            <Plus size={16} /> Novo cliente
           </Button>
         )}
       </div>
@@ -134,7 +157,7 @@ export function ClientList({
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                   <th className="px-4 py-3 font-medium">Empresa</th>
                   <th className="px-4 py-3 font-medium">Contato</th>
                   <th className="px-4 py-3 font-medium">Status</th>
@@ -144,10 +167,13 @@ export function ClientList({
               </thead>
               <tbody>
                 {filtered.map((client) => (
-                  <tr key={client.id} className="border-b border-border last:border-0 hover:bg-card">
+                  <tr key={client.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                     <td className="px-4 py-3">
-                      <Link href={`/clientes/${client.id}`} className="font-medium text-text-primary hover:text-accent-light">
-                        {client.companyName}
+                      <Link href={`/clientes/${client.id}`} className="flex items-center gap-3 font-medium text-text-primary hover:text-accent-light">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/12 text-xs font-semibold text-accent-light">
+                          {client.companyName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("")}
+                        </span>
+                        <span className="truncate">{client.companyName}</span>
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
@@ -157,8 +183,8 @@ export function ClientList({
                     <td className="px-4 py-3">
                       <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-text-secondary">{client.contractsCount}</td>
-                    <td className="px-4 py-3 text-text-secondary">
+                    <td className="lb-figures px-4 py-3 text-text-secondary">{client.contractsCount}</td>
+                    <td className="lb-figures px-4 py-3 text-text-secondary">
                       {client.pendingAmount > 0 ? formatCurrency(client.pendingAmount, currency) : "—"}
                     </td>
                   </tr>
@@ -169,7 +195,7 @@ export function ClientList({
         </>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Cliente">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo cliente">
         <ClientForm action={createClientAction} submitLabel="Cadastrar cliente" onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

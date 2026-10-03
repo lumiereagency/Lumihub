@@ -80,7 +80,7 @@ export function ProjectBoard({
         </div>
         {permissions.canCreate && (
           <Button onClick={() => setCreating(true)} disabled={clients.length === 0}>
-            <Plus size={16} /> Novo Projeto
+            <Plus size={16} /> Novo projeto
           </Button>
         )}
       </div>
@@ -147,7 +147,7 @@ export function ProjectBoard({
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-bg-secondary text-left text-xs uppercase tracking-wide text-text-tertiary">
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Projeto</th>
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Responsável</th>
@@ -157,7 +157,7 @@ export function ProjectBoard({
             </thead>
             <tbody>
               {projects.map((p) => (
-                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card">
+                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card-elevated/50">
                   <td className="px-4 py-3">
                     <Link href={`/projetos/${p.id}`} className="font-medium text-text-primary hover:text-accent-light">
                       {p.name}
@@ -178,7 +178,7 @@ export function ProjectBoard({
         </div>
       )}
 
-      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo Projeto">
+      <Drawer open={creating} onClose={() => setCreating(false)} title="Novo projeto">
         <ProjectForm action={createProjectAction} clients={clients} users={users} submitLabel="Criar projeto" onSuccess={() => setCreating(false)} />
       </Drawer>
     </div>

@@ -95,7 +95,7 @@ export function PublicScheduleCalendar({ events }: { events: PublicCalendarEvent
                 className={cn(
                   "flex min-h-[76px] flex-col items-start gap-1 border-b border-r border-border p-2 text-left transition",
                   !inMonth && "bg-bg-secondary/40",
-                  dayEvents.length > 0 && "cursor-pointer hover:bg-card",
+                  dayEvents.length > 0 && "cursor-pointer hover:bg-card-elevated/50",
                   selected && "bg-accent/10",
                 )}
               >

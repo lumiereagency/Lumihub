@@ -10,7 +10,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 [:where(.gap-4,.gap-5,.gap-6,.gap-8)>&]:mb-0">
       <div>
         <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-text-primary sm:text-[32px]">{title}</h1>
         {description && <p className="mt-1.5 text-[15px] text-text-tertiary">{description}</p>}

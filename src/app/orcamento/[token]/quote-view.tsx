@@ -19,6 +19,7 @@ import type {
   QuoteBreakdown,
 } from "@/lib/pricing/engine";
 import { respondToQuoteAction } from "@/lib/actions/public-quote-actions";
+import { Logo } from "@/components/layout/logo";
 
 interface QuoteItem {
   id: string;
@@ -91,34 +92,6 @@ function dateBR(iso: string): string {
     month: "long",
     timeZone: "America/Sao_Paulo",
   });
-}
-
-function LumiMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 120 72"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient
-          id="q-mark"
-          x1="0"
-          y1="8"
-          x2="120"
-          y2="64"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0" stopColor="#F6DDA0" />
-          <stop offset="0.5" stopColor="#D6B266" />
-          <stop offset="1" stopColor="#9E7B37" />
-        </linearGradient>
-      </defs>
-      <circle cx="36" cy="36" r="27" stroke="url(#q-mark)" strokeWidth="9" />
-      <circle cx="84" cy="36" r="27" stroke="url(#q-mark)" strokeWidth="9" />
-    </svg>
-  );
 }
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -356,7 +329,7 @@ export function QuoteView({
         {/* Topo */}
         <header className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <LumiMark className="h-6 w-10" />
+            <Logo size="md" gradientId="q-mark" className="h-6 w-9" />
             <span
               className={`text-lg font-semibold tracking-[0.32em] ${goldText}`}
             >
@@ -1040,7 +1013,7 @@ export function QuoteView({
         </section>
 
         <footer className="flex flex-col items-center gap-3 border-t border-[var(--q-line)] pt-8 pb-4 text-center">
-          <LumiMark className="h-5 w-8 opacity-80" />
+          <Logo size="sm" gradientId="q-mark-foot" className="h-5 w-[30px] opacity-80" />
           <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--q-faint)]">
             LUMI · {companyName}
           </p>

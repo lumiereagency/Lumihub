@@ -121,7 +121,7 @@ export function PayableForm({
           checked={recurring}
           onChange={(e) => setRecurring(e.target.checked)}
           disabled={showInstallments && Number(installmentTotal) > 1}
-          className="h-4 w-4 rounded border-border bg-card accent-[#E8540A]"
+          className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
         />
         Recorrente (gera a próxima ocorrência automaticamente ao confirmar o pagamento)
       </label>

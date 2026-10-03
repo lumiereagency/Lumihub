@@ -3,6 +3,7 @@ import { requireUser, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { InstallAppPrompt } from "@/components/layout/install-app-prompt";
 
 // Toda a área autenticada depende de sessão/RBAC em tempo real — nunca deve
 // ser servida a partir de um cache estático.
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      <InstallAppPrompt />
     </div>
   );
 }
