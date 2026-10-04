@@ -6,8 +6,9 @@ import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { receivableSchema, confirmPaymentSchema } from "@/lib/validation/receivables";
-import { generateRemindersForReceivable } from "@/lib/billing/reminders";
+import { generateRemindersForReceivable, sendPaymentThanks } from "@/lib/billing/reminders";
 import type { ActionState } from "@/lib/actions/auth-actions";
+import { after } from "next/server";
 
 function parseReceivableForm(formData: FormData) {
   return receivableSchema.safeParse({
@@ -162,7 +163,7 @@ export async function confirmPaymentAction(
   await db.$transaction(async (tx) => {
     await tx.accountReceivable.update({
       where: { id: receivableId },
-      data: { status: "PAGO", paidAt: parsed.data.paidAt, paymentMethod: parsed.data.paymentMethod, proofUrl: parsed.data.proofUrl },
+      data: { status: "PAGO", paidAt: parsed.data.paidAt, paymentMethod: parsed.data.paymentMethod, proofUrl: parsed.data.proofUrl ?? existing.proofUrl, proofSubmittedAt: null },
     });
     if (existing.movementId) {
       await tx.financialMovement.update({
@@ -183,6 +184,9 @@ export async function confirmPaymentAction(
     entityType: "AccountReceivable",
     entityId: receivableId,
   });
+
+  // Agradecimento ao cliente pelo WhatsApp, depois da resposta (não atrasa a tela).
+  after(() => sendPaymentThanks(receivableId));
 
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");

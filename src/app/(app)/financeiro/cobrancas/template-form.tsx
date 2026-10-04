@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { createMessageTemplateAction } from "@/lib/actions/billing-actions";
+import { createMessageTemplateAction, updateMessageTemplateAction } from "@/lib/actions/billing-actions";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { MESSAGE_TRIGGERS, MESSAGE_TRIGGER_LABELS, REMINDER_CHANNELS, REMINDER_CHANNEL_LABELS, TEMPLATE_PLACEHOLDERS } from "@/lib/validation/billing";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,17 @@ import { FormMessage } from "@/components/ui/form-message";
 
 const initialState: ActionState = {};
 
-export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
-  const [state, formAction, pending] = useActionState(createMessageTemplateAction, initialState);
+export interface TemplateValues {
+  id: string;
+  name: string;
+  trigger: string;
+  channel: string;
+  body: string;
+  active: boolean;
+}
+
+export function TemplateForm({ onSuccess, template }: { onSuccess?: () => void; template?: TemplateValues }) {
+  const [state, formAction, pending] = useActionState(template ? updateMessageTemplateAction.bind(null, template.id) : createMessageTemplateAction, initialState);
   const successRef = useRef(state.success);
 
   useEffect(() => {
@@ -28,17 +37,17 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      <Input label="Nome do modelo" name="name" required placeholder="Ex: Lembrete D-3" />
+      <Input label="Nome do modelo" name="name" required placeholder="Ex: Lembrete amigável" defaultValue={template?.name} />
 
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Quando enviar" name="trigger" defaultValue="D_0">
+        <Select label="Quando enviar" name="trigger" defaultValue={template?.trigger ?? "D_0"}>
           {MESSAGE_TRIGGERS.map((t) => (
             <option key={t} value={t}>
               {MESSAGE_TRIGGER_LABELS[t]}
             </option>
           ))}
         </Select>
-        <Select label="Canal" name="channel" defaultValue="WHATSAPP">
+        <Select label="Canal" name="channel" defaultValue={template?.channel ?? "WHATSAPP"}>
           {REMINDER_CHANNELS.map((c) => (
             <option key={c} value={c}>
               {REMINDER_CHANNEL_LABELS[c]}
@@ -47,10 +56,10 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
         </Select>
       </div>
 
-      <Textarea label="Mensagem" name="body" rows={5} required placeholder="Olá, {{nome}}. Sua cobrança de {{valor}} vence em {{vencimento}}." />
+      <Textarea label="Mensagem" name="body" rows={9} required placeholder="Oi, {{nome}}! A fatura de {{descricao}}, no valor de {{valor}}, vence em {{vencimento}}. Para pagar: {{link}}" defaultValue={template?.body} />
 
       <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-tertiary">
-        <p className="mb-1.5 font-medium text-text-secondary">Placeholders disponíveis</p>
+        <p className="mb-1.5 font-medium text-text-secondary">Campos que a base preenche sozinha</p>
         <ul className="flex flex-col gap-0.5">
           {TEMPLATE_PLACEHOLDERS.map((p) => (
             <li key={p.key}>
@@ -61,12 +70,12 @@ export function TemplateForm({ onSuccess }: { onSuccess?: () => void }) {
       </div>
 
       <label className="flex items-center gap-2 text-sm text-text-secondary">
-        <input type="checkbox" name="active" defaultChecked className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]" />
+        <input type="checkbox" name="active" defaultChecked={template?.active ?? true} className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]" />
         Ativo
       </label>
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
-        {pending ? "Salvando..." : "Criar modelo"}
+        {pending ? "Salvando..." : template ? "Salvar modelo" : "Criar modelo"}
       </Button>
     </form>
   );

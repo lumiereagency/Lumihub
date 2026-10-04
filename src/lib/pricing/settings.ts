@@ -20,6 +20,8 @@ export interface PricingSettingsView {
   pixKey: string | null;
   whatsappTemplate: string;
   contractMessage: string;
+  billingThanks: boolean;
+  billingPixSeparate: boolean;
   company: {
     legalName: string;
     document: string | null;
@@ -49,6 +51,8 @@ export async function getPricingSettings(organizationId: string): Promise<Pricin
     pixKey: row?.pixKey ?? null,
     whatsappTemplate: row?.whatsappTemplate || DEFAULT_WHATSAPP_TEMPLATE,
     contractMessage: row?.contractTemplateMsg || DEFAULT_CONTRACT_MESSAGE,
+    billingThanks: row?.billingThanks ?? true,
+    billingPixSeparate: row?.billingPixSeparate ?? true,
     company: {
       legalName: row?.companyLegalName || "AGÊNCIA LUMIERE LTDA",
       document: row?.companyDocument ?? null,

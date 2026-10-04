@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ReceivableForm, type ReceivableFormValues } from "./receivable-form";
 import { ConfirmPaymentForm } from "./confirm-payment-form";
+import { ChargePanel } from "./charge-panel";
 
 interface ReceivableRow {
   id: string;
@@ -24,6 +25,8 @@ interface ReceivableRow {
   paymentMethod: string | null;
   paidAt: string | null;
   proofUrl: string | null;
+  proofSubmittedAt: string | null;
+  dueLabel: string;
   notes: string | null;
   clientName: string;
 }
@@ -143,7 +146,7 @@ export function ReceivableList({
                   <p className="text-sm text-text-secondary">{r.description}</p>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-text-secondary">{formatCurrency(r.amount, currency)}</span>
-                    <span className="text-text-tertiary">{formatDate(new Date(r.dueDate))}</span>
+                    <span className="text-text-tertiary">{r.dueLabel}</span>
                   </div>
                 </button>
               );
@@ -170,9 +173,12 @@ export function ReceivableList({
                       <td className="px-4 py-3 text-text-primary">{r.clientName}</td>
                       <td className="px-4 py-3 text-text-secondary">{r.description}</td>
                       <td className="px-4 py-3 text-text-secondary">{formatCurrency(r.amount, currency)}</td>
-                      <td className="px-4 py-3 text-text-secondary">{formatDate(new Date(r.dueDate))}</td>
+                      <td className="px-4 py-3 text-text-secondary">{r.dueLabel}</td>
                       <td className="px-4 py-3">
-                        <Badge tone={STATUS_TONE[status] ?? "neutral"}>{RECEIVABLE_STATUS_LABELS[status as keyof typeof RECEIVABLE_STATUS_LABELS] ?? status}</Badge>
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <Badge tone={STATUS_TONE[status] ?? "neutral"}>{RECEIVABLE_STATUS_LABELS[status as keyof typeof RECEIVABLE_STATUS_LABELS] ?? status}</Badge>
+                          {r.proofSubmittedAt && r.status !== "PAGO" && <Badge tone="warning">Comprovante</Badge>}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -200,7 +206,20 @@ export function ReceivableList({
         {editing && (
           <div className="flex flex-col gap-4">
             {(editing.status === "PENDENTE" || editing.status === "ATRASADO") && (
-              <ConfirmPaymentForm receivableId={editing.id} defaultPaymentMethod={editing.paymentMethod} />
+              <>
+                {editing.proofSubmittedAt && (
+                  <div className="flex flex-col gap-1 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                    <span>O cliente enviou o comprovante em {formatDate(new Date(editing.proofSubmittedAt))}. Confira e confirme abaixo.</span>
+                    {editing.proofUrl && (
+                      <a href={editing.proofUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline">
+                        <ExternalLink size={12} /> Ver comprovante
+                      </a>
+                    )}
+                  </div>
+                )}
+                <ConfirmPaymentForm receivableId={editing.id} defaultPaymentMethod={editing.paymentMethod} />
+                {permissions.canEdit && <ChargePanel key={editing.id} receivableId={editing.id} />}
+              </>
             )}
             {editing.status === "PAGO" && (
               <>

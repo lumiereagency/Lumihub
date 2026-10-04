@@ -491,6 +491,9 @@ model PricingSettings {
   representativeName  String?
   representativeEmail String?
   representativeDoc   String?
+  // Lumi Cobranças: agradecimento automático ao confirmar pagamento e Pix copia e cola em mensagem separada.
+  billingThanks       Boolean  @default(true)
+  billingPixSeparate  Boolean  @default(true)
   updatedAt           DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1200,6 +1203,11 @@ model AccountReceivable {
   paidAt         DateTime?
   proofUrl       String?
   notes          String?
+  // Link de pagamento enviado ao cliente (/pagar/<token>); gerado no primeiro envio.
+  publicToken      String?        @unique
+  // Cliente enviou comprovante pela página de pagamento e o financeiro ainda precisa conferir.
+  proofSubmittedAt DateTime?
+  thanksSentAt     DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 

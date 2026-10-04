@@ -22,6 +22,8 @@ const PUBLIC_PATHS = [
   "/midia/publico",
   // Orçamento enviado ao cliente por link (token aleatório é a credencial).
   "/orcamento",
+  // Link de pagamento enviado na cobrança (token aleatório é a credencial).
+  "/pagar",
 ];
 
 export function proxy(request: NextRequest) {

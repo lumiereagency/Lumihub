@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PAYMENT_METHODS } from "@/lib/validation/shared";
+import { parseDateInput } from "@/lib/billing/dates";
 
 export const RECEIVABLE_STATUSES = ["PENDENTE", "PAGO", "ATRASADO", "CANCELADO"] as const;
 
@@ -17,13 +18,13 @@ export const receivableSchema = z.object({
   contractId: z.preprocess(emptyToUndefined, z.string().optional()),
   description: z.string().trim().min(1, "Informe a descrição."),
   amount: z.coerce.number().positive("Informe um valor maior que zero."),
-  dueDate: z.coerce.date({ error: "Informe o vencimento." }),
+  dueDate: z.preprocess(parseDateInput, z.coerce.date({ error: "Informe o vencimento." })),
   paymentMethod: z.preprocess(emptyToUndefined, z.enum(PAYMENT_METHODS).optional()),
   notes: z.preprocess(emptyToUndefined, z.string().trim().optional()),
 });
 
 export const confirmPaymentSchema = z.object({
-  paidAt: z.coerce.date({ error: "Informe a data de pagamento." }),
+  paidAt: z.preprocess(parseDateInput, z.coerce.date({ error: "Informe a data de pagamento." })),
   paymentMethod: z.preprocess(emptyToUndefined, z.enum(PAYMENT_METHODS).optional()),
   proofUrl: z.preprocess(emptyToUndefined, z.string().trim().url("Informe uma URL válida.").optional()),
 });

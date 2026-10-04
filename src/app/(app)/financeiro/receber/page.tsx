@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import { FINANCE_TABS, filterTabsForUser } from "@/lib/nav";
 import { ReceivableList } from "./receivable-list";
+import { formatDueDate } from "@/lib/billing/dates";
 
 export default async function ReceivablesPage() {
   const user = await requirePermission(permKey("RECEIVABLES", "VIEW"));
@@ -50,6 +51,8 @@ export default async function ReceivablesPage() {
           paymentMethod: r.paymentMethod,
           paidAt: r.paidAt?.toISOString() ?? null,
           proofUrl: r.proofUrl,
+          proofSubmittedAt: r.proofSubmittedAt?.toISOString() ?? null,
+          dueLabel: formatDueDate(r.dueDate),
           notes: r.notes,
           clientName: r.client.companyName,
         }))}
