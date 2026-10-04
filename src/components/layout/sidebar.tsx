@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Wordmark } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface SidebarUser {
   name: string;
@@ -60,7 +61,10 @@ export function Sidebar({
       <div className="flex w-full flex-col rounded-3xl border border-border bg-card">
         <div className="flex h-[68px] items-center justify-between px-5">
           <Wordmark />
-          <ThemeToggle />
+          <div className="flex items-center gap-0.5">
+            <NotificationBell placement="sidebar" />
+            <ThemeToggle />
+          </div>
         </div>
         <nav
           ref={navRef}

@@ -3,7 +3,8 @@ import { requireUser, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { InstallAppPrompt } from "@/components/layout/install-app-prompt";
+import { AppPrompts } from "@/components/notifications/app-prompts";
+import { getVapidKeys } from "@/lib/notifications/push";
 
 // Toda a área autenticada depende de sessão/RBAC em tempo real — nunca deve
 // ser servida a partir de um cache estático.
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const permissions = Array.from(user.permissions);
+  const { publicKey } = await getVapidKeys();
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -35,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
-      <InstallAppPrompt />
+      <AppPrompts vapidPublicKey={publicKey} />
     </div>
   );
 }

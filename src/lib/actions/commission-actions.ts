@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireDirector } from "@/lib/auth/guard";
 import { audit } from "@/lib/audit";
 import { formatCurrency } from "@/lib/format";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 type Result = { ok: true; count?: number } | { ok: false; error: string };
 
@@ -16,7 +17,7 @@ function done(proposalId?: string) {
 
 async function notifySeller(organizationId: string, sellerUserId: string | null, title: string, body: string) {
   if (!sellerUserId) return;
-  await db.notification.create({ data: { organizationId, userId: sellerUserId, title, body, link: "/comissoes" } });
+  await notifyUsers({ organizationId, userIds: [sellerUserId], title, body, link: "/comissoes", category: "comercial" });
 }
 
 async function load(id: string, organizationId: string) {

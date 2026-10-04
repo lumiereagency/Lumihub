@@ -14,6 +14,7 @@ import {
   createBoardWithDefaults,
   nextPosition,
 } from "@/lib/tasks/board-service";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -44,7 +45,7 @@ async function findBoard(organizationId: string, boardId: string) {
 
 async function notify(organizationId: string, userId: string, actorId: string, title: string, body: string, link: string) {
   if (userId === actorId) return;
-  await db.notification.create({ data: { organizationId, userId, title, body, link } });
+  await notifyUsers({ organizationId, userIds: [userId], title, body, link, category: "tarefas" });
 }
 
 // ---------------------------------------------------------------- Quadros

@@ -153,12 +153,15 @@ model User {
   isOwner         Boolean   @default(false)
   emailVerifiedAt DateTime?
   lastLoginAt     DateTime?
+  // Preferências de notificação (categorias e horário de silêncio); nulo = padrão, tudo ligado.
+  notificationSettings Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
   organization              Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   role                      Role                      @relation(fields: [roleId], references: [id])
+  pushSubscriptions         PushSubscription[]
   sessions                  Session[]
   passwordResets            PasswordResetToken[]
   auditLogs                 AuditLog[]
@@ -1464,6 +1467,10 @@ model Notification {
   title          String
   body           String
   link           String?
+  // tarefas | comercial | financeiro | alertas | operacao | midia | resumo
+  category       String?
+  // Lembretes automáticos (rotina de pendências) não se repetem: uma chave por aviso.
+  dedupeKey      String?   @unique
   readAt         DateTime?
   createdAt      DateTime  @default(now())
 
@@ -1472,6 +1479,32 @@ model Notification {
 
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+// Um aparelho (navegador/app instalado) que aceitou receber notificações push.
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// Configurações do servidor que não pertencem a uma organização (ex: chaves VAPID do push).
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
 // =========================================================================

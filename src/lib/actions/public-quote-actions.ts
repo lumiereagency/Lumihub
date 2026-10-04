@@ -8,6 +8,7 @@ import { convertLeadToClient, fillClientGaps } from "@/lib/crm/convert";
 import { createCommissionsForProposal } from "@/lib/commissions/service";
 import { LEAD_STAGES } from "@/lib/validation/crm";
 import { formatDocument, isValidCnpj, isValidCpf, onlyDigits } from "@/lib/documents";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 // Ações da página pública do orçamento (/orcamento/[token]): sem login. O
 // token de 24 caracteres aleatórios é a única credencial, e ele só permite
@@ -63,9 +64,7 @@ async function notifyTeam(organizationId: string, proposal: { id: string; create
   ]);
   const ids = new Set([...admins.map((a) => a.id), proposal.createdByUserId, lead?.ownerUserId].filter((v): v is string => !!v));
   if (!ids.size) return;
-  await db.notification.createMany({
-    data: [...ids].map((userId) => ({ organizationId, userId, title, body, link: `/propostas/${proposal.id}` })),
-  });
+  await notifyUsers({ organizationId, userIds: [...ids], title, body, link: `/propostas/${proposal.id}`, category: "comercial" });
 }
 
 export async function respondToQuoteAction(token: string, input: QuoteResponseInput): Promise<Result> {

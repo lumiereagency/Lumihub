@@ -2,6 +2,8 @@ import { requireMediaMember, isMediaLeader } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { mediaThemeStyle } from "@/lib/media/theme";
 import { MediaPortalShell } from "@/components/media/portal-shell";
+import { AppPrompts } from "@/components/notifications/app-prompts";
+import { getVapidKeys } from "@/lib/notifications/push";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,7 @@ export default async function MediaPortalLayout({ children }: { children: React.
   const user = await requireMediaMember();
   const brand = await db.mediaBrandSettings.findUnique({ where: { organizationId: user.organizationId } });
   const permissions = Array.from(user.permissions);
+  const { publicKey } = await getVapidKeys();
 
   return (
     <div style={mediaThemeStyle(brand)}>
@@ -24,6 +27,7 @@ export default async function MediaPortalLayout({ children }: { children: React.
       >
         {children}
       </MediaPortalShell>
+      <AppPrompts vapidPublicKey={publicKey} />
     </div>
   );
 }

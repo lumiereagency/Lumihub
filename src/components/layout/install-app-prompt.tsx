@@ -36,7 +36,7 @@ function recentlyDismissed() {
   }
 }
 
-export function InstallAppPrompt() {
+export function InstallAppPrompt({ hidden = false }: { hidden?: boolean }) {
   const [mode, setMode] = useState<"hidden" | "native" | "ios">("hidden");
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
 
@@ -81,7 +81,7 @@ export function InstallAppPrompt() {
     else dismiss();
   }
 
-  if (mode === "hidden") return null;
+  if (mode === "hidden" || hidden) return null;
 
   return (
     <div
@@ -116,7 +116,7 @@ export function InstallAppPrompt() {
             </>
           ) : (
             <>
-              <p className="text-[13px] leading-snug text-text-tertiary">Tenha a base na tela inicial do iPhone, como um app.</p>
+              <p className="text-[13px] leading-snug text-text-tertiary">Tenha a base na tela inicial do iPhone, como um app, e receba as notificações.</p>
               <ol className="mt-2 flex flex-col gap-1.5 text-[13px] text-text-secondary">
                 <li className="flex items-center gap-2">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-card-elevated text-text-primary">

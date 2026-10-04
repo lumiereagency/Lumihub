@@ -7,6 +7,7 @@ import { getPricingSettings } from "@/lib/pricing/settings";
 import { quoteForProposal } from "@/lib/pricing/quote";
 import { parseChoice } from "@/lib/pricing/engine";
 import { QuoteView } from "./quote-view";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"], variable: "--font-poppins" });
 
@@ -53,14 +54,13 @@ export default async function PublicQuotePage({ params }: PageProps<"/orcamento/
     });
     if (wasDraft) proposal.status = "ENVIADA";
     if (!proposal.viewedAt && proposal.createdByUserId) {
-      await db.notification.create({
-        data: {
-          organizationId: proposal.organizationId,
-          userId: proposal.createdByUserId,
-          title: "Orçamento aberto 👀",
-          body: `${proposal.recipientName?.split(" ")[0] ?? "O cliente"} acabou de abrir "${proposal.title}".`,
-          link: `/propostas/${proposal.id}`,
-        },
+      await notifyUsers({
+        organizationId: proposal.organizationId,
+        userIds: [proposal.createdByUserId],
+        title: "Orçamento aberto 👀",
+        body: `${proposal.recipientName?.split(" ")[0] ?? "O cliente"} acabou de abrir "${proposal.title}".`,
+        link: `/propostas/${proposal.id}`,
+        category: "comercial",
       });
     }
   }

@@ -8,6 +8,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ChangePasswordForm } from "./change-password-form";
 import { RevokeSessionButton } from "./revoke-session-button";
+import { db } from "@/lib/db";
+import { getVapidKeys } from "@/lib/notifications/push";
+import { parseNotificationSettings } from "@/lib/notifications/settings";
+import { NotificationSettingsPanel } from "@/components/notifications/notification-settings-panel";
 
 function formatRelative(date: Date): string {
   const diffMs = Date.now() - date.getTime();
@@ -22,14 +26,19 @@ function formatRelative(date: Date): string {
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const sessions = await listActiveSessions(user.id);
+  const [sessions, { publicKey }, me, pushDevices] = await Promise.all([
+    listActiveSessions(user.id),
+    getVapidKeys(),
+    db.user.findUnique({ where: { id: user.id }, select: { notificationSettings: true } }),
+    db.pushSubscription.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, userAgent: true } }),
+  ]);
 
   // Sessão atual primeiro, depois a mais recente.
   const ordered = [...sessions].sort((a, b) => Number(b.id === user.sessionId) - Number(a.id === user.sessionId) || b.lastActiveAt.getTime() - a.lastActiveAt.getTime());
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Meu perfil" description="Suas informações, sua senha e os aparelhos conectados à sua conta." />
+      <PageHeader title="Meu perfil" description="Suas informações, sua senha, as notificações e os aparelhos conectados à sua conta." />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <div className="flex flex-col gap-5">
@@ -91,6 +100,20 @@ export default async function ProfilePage() {
           </div>
         </Card>
       </div>
+
+      <Card id="notificacoes" className="scroll-mt-6">
+        <CardHeader>
+          <div>
+            <CardTitle>Notificações</CardTitle>
+            <p className="mt-1 text-sm text-text-tertiary">Avisos no celular e no computador, mesmo com a base fechada. Ative em cada aparelho que você usa.</p>
+          </div>
+        </CardHeader>
+        <NotificationSettingsPanel
+          vapidPublicKey={publicKey}
+          initial={parseNotificationSettings(me?.notificationSettings)}
+          devices={pushDevices.map((d) => ({ id: d.id, ...describeUserAgent(d.userAgent) }))}
+        />
+      </Card>
     </div>
   );
 }

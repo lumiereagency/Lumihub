@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 // Camada única de notificação interna do Mídia ADESF — reaproveita o modelo
 // `Notification` já existente no LUMIBASE (in-app, por usuário) em vez de
@@ -7,7 +8,7 @@ import { db } from "@/lib/db";
 // diretamente (§61): quem quiser aviso por e-mail/WhatsApp no futuro troca
 // só esta função, sem tocar nos services de domínio que a chamam.
 export async function notifyUser(organizationId: string, userId: string, title: string, body: string, link?: string): Promise<void> {
-  await db.notification.create({ data: { organizationId, userId, title, body, link } });
+  await notifyUsers({ organizationId, userIds: [userId], title, body, link, category: "midia" });
 }
 
 export async function notifyMediaMember(organizationId: string, memberId: string, title: string, body: string, link?: string): Promise<void> {
@@ -24,7 +25,5 @@ export async function notifyMediaLeaders(organizationId: string, title: string, 
     select: { userId: true },
   });
   if (leaders.length === 0) return;
-  await db.notification.createMany({
-    data: leaders.map((l) => ({ organizationId, userId: l.userId, title, body, link })),
-  });
+  await notifyUsers({ organizationId, userIds: leaders.map((l) => l.userId), title, body, link, category: "midia" });
 }

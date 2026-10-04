@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import { NAV_GROUPS, getActiveHref } from "@/lib/nav";
 import { Wordmark } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function MobileNav({ permissions }: { permissions: string[] }) {
   const [open, setOpen] = useState(false);
@@ -29,6 +30,7 @@ export function MobileNav({ permissions }: { permissions: string[] }) {
         <div className="flex h-14 items-center justify-between rounded-full border border-border bg-card pl-5 pr-2">
           <Wordmark gradientId="lb-logo-mark-mobile" />
           <div className="flex items-center gap-1.5">
+            <NotificationBell placement="mobile" />
             <ThemeToggle />
             <button
               type="button"

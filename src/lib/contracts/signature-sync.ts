@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getAutentiqueCredentials, getAutentiqueDocument, type AutentiqueSigner } from "@/lib/integrations/autentique";
+import { notifyUsers } from "@/lib/notifications/notify";
 
 export interface StoredSigner {
   publicId: string;
@@ -58,14 +59,13 @@ export async function syncContractSignature(contractId: string): Promise<{ statu
     });
     const ids = new Set([...admins.map((a) => a.id), contract.proposal?.createdByUserId].filter((v): v is string => !!v));
     const signed = status === "SIGNED";
-    await db.notification.createMany({
-      data: [...ids].map((userId) => ({
-        organizationId: contract.organizationId,
-        userId,
-        title: signed ? "Contrato assinado ✍️" : "Contrato recusado na assinatura",
-        body: `${contract.client.companyName} ${signed ? "assinou" : "recusou"} "${contract.title}".`,
-        link: contract.proposal ? `/propostas/${contract.proposal.id}` : "/contratos",
-      })),
+    await notifyUsers({
+      organizationId: contract.organizationId,
+      userIds: [...ids],
+      title: signed ? "Contrato assinado ✍️" : "Contrato recusado na assinatura",
+      body: `${contract.client.companyName} ${signed ? "assinou" : "recusou"} "${contract.title}".`,
+      link: contract.proposal ? `/propostas/${contract.proposal.id}` : "/contratos",
+      category: "comercial",
     });
     await audit({
       organizationId: contract.organizationId,

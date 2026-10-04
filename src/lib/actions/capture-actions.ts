@@ -15,6 +15,7 @@ import {
 } from "@/lib/validation/capture-assignments";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
+import { deferPush } from "@/lib/notifications/notify";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -116,15 +117,18 @@ async function syncCaptureAssignments(
       data: { organizationId, captureId, userId: wanted.userId, role, status: "PENDENTE" },
     });
 
-    await tx.notification.create({
+    const notification = await tx.notification.create({
       data: {
         organizationId,
         userId: wanted.userId,
+        category: "operacao",
         title: "Nova captação para aceitar",
         body: `Você foi escalado como ${CAPTURE_CREW_ROLE_LABELS[role]} para a captação de ${capture.date.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} às ${capture.date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}${capture.location ? ` — ${capture.location}` : ""}. Aceite ou recuse na sua tela inicial.`,
         link: "/dashboard",
       },
     });
+    // Push sai depois da resposta, com a transação já gravada.
+    deferPush([wanted.userId], { title: notification.title, body: notification.body, link: notification.link, category: "operacao" });
   }
 
   return removedGoogleEventIds;
