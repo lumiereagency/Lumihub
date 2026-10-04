@@ -99,7 +99,7 @@ export function InstallAppPrompt() {
           <X size={15} />
         </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/icon-192.png" alt="" width={52} height={52} className="h-[52px] w-[52px] shrink-0 rounded-[14px]" />
+        <img src="/icons/icon-192.png?v=3" alt="" width={52} height={52} className="h-[52px] w-[52px] shrink-0 rounded-[14px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1 pr-6">
           <p className="text-sm font-semibold text-text-primary">Instale a LUMIBASE</p>
           {mode === "native" ? (
