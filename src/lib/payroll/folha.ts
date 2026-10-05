@@ -5,7 +5,8 @@ import { parsePayDayMode, payDayOf } from "@/lib/payroll/business-days";
 import type { Prisma } from "@/generated/prisma/client";
 
 // FOLHA DO MÊS — uma conta a pagar por pessoa por mês de competência:
-//   fixo (salário) + comissões liberadas + cachês de captação.
+//   fixo (salário) + comissões liberadas + extras (captações, edição de
+//   vídeo, serviços gráficos — pontuais ou recorrentes).
 // O que é ganho no mês M é pago no dia de pagamento da pessoa no mês M+1
 // (ex: 5º dia útil). Enquanto a folha não é paga, o valor se recalcula
 // sozinho; o que entra depois que a folha do mês já foi paga vai para a
@@ -75,7 +76,7 @@ async function openFolha(tx: Db, member: { id: string; organizationId: string; n
     const dueDate = folhaDueDate(member, c);
     const categoryId = await payrollCategory(tx, member.organizationId);
     const movement = await tx.financialMovement.create({
-      data: { organizationId: member.organizationId, type: "DESPESA", amount: 0, competenceDate: noonOf(`${c}-15`), dueDate, categoryId, status: "PENDENTE", notes: "Folha do mês (fixo + comissões + cachês)." },
+      data: { organizationId: member.organizationId, type: "DESPESA", amount: 0, competenceDate: noonOf(`${c}-15`), dueDate, categoryId, status: "PENDENTE", notes: "Folha do mês (fixo + comissões + extras)." },
     });
     return tx.accountPayable.create({
       data: {
@@ -100,6 +101,18 @@ export interface FolhaBreakdown {
   fixed: number;
   commissions: { id: string; description: string; amount: number }[];
   extras: { id: string; captureId: string; date: string; client: string; role: string; amount: number }[];
+  // Extras lançados à mão (edição de vídeo, gráficos...), pontuais ou do mês de um recorrente.
+  bonuses?: { id: string; bonusId: string; kind: string; description: string; recurring: boolean; amount: number }[];
+}
+
+export function bonusesOf(b: FolhaBreakdown | null | undefined) {
+  return b?.bonuses ?? [];
+}
+
+// Soma de tudo o que é extra na folha (captações + extras lançados).
+export function extrasTotalOf(b: FolhaBreakdown | null | undefined): number {
+  if (!b) return 0;
+  return b.extras.reduce((s, e) => s + e.amount, 0) + bonusesOf(b).reduce((s, e) => s + e.amount, 0);
 }
 
 // Recalcula valor, vencimento e composição de uma folha em aberto.
@@ -107,11 +120,16 @@ async function recalcFolha(tx: Db, payableId: string) {
   const p = await tx.accountPayable.findUniqueOrThrow({ where: { id: payableId }, include: { teamMember: true } });
   if (p.status === "PAGO" || p.status === "CANCELADO" || !p.teamMember || !p.competence) return;
   const member = p.teamMember;
-  const [commissions, extras] = await Promise.all([
+  const [commissions, extras, bonuses] = await Promise.all([
     tx.commission.findMany({ where: { payableId, status: "A_PAGAR" }, select: { id: true, description: true, amount: true } }),
     tx.captureAssignment.findMany({
       where: { payableId, fee: { not: null } },
       select: { id: true, role: true, fee: true, capture: { select: { id: true, date: true, client: { select: { companyName: true } } } } },
+    }),
+    tx.extraBonusEntry.findMany({
+      where: { payableId },
+      select: { id: true, amount: true, bonus: { select: { id: true, kind: true, description: true, recurring: true } } },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
   const fixed = member.active && member.paymentValue ? Number(member.paymentValue) : 0;
@@ -119,8 +137,9 @@ async function recalcFolha(tx: Db, payableId: string) {
     fixed,
     commissions: commissions.map((c) => ({ id: c.id, description: c.description, amount: Number(c.amount) })),
     extras: extras.map((e) => ({ id: e.id, captureId: e.capture.id, date: e.capture.date.toISOString(), client: e.capture.client.companyName, role: e.role, amount: Number(e.fee) })),
+    bonuses: bonuses.map((b) => ({ id: b.id, bonusId: b.bonus.id, kind: b.bonus.kind, description: b.bonus.description, recurring: b.bonus.recurring, amount: Number(b.amount) })),
   };
-  const amount = Math.round((fixed + breakdown.commissions.reduce((s, c) => s + c.amount, 0) + breakdown.extras.reduce((s, e) => s + e.amount, 0)) * 100) / 100;
+  const amount = Math.round((fixed + breakdown.commissions.reduce((s, c) => s + c.amount, 0) + extrasTotalOf(breakdown)) * 100) / 100;
 
   if (amount === 0) {
     // Nada a pagar neste mês: some das contas a pagar.
@@ -198,6 +217,30 @@ export async function syncPayroll(organizationId: string) {
         if (!member) continue;
         const folha = await openFolha(tx, member, competenceOf(a.capture.date));
         await tx.captureAssignment.update({ where: { id: a.id }, data: { payableId: folha.id } });
+        touched.add(folha.id);
+      }
+
+      // Extras: o recorrente ganha o lançamento de cada mês (até o mês atual);
+      // o pontual, o do mês em que foi feito. Cada lançamento vai para a folha.
+      const bonuses = await tx.extraBonus.findMany({ where: { organizationId }, include: { entries: { select: { competence: true } } } });
+      for (const b of bonuses) {
+        const have = new Set(b.entries.map((e) => e.competence));
+        const start = competenceOf(b.date);
+        const comps: string[] = [];
+        if (!b.recurring) comps.push(start);
+        else {
+          const last = b.endCompetence && b.endCompetence < current ? b.endCompetence : current;
+          for (let c = start, i = 0; c <= last && i < 36; c = shiftCompetence(c, 1), i++) comps.push(c);
+        }
+        const missing = comps.filter((c) => !have.has(c));
+        if (missing.length) await tx.extraBonusEntry.createMany({ data: missing.map((competence) => ({ bonusId: b.id, competence, amount: b.amount })), skipDuplicates: true });
+      }
+      const looseEntries = await tx.extraBonusEntry.findMany({ where: { payableId: null, bonus: { organizationId } }, include: { bonus: { select: { teamMemberId: true } } } });
+      for (const e of looseEntries) {
+        const member = await tx.teamMember.findUnique({ where: { id: e.bonus.teamMemberId } });
+        if (!member) continue;
+        const folha = await openFolha(tx, member, e.competence);
+        await tx.extraBonusEntry.update({ where: { id: e.id }, data: { payableId: folha.id } });
         touched.add(folha.id);
       }
 

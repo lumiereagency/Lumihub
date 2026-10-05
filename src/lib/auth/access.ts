@@ -32,7 +32,7 @@ export const ACCESS_TABS: AccessTab[] = [
   { module: "CONTRACTS", label: "Contratos", hint: "Contratos e assinaturas", group: "Clientes" },
   { module: "TASKS", label: "Workspace", hint: "Quadros e cartões de trabalho", group: "Operação" },
   { module: "PROJECTS", label: "Projetos", hint: "Projetos dos clientes", group: "Operação" },
-  { module: "CAPTURES", label: "Captações", hint: "Agenda de gravações", group: "Operação" },
+  { module: "CAPTURES", label: "Extras · Captações", hint: "Agenda de gravações e extras de captação", group: "Operação" },
   { module: "CALENDAR", label: "Agenda", hint: "Compromissos", group: "Operação" },
   { module: "FINANCE", label: "Financeiro", hint: "Visão geral, caixa e impostos", group: "Financeiro" },
   { module: "RECEIVABLES", label: "Contas a receber", hint: "Recebimentos e cobranças", group: "Financeiro" },

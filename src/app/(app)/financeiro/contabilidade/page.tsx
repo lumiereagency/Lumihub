@@ -29,7 +29,7 @@ export default async function AccountingPage({ searchParams }: PageProps<"/finan
   const items = [
     { icon: Receipt, title: "Receitas", text: `${incomeCount} recebimento(s) com cliente e CNPJ/CPF` },
     { icon: FileSpreadsheet, title: "Despesas", text: `${expenseCount} conta(s) com fornecedor e categoria` },
-    { icon: Users, title: "Folha", text: `${folhaCount} pessoa(s): fixo, comissões e cachês` },
+    { icon: Users, title: "Folha", text: `${folhaCount} pessoa(s): fixo, comissões e extras` },
     { icon: Landmark, title: "Impostos e comprovantes", text: `DAS do mês e ${proofCount} comprovante(s) anexado(s)` },
   ];
 

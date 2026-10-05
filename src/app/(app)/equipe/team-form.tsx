@@ -81,7 +81,7 @@ export function TeamMemberForm({
         min={0}
         step="0.01"
         defaultValue={defaultValues?.paymentValue ?? ""}
-        placeholder="Deixe em branco se recebe só comissão ou cachê"
+        placeholder="Deixe em branco se recebe só comissão ou extras"
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px]">
@@ -105,7 +105,7 @@ export function TeamMemberForm({
         )}
       </div>
       <p className="-mt-2 text-xs text-text-tertiary">
-        O que a pessoa ganha no mês (fixo, comissões e cachês de captação) é pago nessa data do mês seguinte. Dias úteis já descontam fins de semana e feriados nacionais.
+        O que a pessoa ganha no mês (fixo, comissões e extras) é pago nessa data do mês seguinte. Dias úteis já descontam fins de semana e feriados nacionais.
       </p>
 
       <Select label="Forma de pagamento" name="paymentMethod" defaultValue={defaultValues?.paymentMethod ?? ""}>

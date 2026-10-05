@@ -241,7 +241,7 @@ export async function setCaptureFeeAction(assignmentId: string, value: number | 
   const user = await requirePermission(permKey("CAPTURES", "EDIT"));
   const a = await db.captureAssignment.findFirst({ where: { id: assignmentId, organizationId: user.organizationId } });
   if (!a) return { ok: false, error: "Pessoa não encontrada nesta captação." };
-  if (a.payableId && (await db.accountPayable.findFirst({ where: { id: a.payableId, status: "PAGO" } }))) return { ok: false, error: "Este cachê já foi pago na folha." };
+  if (a.payableId && (await db.accountPayable.findFirst({ where: { id: a.payableId, status: "PAGO" } }))) return { ok: false, error: "Este extra já foi pago na folha." };
   if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100000)) return { ok: false, error: "Valor inválido." };
   await db.captureAssignment.update({ where: { id: assignmentId }, data: value === null ? { feeManual: false } : { fee: value, feeManual: true } });
   if (value === null) await db.$transaction((tx) => applyCaptureFees(tx, a.captureId));

@@ -94,6 +94,13 @@ export const PROJECT_TABS: NavTab[] = [
   { label: "Projetos", href: "/projetos", permission: permKey("PROJECTS", "VIEW") },
 ];
 
+// Extras: serviços além do fixo que entram nos ganhos de cada pessoa.
+export const EXTRAS_TABS: NavTab[] = [
+  { label: "Captações", href: "/captacoes", permission: permKey("CAPTURES", "VIEW") },
+  { label: "Edição de vídeo", href: "/extras/edicao-de-video", permission: null },
+  { label: "Serviços gráficos", href: "/extras/servicos-graficos", permission: null },
+];
+
 export const FINANCE_TABS: NavTab[] = [
   { label: "Visão Geral", href: "/financeiro", permission: permKey("FINANCE", "VIEW") },
   { label: "Contas a Receber", href: "/financeiro/receber", permission: permKey("RECEIVABLES", "VIEW") },
@@ -138,7 +145,13 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: permKey("TASKS", "VIEW"),
         matches: ["/projetos"],
       },
-      { label: "Captações", href: "/captacoes", icon: Camera, permission: permKey("CAPTURES", "VIEW") },
+      {
+        label: "Extras",
+        href: "/extras",
+        icon: Camera,
+        permission: [permKey("CAPTURES", "VIEW"), permKey("PAYABLES", "VIEW")],
+        matches: ["/captacoes"],
+      },
       { label: "Agenda", href: "/agenda", icon: Calendar, permission: permKey("CALENDAR", "VIEW") },
     ],
   },

@@ -905,8 +905,54 @@ model TeamMember {
   user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
   projects     ProjectTeamMember[]
   payables     AccountPayable[]
+  extras       ExtraBonus[]
 
   @@map("team_members")
+}
+
+// EXTRAS — serviços feitos além do fixo (edição de vídeo, serviços gráficos,
+// captação avulsa...) que entram nos ganhos da pessoa. Pontual: entra uma vez,
+// no mês em que foi feito. Recorrente: entra todo mês, do mês de início até
+// o mês final (ou até ser encerrado).
+model ExtraBonus {
+  id             String    @id @default(cuid())
+  organizationId String
+  teamMemberId   String
+  // EDICAO_VIDEO | GRAFICO | CAPTACAO | OUTRO
+  kind           String
+  description    String
+  amount         Decimal   @db.Decimal(14, 2)
+  recurring      Boolean   @default(false)
+  // Pontual: dia em que foi feito. Recorrente: primeiro mês.
+  date           DateTime
+  // Recorrente: último mês (AAAA-MM); nulo = sem data para acabar.
+  endCompetence  String?
+  clientName     String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  teamMember TeamMember        @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  entries    ExtraBonusEntry[]
+
+  @@index([organizationId, kind])
+  @@map("extra_bonuses")
+}
+
+// Lançamento de um extra na folha de um mês (pontual = 1; recorrente = 1 por mês).
+model ExtraBonusEntry {
+  id         String   @id @default(cuid())
+  bonusId    String
+  competence String
+  amount     Decimal  @db.Decimal(14, 2)
+  payableId  String?
+  createdAt  DateTime @default(now())
+
+  bonus ExtraBonus @relation(fields: [bonusId], references: [id], onDelete: Cascade)
+
+  @@unique([bonusId, competence])
+  @@index([payableId])
+  @@map("extra_bonus_entries")
 }
 
 model ProjectTeamMember {

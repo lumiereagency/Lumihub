@@ -44,7 +44,7 @@ export function MyMonthView({
   awaiting: { count: number; amount: number };
   upcomingFees: { date: string; client: string; fee: number }[];
 }) {
-  const [idx, setIdx] = useState(months.length - 1);
+  const [idx, setIdx] = useState(() => Math.max(0, months.findIndex((x) => x.comp === current)));
   const m = months[idx];
   const isCurrent = m.comp === current;
   const prev = months[idx - 1];
@@ -158,7 +158,7 @@ export function MyMonthView({
           <div className="flex flex-col gap-1 rounded-3xl border border-border bg-card p-4">
             <p className="flex items-center gap-1.5 text-xs text-text-tertiary"><Sparkles size={13} className="text-accent-light" /> Ganhos extras {isCurrent ? "no mês" : `em ${monthShort(m.comp)}`}</p>
             <p className="lb-figures text-2xl font-semibold tracking-tight text-text-primary">{formatCurrency(variable)}</p>
-            <p className="text-xs text-text-tertiary">comissões + captações, além do fixo</p>
+            <p className="text-xs text-text-tertiary">comissões + extras, além do fixo</p>
           </div>
           {isCurrent ? (
             <div className="flex flex-col gap-1 rounded-3xl border border-border bg-card p-4">

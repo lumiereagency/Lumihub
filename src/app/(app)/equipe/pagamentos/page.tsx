@@ -25,7 +25,7 @@ export default async function PayrollPage({ searchParams }: PageProps<"/equipe/p
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Pagamentos da equipe"
-        description="Fixo, comissões e cachês de cada pessoa, somados na folha do mês e pagos na data de cada um."
+        description="Fixo, comissões e extras de cada pessoa, somados na folha do mês e pagos na data de cada um."
         actions={
           <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
             <Link href={`?mes=${shiftCompetence(raw, -1)}`} className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary hover:bg-card-elevated" aria-label="Mês anterior">

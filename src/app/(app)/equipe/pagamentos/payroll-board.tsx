@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Camera, Check, ChevronDown, HandCoins, Settings2, Undo2, Wallet } from "lucide-react";
 import { payFolhaAction, undoFolhaAction, updatePayrollSettingsAction } from "@/lib/actions/payroll-actions";
 import { CAPTURE_CREW_ROLE_LABELS } from "@/lib/validation/capture-assignments";
+import { extraKindLabel } from "@/lib/payroll/extra-kinds";
 import type { MonthOverview, PersonMonth } from "@/lib/payroll/overview";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -32,7 +33,7 @@ function PersonCard({ p, canPay }: { p: PersonMonth; canPay: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const tone = p.status === "PAGO" ? "success" : p.status === "ATRASADO" ? "error" : p.status === "PENDENTE" ? "accent" : "neutral";
   const label = p.status === "PAGO" ? `Pago ${p.paidAt ? dateBR(p.paidAt) : ""}` : p.status === "ATRASADO" ? "Atrasado" : p.status === "PENDENTE" ? `Vence ${dateBR(p.dueDate)}` : "Nada neste mês";
-  const hasDetails = p.commissions.length > 0 || p.extras.length > 0;
+  const hasDetails = p.commissions.length > 0 || p.extras.length > 0 || p.bonuses.length > 0;
 
   return (
     <article className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5">
@@ -51,7 +52,7 @@ function PersonCard({ p, canPay }: { p: PersonMonth; canPay: boolean }) {
       <div className="flex flex-col gap-2">
         <Row icon={Wallet} label="Fixo" value={p.fixed} />
         <Row icon={HandCoins} label={`Comissões${p.commissions.length ? ` (${p.commissions.length})` : ""}`} value={p.commissionsTotal} />
-        <Row icon={Camera} label={`Cachês de captação${p.extras.length ? ` (${p.extras.length})` : ""}`} value={p.extrasTotal} />
+        <Row icon={Camera} label={`Extras${p.extras.length + p.bonuses.length ? ` (${p.extras.length + p.bonuses.length})` : ""}`} value={p.extrasTotal} />
       </div>
 
       <div className="flex items-end justify-between gap-3 border-t border-border pt-4">
@@ -115,6 +116,15 @@ function PersonCard({ p, canPay }: { p: PersonMonth; canPay: boolean }) {
                   <span className="lb-figures shrink-0 text-text-primary">{formatCurrency(e.amount)}</span>
                 </div>
               ))}
+              {p.bonuses.map((b, i) => (
+                <div key={`b${i}`} className="flex justify-between gap-3">
+                  <span className="truncate text-text-secondary">
+                    {extraKindLabel(b.kind)} · {b.description}
+                    {b.recurring ? " (todo mês)" : ""}
+                  </span>
+                  <span className="lb-figures shrink-0 text-text-primary">{formatCurrency(b.amount)}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -156,7 +166,7 @@ function SettingsCard({ settings }: { settings: { captureFeeSolo: number; captur
         {field("taxRate", "Imposto sobre o que recebe (Simples)", "%", "0.01")}
         {field("taxDueDay", "Dia do vencimento do DAS", "º dia")}
       </div>
-      <p className="text-xs text-text-tertiary">Os cachês novos usam estes valores. Os que já foram pagos não mudam.</p>
+      <p className="text-xs text-text-tertiary">Os extras de captação novos usam estes valores. Os que já foram pagos não mudam.</p>
       <div className="flex items-center gap-3">
         <Button
           size="sm"
@@ -219,7 +229,7 @@ export function PayrollBoard({
                 <p className="lb-figures font-semibold">{formatCurrency(t.commissions)}</p>
               </div>
               <div>
-                <p className="text-xs text-accent-on/70">Cachês</p>
+                <p className="text-xs text-accent-on/70">Extras</p>
                 <p className="lb-figures font-semibold">{formatCurrency(t.extras)}</p>
               </div>
             </div>
@@ -229,13 +239,13 @@ export function PayrollBoard({
           <SettingsCard settings={settings} />
         ) : (
           <section className="rounded-3xl border border-border bg-card p-5 text-sm text-text-secondary">
-            Cachê de captação: {formatCurrency(settings.captureFeeSolo)} sozinho · {formatCurrency(settings.captureFeeShared)} por pessoa em dupla.
+            Extra de captação: {formatCurrency(settings.captureFeeSolo)} sozinho · {formatCurrency(settings.captureFeeShared)} por pessoa em dupla.
           </section>
         )}
       </div>
 
       {people.length === 0 ? (
-        <EmptyState title="Ninguém com valores neste mês" description="Salários fixos, comissões liberadas e cachês de captações realizadas aparecem aqui." />
+        <EmptyState title="Ninguém com valores neste mês" description="Salários fixos, comissões liberadas e extras (captações, edição, gráficos) aparecem aqui." />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {people.map((p) => (

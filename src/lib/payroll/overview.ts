@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { describePayRule, parsePayDayMode } from "@/lib/payroll/business-days";
-import { FOLHA, competenceLabel, folhaDueDate, type FolhaBreakdown } from "@/lib/payroll/folha";
+import { FOLHA, bonusesOf, competenceLabel, extrasTotalOf, folhaDueDate, type FolhaBreakdown } from "@/lib/payroll/folha";
 
 // Visão da folha de um mês: um cartão por pessoa com fixo, comissões e
 // cachês, total, data e situação do pagamento.
@@ -15,6 +15,7 @@ export interface PersonMonth {
   fixed: number;
   commissions: { description: string; amount: number }[];
   extras: { date: string; client: string; role: string; amount: number }[];
+  bonuses: { kind: string; description: string; recurring: boolean; amount: number }[];
   commissionsTotal: number;
   extrasTotal: number;
   total: number;
@@ -50,7 +51,7 @@ export async function getMonthOverview(organizationId: string, competence: strin
     const b = (f?.breakdown as FolhaBreakdown | null) ?? emptyBreakdown();
     const fixed = f ? b.fixed : 0;
     const commissionsTotal = b.commissions.reduce((s, c) => s + c.amount, 0);
-    const extrasTotal = b.extras.reduce((s, e) => s + e.amount, 0);
+    const extrasTotal = extrasTotalOf(b);
     const total = f ? Number(f.amount) : 0;
     const overdue = f && f.status !== "PAGO" && f.dueDate < new Date();
     people.push({
@@ -62,6 +63,7 @@ export async function getMonthOverview(organizationId: string, competence: strin
       fixed,
       commissions: b.commissions.map((c) => ({ description: c.description, amount: c.amount })),
       extras: b.extras.map((e) => ({ date: e.date, client: e.client, role: e.role, amount: e.amount })),
+      bonuses: bonusesOf(b).map((x) => ({ kind: x.kind, description: x.description, recurring: x.recurring, amount: x.amount })),
       commissionsTotal,
       extrasTotal,
       total,

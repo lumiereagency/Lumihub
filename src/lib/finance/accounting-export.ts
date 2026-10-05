@@ -3,7 +3,7 @@ import { zipSync, strToU8 } from "fflate";
 import { db } from "@/lib/db";
 import { readLocalFile } from "@/lib/storage/local";
 import { formatDueDate } from "@/lib/billing/dates";
-import { FOLHA, competenceLabel, type FolhaBreakdown } from "@/lib/payroll/folha";
+import { FOLHA, competenceLabel, extrasTotalOf, type FolhaBreakdown } from "@/lib/payroll/folha";
 import { IMPOSTO, getMonthResult, monthRange } from "@/lib/finance/taxes";
 
 // Pacote do mês para a contabilidade: planilhas (CSV no padrão do Excel
@@ -60,10 +60,10 @@ export async function buildAccountingPackage(organizationId: string, comp: strin
     payables.map((p) => [day(p.dueDate), day(p.paidAt), p.supplier ?? "", p.description, p.category?.name ?? "", p.status, money(Number(p.amount))]),
   );
   files["04-folha.csv"] = csv(
-    ["Pessoa", "Fixo (R$)", "Comissões (R$)", "Cachês (R$)", "Total (R$)", "Vencimento", "Pago em", "Situação"],
+    ["Pessoa", "Fixo (R$)", "Comissões (R$)", "Extras (R$)", "Total (R$)", "Vencimento", "Pago em", "Situação"],
     folhas.map((f) => {
       const b = (f.breakdown as FolhaBreakdown | null) ?? { fixed: 0, commissions: [], extras: [] };
-      return [f.supplier ?? "", money(b.fixed), money(b.commissions.reduce((s, c) => s + c.amount, 0)), money(b.extras.reduce((s, e) => s + e.amount, 0)), money(Number(f.amount)), day(f.dueDate), day(f.paidAt), f.status];
+      return [f.supplier ?? "", money(b.fixed), money(b.commissions.reduce((s, c) => s + c.amount, 0)), money(extrasTotalOf(b)), money(Number(f.amount)), day(f.dueDate), day(f.paidAt), f.status];
     }),
   );
   files["05-impostos.csv"] = csv(

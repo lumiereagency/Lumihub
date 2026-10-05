@@ -2,6 +2,8 @@ import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionTabs } from "@/components/layout/section-tabs";
+import { EXTRAS_TABS, filterTabsForUser } from "@/lib/nav";
 import { CapturesView } from "./captures-view";
 
 export default async function CapturesPage() {
@@ -48,7 +50,8 @@ export default async function CapturesPage() {
 
   return (
     <div>
-      <PageHeader title="Captações" description="Agendamento de captações com equipe, equipamentos e status de entrega." />
+      <PageHeader title="Extras" description="Captações, edição de vídeo e serviços gráficos: o que cada pessoa faz além do fixo entra nos ganhos do mês." />
+      <SectionTabs tabs={filterTabsForUser(EXTRAS_TABS, user.permissions)} />
       <CapturesView
         captures={captures.map((c) => ({
           id: c.id,

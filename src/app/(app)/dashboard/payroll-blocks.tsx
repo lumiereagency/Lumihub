@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/format";
 import { competenceOf, shiftCompetence } from "@/lib/payroll/folha";
 import { getMonthOverview } from "@/lib/payroll/overview";
 import { MyMonthView, type MyMonth } from "./my-month-view";
+import { extraKindLabel } from "@/lib/payroll/extra-kinds";
 
 const TZ = "America/Sao_Paulo";
 const dateBR = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", timeZone: TZ });
@@ -20,7 +21,7 @@ export async function TeamPayrollSummary({ organizationId }: { organizationId: s
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[17px] font-semibold tracking-tight text-text-primary">Equipe · {o.label}</p>
-          <p className="text-sm text-text-tertiary">Fixo + comissões + cachês de cada pessoa, já na folha do mês</p>
+          <p className="text-sm text-text-tertiary">Fixo + comissões + extras de cada pessoa, já na folha do mês</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-text-tertiary">Total da folha</p>
@@ -35,7 +36,7 @@ export async function TeamPayrollSummary({ organizationId }: { organizationId: s
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-text-primary">{p.name}</p>
               <p className="lb-figures truncate text-[11px] text-text-tertiary">
-                {[p.fixed && `fixo ${formatCurrency(p.fixed)}`, p.commissionsTotal && `comissão ${formatCurrency(p.commissionsTotal)}`, p.extrasTotal && `cachês ${formatCurrency(p.extrasTotal)}`].filter(Boolean).join(" · ")}
+                {[p.fixed && `fixo ${formatCurrency(p.fixed)}`, p.commissionsTotal && `comissão ${formatCurrency(p.commissionsTotal)}`, p.extrasTotal && `extras ${formatCurrency(p.extrasTotal)}`].filter(Boolean).join(" · ")}
               </p>
             </div>
             <span className="lb-figures shrink-0 text-sm font-semibold text-text-primary">{formatCurrency(p.total)}</span>
@@ -58,6 +59,9 @@ export async function MyMonthCard({ organizationId, userId }: { organizationId: 
   const now = new Date();
   const comp = competenceOf(now);
   const comps = Array.from({ length: 12 }, (_, i) => shiftCompetence(comp, i - 11));
+  // Folha do mês que vem já aberta (ex.: extra lançado depois de a folha deste mês ser paga).
+  const next = shiftCompetence(comp, 1);
+  if (await db.accountPayable.count({ where: { teamMemberId: member.id, kind: "FOLHA", competence: next, status: { not: "CANCELADO" } } })) comps.push(next);
 
   const [overviews, awaiting, upcoming, settings] = await Promise.all([
     Promise.all(comps.map((c) => getMonthOverview(organizationId, c, userId))),
@@ -69,7 +73,7 @@ export async function MyMonthCard({ organizationId, userId }: { organizationId: 
     }),
     db.pricingSettings.findUnique({ where: { organizationId }, select: { captureFeeSolo: true, captureFeeShared: true } }),
   ]);
-  if (!overviews[overviews.length - 1]?.people[0]) return null;
+  if (!overviews.find((o) => o.competence === comp)?.people[0]) return null;
 
   const months: MyMonth[] = overviews.map((o) => {
     const me = o.people[0];
@@ -87,6 +91,7 @@ export async function MyMonthCard({ organizationId, userId }: { organizationId: 
       items: [
         ...(me?.commissions ?? []).map((c) => ({ kind: "c" as const, text: c.description, amount: c.amount, date: null })),
         ...(me?.extras ?? []).map((e) => ({ kind: "e" as const, text: `Captação · ${e.client}`, amount: e.amount, date: e.date })),
+        ...(me?.bonuses ?? []).map((b) => ({ kind: "e" as const, text: `${extraKindLabel(b.kind)} · ${b.description}${b.recurring ? " (todo mês)" : ""}`, amount: b.amount, date: null })),
       ],
     };
   });

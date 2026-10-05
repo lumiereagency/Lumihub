@@ -109,7 +109,7 @@ function FeeEditor({ crew, onSaved }: { crew: CaptureRow["crew"]; onSaved: () =>
   if (crew.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-border p-4">
-      <p className="text-sm font-medium text-text-primary">Cachês desta captação</p>
+      <p className="text-sm font-medium text-text-primary">Extras desta captação</p>
       <p className="text-xs text-text-tertiary">Calculados quando a captação é marcada como realizada (sozinho ou em dupla). Ajuste se precisar.</p>
       {crew.map((m) => (
         <div key={m.id} className="flex items-center justify-between gap-3 py-1.5">
@@ -213,7 +213,7 @@ export function CapturesView({
         <MetricCard label="Aguardando aceite" value={String(stats.pendingAccept)} caption="pessoas escaladas sem resposta" icon={<Clock />} />
         <MetricCard label="Realizadas no mês" value={String(stats.doneMonth)} caption="captações concluídas" icon={<CheckCircle2 />} />
         {permissions.canSeeFees ? (
-          <MetricCard label="Cachês do mês" value={formatCurrency(stats.fees)} caption="entram na folha de cada pessoa" />
+          <MetricCard label="Extras de captação no mês" value={formatCurrency(stats.fees)} caption="entram na folha de cada pessoa" />
         ) : (
           <MetricCard label="Clientes atendidos" value={String(new Set(captures.filter((c) => dayKey(c.date).startsWith(monthKey)).map((c) => c.clientId)).size)} caption="neste mês" />
         )}
@@ -315,7 +315,7 @@ export function CapturesView({
                       {permissions.canEdit && (
                         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3" onClick={(e) => e.stopPropagation()}>
                           {done ? (
-                            <span className="text-xs text-text-tertiary">{permissions.canSeeFees && feeTotal > 0 ? `Cachês: ${formatCurrency(feeTotal)}` : "Concluída"}</span>
+                            <span className="text-xs text-text-tertiary">{permissions.canSeeFees && feeTotal > 0 ? `Extras: ${formatCurrency(feeTotal)}` : "Concluída"}</span>
                           ) : (
                             <span className="text-xs text-text-tertiary">{activeCrew.length === 1 ? "1 pessoa" : `${activeCrew.length} pessoas`}</span>
                           )}
@@ -372,7 +372,7 @@ export function CapturesView({
                 variant="danger"
                 disabled={pending}
                 onClick={() => {
-                  if (!confirm("Excluir esta captação? Cachês ainda não pagos saem da folha junto.")) return;
+                  if (!confirm("Excluir esta captação? Extras ainda não pagos saem da folha junto.")) return;
                   start(async () => {
                     const res = await deleteCaptureAction(editing.id);
                     if (res.ok) setEditingId(null);
