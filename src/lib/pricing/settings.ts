@@ -22,6 +22,10 @@ export interface PricingSettingsView {
   contractMessage: string;
   billingThanks: boolean;
   billingPixSeparate: boolean;
+  captureFeeSolo: number;
+  captureFeeShared: number;
+  taxRate: number;
+  taxDueDay: number;
   company: {
     legalName: string;
     document: string | null;
@@ -53,6 +57,10 @@ export async function getPricingSettings(organizationId: string): Promise<Pricin
     contractMessage: row?.contractTemplateMsg || DEFAULT_CONTRACT_MESSAGE,
     billingThanks: row?.billingThanks ?? true,
     billingPixSeparate: row?.billingPixSeparate ?? true,
+    captureFeeSolo: Number(row?.captureFeeSolo ?? 100),
+    captureFeeShared: Number(row?.captureFeeShared ?? 50),
+    taxRate: Number(row?.taxRate ?? 6),
+    taxDueDay: row?.taxDueDay ?? 20,
     company: {
       legalName: row?.companyLegalName || "AGÊNCIA LUMIERE LTDA",
       document: row?.companyDocument ?? null,

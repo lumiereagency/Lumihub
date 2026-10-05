@@ -32,6 +32,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MyMonthCard, TeamPayrollSummary } from "./payroll-blocks";
 
 function greeting(): string {
   // O servidor roda em UTC — a saudação precisa seguir o horário de Brasília.
@@ -183,6 +184,10 @@ export default async function DashboardPage() {
       />
 
       <PendingCaptureAssignments userId={user.id} />
+
+      <MyMonthCard organizationId={user.organizationId} userId={user.id} />
+
+      {(isDirector(user) || hasPermission(user, permKey("PAYABLES", "VIEW"))) && <TeamPayrollSummary organizationId={user.organizationId} />}
 
       {canViewCRM && <CommissionsSummary organizationId={user.organizationId} userId={user.id} director={isDirector(user)} />}
 
