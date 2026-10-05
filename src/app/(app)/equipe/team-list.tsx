@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Plus, Search, UserSquare2 } from "lucide-react";
-import { createTeamMemberAction, updateTeamMemberAction } from "@/lib/actions/team-actions";
+import { createTeamMemberAction, deleteTeamMemberAction, updateTeamMemberAction } from "@/lib/actions/team-actions";
+import { describePayRule, parsePayDayMode } from "@/lib/payroll/business-days";
 import { TEAM_MEMBER_TYPE_LABELS } from "@/lib/validation/team";
 import { PAYMENT_METHOD_LABELS } from "@/lib/validation/shared";
 import { formatCurrency } from "@/lib/format";
@@ -22,6 +23,7 @@ interface MemberRow {
   paymentValue: number | null;
   paymentMethod: string | null;
   paymentDay: number | null;
+  paymentDayMode: string;
   active: boolean;
   projectsCount: number;
 }
@@ -35,6 +37,7 @@ function toFormValues(m: MemberRow): TeamMemberFormValues {
     paymentValue: m.paymentValue,
     paymentMethod: m.paymentMethod,
     paymentDay: m.paymentDay,
+    paymentDayMode: m.paymentDayMode,
     active: m.active,
   };
 }
@@ -51,7 +54,7 @@ export function TeamList({
   members: MemberRow[];
   availableUsers: { id: string; name: string }[];
   currency: string;
-  permissions: { canCreate: boolean; canEdit: boolean };
+  permissions: { canCreate: boolean; canEdit: boolean; canDelete: boolean; canSeePay: boolean };
   typeFilter?: string[];
   emptyLabel: string;
   createLabel: string;
@@ -59,6 +62,7 @@ export function TeamList({
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [deleting, startDelete] = useTransition();
 
   const scoped = useMemo(
     () => (typeFilter ? members.filter((m) => typeFilter.includes(m.type)) : members),
@@ -106,7 +110,7 @@ export function TeamList({
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Pagamento</th>
+                <th className="px-4 py-3 font-medium">{permissions.canSeePay ? "Fixo / pagamento" : "Pagamento"}</th>
                 <th className="px-4 py-3 font-medium">Projetos</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium" />
@@ -123,13 +127,12 @@ export function TeamList({
                     <Badge tone="neutral">{TEAM_MEMBER_TYPE_LABELS[m.type as keyof typeof TEAM_MEMBER_TYPE_LABELS] ?? m.type}</Badge>
                   </td>
                   <td className="px-4 py-3 text-text-secondary">
-                    {m.paymentValue != null ? formatCurrency(m.paymentValue, currency) : "—"}
-                    {m.paymentMethod && (
-                      <span className="block text-xs text-text-tertiary">
-                        {PAYMENT_METHOD_LABELS[m.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] ?? m.paymentMethod}
-                        {m.paymentDay ? ` · dia ${m.paymentDay}` : ""}
-                      </span>
-                    )}
+                    {permissions.canSeePay ? (m.paymentValue != null ? formatCurrency(m.paymentValue, currency) : "Sem fixo") : "—"}
+                    <span className="block text-xs text-text-tertiary">
+                      {[m.paymentMethod ? (PAYMENT_METHOD_LABELS[m.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] ?? m.paymentMethod) : null, describePayRule(parsePayDayMode(m.paymentDayMode), m.paymentDay)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-text-secondary">{m.projectsCount}</td>
                   <td className="px-4 py-3">
@@ -171,6 +174,23 @@ export function TeamList({
             availableUsers={availableUsers}
             submitLabel="Salvar alterações"
           />
+        )}
+        {editing && permissions.canDelete && (
+          <Button
+            variant="danger"
+            className="mt-4 w-full"
+            disabled={deleting}
+            onClick={() => {
+              if (!confirm(`Excluir ${editing.name} da equipe? As folhas em aberto dessa pessoa somem; o que já foi pago continua no histórico do financeiro.`)) return;
+              startDelete(async () => {
+                const res = await deleteTeamMemberAction(editing.id);
+                if (res.ok) setEditingId(null);
+                else alert(res.error);
+              });
+            }}
+          >
+            {deleting ? "Excluindo…" : "Excluir da equipe"}
+          </Button>
         )}
       </Drawer>
     </div>

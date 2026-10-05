@@ -11,8 +11,10 @@ export default async function AlertsPage() {
 
   await syncAlerts(user.organizationId);
 
+  // Alertas de dinheiro (contas, cobranças, inadimplência) só para quem vê o financeiro.
+  const canViewFinance = hasPermission(user, permKey("FINANCE", "VIEW"));
   const alerts = await db.alert.findMany({
-    where: { organizationId: user.organizationId },
+    where: { organizationId: user.organizationId, ...(canViewFinance ? {} : { category: { notIn: ["FINANCEIRO", "CLIENTES"] } }) },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 

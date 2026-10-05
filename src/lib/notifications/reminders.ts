@@ -53,10 +53,11 @@ async function urgentAlerts(organizationId: string, team: TeamUser[], now: Date)
   await syncAlerts(organizationId);
   const alerts = await db.alert.findMany({
     where: { organizationId, status: "ABERTO", severity: "URGENTE", createdAt: { gte: new Date(now.getTime() - 2 * 3600_000) } },
-    select: { id: true, title: true, message: true },
+    select: { id: true, title: true, message: true, category: true },
   });
-  const recipients = team.filter((u) => u.director || u.permissions.has("ALERTS_VIEW")).map((u) => u.id);
   for (const a of alerts) {
+    const money = a.category === "FINANCEIRO" || a.category === "CLIENTES";
+    const recipients = team.filter((u) => u.director || (u.permissions.has("ALERTS_VIEW") && (!money || u.permissions.has("FINANCE_VIEW")))).map((u) => u.id);
     await notifyUsers({ organizationId, userIds: recipients, title: a.title, body: a.message, link: "/alertas", category: "alertas", dedupeKey: `alert:${a.id}` });
   }
 }

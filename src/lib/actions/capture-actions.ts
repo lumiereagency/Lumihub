@@ -16,6 +16,7 @@ import {
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
 import { deferPush } from "@/lib/notifications/notify";
+import { applyCaptureFees, syncPayroll } from "@/lib/payroll/folha";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -151,8 +152,10 @@ export async function createCaptureAction(_prev: ActionState, formData: FormData
     const created = await tx.capture.create({ data: { organizationId: user.organizationId, ...parsed.data } });
     await syncCaptureCalendarEvent(tx, created.id);
     await syncCaptureAssignments(tx, user.organizationId, created.id, crewAssignments);
+    await applyCaptureFees(tx, created.id);
     return created;
   });
+  await syncPayroll(user.organizationId);
 
   await audit({
     organizationId: user.organizationId,
@@ -190,8 +193,11 @@ export async function updateCaptureAction(
   const removedGoogleEventIds = await db.$transaction(async (tx) => {
     await tx.capture.update({ where: { id: captureId }, data: parsed.data });
     await syncCaptureCalendarEvent(tx, captureId);
-    return syncCaptureAssignments(tx, user.organizationId, captureId, crewAssignments);
+    const removed = await syncCaptureAssignments(tx, user.organizationId, captureId, crewAssignments);
+    await applyCaptureFees(tx, captureId);
+    return removed;
   });
+  await syncPayroll(user.organizationId);
 
   for (const eventId of removedGoogleEventIds) {
     await cancelGoogleCalendarReminder(user.organizationId, eventId);
@@ -208,4 +214,56 @@ export async function updateCaptureAction(
   revalidatePath("/captacoes");
   if (existing.projectId) revalidatePath(`/projetos/${existing.projectId}`);
   return { success: "Captação atualizada." };
+}
+
+export async function deleteCaptureAction(captureId: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await requirePermission(permKey("CAPTURES", "DELETE"));
+  const capture = await db.capture.findFirst({ where: { id: captureId, organizationId: user.organizationId }, include: { assignments: true } });
+  if (!capture) return { ok: false, error: "Captação não encontrada." };
+
+  // Cachê já pago fica no histórico da folha; o que ainda não foi pago sai junto.
+  await db.capture.delete({ where: { id: captureId } });
+  for (const a of capture.assignments) {
+    if (a.googleEventId) await cancelGoogleCalendarReminder(user.organizationId, a.googleEventId);
+  }
+  await syncPayroll(user.organizationId);
+
+  await audit({ organizationId: user.organizationId, userId: user.id, action: "CAPTURE_DELETED", entityType: "Capture", entityId: captureId });
+  revalidatePath("/captacoes");
+  revalidatePath("/agenda");
+  revalidatePath("/dashboard");
+  if (capture.projectId) revalidatePath(`/projetos/${capture.projectId}`);
+  return { ok: true };
+}
+
+// Ajuste manual do cachê de uma pessoa numa captação (diretoria e gestão).
+export async function setCaptureFeeAction(assignmentId: string, value: number | null): Promise<{ ok: boolean; error?: string }> {
+  const user = await requirePermission(permKey("CAPTURES", "EDIT"));
+  const a = await db.captureAssignment.findFirst({ where: { id: assignmentId, organizationId: user.organizationId } });
+  if (!a) return { ok: false, error: "Pessoa não encontrada nesta captação." };
+  if (a.payableId && (await db.accountPayable.findFirst({ where: { id: a.payableId, status: "PAGO" } }))) return { ok: false, error: "Este cachê já foi pago na folha." };
+  if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100000)) return { ok: false, error: "Valor inválido." };
+  await db.captureAssignment.update({ where: { id: assignmentId }, data: value === null ? { feeManual: false } : { fee: value, feeManual: true } });
+  if (value === null) await db.$transaction((tx) => applyCaptureFees(tx, a.captureId));
+  await syncPayroll(user.organizationId);
+  revalidatePath("/captacoes");
+  return { ok: true };
+}
+
+// Troca rápida de status (ex: "Marcar como realizada" direto no cartão).
+export async function setCaptureStatusAction(captureId: string, status: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await requirePermission(permKey("CAPTURES", "EDIT"));
+  const allowed = ["PLANEJADA", "CONFIRMADA", "REALIZADA", "EM_EDICAO", "ENTREGUE"] as const;
+  if (!(allowed as readonly string[]).includes(status)) return { ok: false, error: "Status inválido." };
+  const capture = await db.capture.findFirst({ where: { id: captureId, organizationId: user.organizationId } });
+  if (!capture) return { ok: false, error: "Captação não encontrada." };
+  await db.$transaction(async (tx) => {
+    await tx.capture.update({ where: { id: captureId }, data: { status: status as (typeof allowed)[number] } });
+    await syncCaptureCalendarEvent(tx, captureId);
+    await applyCaptureFees(tx, captureId);
+  });
+  await syncPayroll(user.organizationId);
+  revalidatePath("/captacoes");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }

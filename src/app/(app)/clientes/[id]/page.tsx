@@ -38,6 +38,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePermission(permKey("CLIENTS", "VIEW"));
+  const canViewFinance = hasPermission(user, permKey("FINANCE", "VIEW")) || hasPermission(user, permKey("RECEIVABLES", "VIEW"));
 
   const client = await db.client.findFirst({
     where: { id, organizationId: user.organizationId, deletedAt: null },
@@ -117,10 +118,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         quoteHref={hasPermission(user, permKey("CRM", "CREATE")) ? `/propostas/nova?client=${client.id}` : null}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Contratos" value={String(contracts.length)} />
-        <MetricCard label="Receita recebida" value={formatCurrency(Number(receivedTotal._sum.amount ?? 0), currency)} tone="accent" />
-        <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} />
+      <div className={`grid grid-cols-2 gap-4 ${canViewFinance ? "sm:grid-cols-4" : "sm:grid-cols-2"}`}>
+        <MetricCard label="Contratos" value={String(contracts.length)} tone={canViewFinance ? undefined : "accent"} />
+        {canViewFinance && <MetricCard label="Receita recebida" value={formatCurrency(Number(receivedTotal._sum.amount ?? 0), currency)} tone="accent" />}
+        {canViewFinance && <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} />}
         <MetricCard
           label="Orçamentos"
           value={String(quotes.length)}
@@ -128,7 +129,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-4 ${canViewFinance ? "lg:grid-cols-2" : ""}`}>
         <Card>
           <CardHeader>
             <CardTitle>Contratos</CardTitle>
@@ -154,6 +155,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           )}
         </Card>
 
+        {canViewFinance && (
         <Card>
           <CardHeader>
             <CardTitle>Financeiro — últimas cobranças</CardTitle>
@@ -176,6 +178,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             </div>
           )}
         </Card>
+        )}
       </div>
 
       <ClientServices

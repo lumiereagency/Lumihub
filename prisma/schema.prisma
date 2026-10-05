@@ -456,6 +456,8 @@ model Commission {
   paidAt         DateTime?
   paidByUserId   String?
   cancelReason   String?
+  // Folha (conta a pagar) em que esta comissão entra para ser paga.
+  payableId      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -493,6 +495,12 @@ model PricingSettings {
   representativeDoc   String?
   // Lumi Cobranças: agradecimento automático ao confirmar pagamento e Pix copia e cola em mensagem separada.
   billingThanks       Boolean  @default(true)
+  // Cachês de captação: uma pessoa sozinha / cada pessoa quando há mais de uma.
+  captureFeeSolo      Decimal  @default(100) @db.Decimal(10, 2)
+  captureFeeShared    Decimal  @default(50) @db.Decimal(10, 2)
+  // Simples Nacional: % sobre o que é recebido no mês, guia (DAS) no dia taxDueDay do mês seguinte.
+  taxRate             Decimal  @default(6) @db.Decimal(6, 3)
+  taxDueDay           Int      @default(20)
   billingPixSeparate  Boolean  @default(true)
   updatedAt           DateTime @updatedAt
 
@@ -877,6 +885,8 @@ model TeamMember {
   paymentValue   Decimal?       @db.Decimal(14, 2)
   paymentMethod  PaymentMethod?
   paymentDay     Int?
+  // FIXED = dia do mês (paymentDay) · BUSINESS_DAY = Nº dia útil (paymentDay = N) · LAST_BUSINESS_DAY = último dia útil
+  paymentDayMode String         @default("FIXED")
   active         Boolean        @default(true)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -1023,6 +1033,11 @@ model CaptureAssignment {
   status         CaptureAssignmentStatus @default(PENDENTE)
   respondedAt    DateTime?
   googleEventId  String?
+  // Cachê da captação para esta pessoa (definido quando a captação é realizada; editável pelo admin).
+  fee            Decimal?                @db.Decimal(14, 2)
+  feeManual      Boolean                 @default(false)
+  // Folha (conta a pagar) em que este cachê entra.
+  payableId      String?
   createdAt      DateTime                @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1244,6 +1259,10 @@ model AccountPayable {
   installmentTotal   Int?
   responsibleUserId  String?
   teamMemberId       String?
+  // Folha: mês de competência ("2026-10") e composição (fixo, comissões, extras). Imposto: kind = IMPOSTO.
+  kind               String?
+  competence         String?
+  breakdown          Json?
   status             PayableStatus @default(PENDENTE)
   paidAt             DateTime?
   createdAt          DateTime      @default(now())
@@ -1257,6 +1276,7 @@ model AccountPayable {
 
   @@index([organizationId, status, dueDate])
   @@index([teamMemberId])
+  @@index([organizationId, kind, competence])
   @@map("accounts_payable")
 }
 

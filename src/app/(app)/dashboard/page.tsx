@@ -95,13 +95,14 @@ export default async function DashboardPage() {
     canViewFinance || canViewCRM
       ? buildDashboardInsights({
           currency,
-          aReceber: finance.aReceber,
-          aPagar: finance.aPagar,
-          overdueReceivablesCount: attention.overdueReceivables.length,
-          overdueReceivablesTotal: attention.overdueReceivables.reduce((s, r) => s + Number(r.amount), 0),
-          pipelineTotal: commercial.pipelineTotal,
-          pipelineWeighted: commercial.pipelineWeighted,
-          goalTarget: currentGoal ? Number(currentGoal.targetValue) : null,
+          // Sem acesso ao financeiro, nenhum número de caixa entra nos insights.
+          aReceber: canViewFinance ? finance.aReceber : 0,
+          aPagar: canViewFinance ? finance.aPagar : 0,
+          overdueReceivablesCount: canViewFinance ? attention.overdueReceivables.length : 0,
+          overdueReceivablesTotal: canViewFinance ? attention.overdueReceivables.reduce((s, r) => s + Number(r.amount), 0) : 0,
+          pipelineTotal: canViewCRM ? commercial.pipelineTotal : 0,
+          pipelineWeighted: canViewCRM ? commercial.pipelineWeighted : 0,
+          goalTarget: canViewFinance && currentGoal ? Number(currentGoal.targetValue) : null,
         })
       : [];
 
@@ -229,7 +230,9 @@ export default async function DashboardPage() {
               <span className="text-sm text-text-tertiary">de 100</span>
             </div>
             <div className="mt-6 flex flex-col gap-3">
-              {Object.entries(health.breakdown).map(([key, value]) => (
+              {Object.entries(health.breakdown)
+                .filter(([key]) => canViewFinance || (key !== "financeiro" && key !== "caixaFuturo"))
+                .map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
                   <span className="w-28 shrink-0 text-sm capitalize text-text-secondary">{key}</span>
                   <div className="lb-stripes h-2.5 flex-1 overflow-hidden rounded-full">

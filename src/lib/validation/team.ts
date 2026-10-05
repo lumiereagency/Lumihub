@@ -19,6 +19,7 @@ export const teamMemberSchema = z.object({
   paymentValue: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
   paymentMethod: z.preprocess(emptyToUndefined, z.enum(PAYMENT_METHODS).optional()),
   paymentDay: z.preprocess(emptyToUndefined, z.coerce.number().int().min(1).max(31).optional()),
+  paymentDayMode: z.enum(["FIXED", "BUSINESS_DAY", "LAST_BUSINESS_DAY"]).default("FIXED"),
   active: z.boolean().default(true),
 });
 

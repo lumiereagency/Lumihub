@@ -40,7 +40,7 @@ export function ClientList({
 }: {
   clients: ClientRow[];
   currency: string;
-  permissions: { canCreate: boolean; canEdit: boolean };
+  permissions: { canCreate: boolean; canEdit: boolean; canViewFinance: boolean };
 }) {
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,7 +68,11 @@ export function ClientList({
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard label="Clientes ativos" value={String(counts.ATIVO ?? 0)} icon={<Users />} tone="accent" caption={`${clients.length} no total`} />
           <MetricCard label="Inadimplentes" value={String(counts.INADIMPLENTE ?? 0)} caption="com cobrança atrasada" />
-          <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} caption="cobranças pendentes" />
+          {permissions.canViewFinance ? (
+            <MetricCard label="Em aberto" value={formatCurrency(pendingTotal, currency)} caption="cobranças pendentes" />
+          ) : (
+            <MetricCard label="Com contrato" value={String(clients.filter((c) => c.contractsCount > 0).length)} caption="clientes com contrato" />
+          )}
           <MetricCard label="Prospectos" value={String(counts.PROSPECTO ?? 0)} caption="ainda sem contrato" />
         </div>
       )}
@@ -148,7 +152,7 @@ export function ClientList({
                 )}
                 <div className="flex items-center justify-between text-xs text-text-tertiary">
                   <span>{client.contractsCount} contrato{client.contractsCount === 1 ? "" : "s"}</span>
-                  <span>{client.pendingAmount > 0 ? `Em aberto: ${formatCurrency(client.pendingAmount, currency)}` : "Sem pendências"}</span>
+                  {permissions.canViewFinance && <span>{client.pendingAmount > 0 ? `Em aberto: ${formatCurrency(client.pendingAmount, currency)}` : "Sem pendências"}</span>}
                 </div>
               </Link>
             ))}
@@ -162,7 +166,7 @@ export function ClientList({
                   <th className="px-4 py-3 font-medium">Contato</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Contratos</th>
-                  <th className="px-4 py-3 font-medium">Em aberto</th>
+                  {permissions.canViewFinance && <th className="px-4 py-3 font-medium">Em aberto</th>}
                 </tr>
               </thead>
               <tbody>
@@ -184,9 +188,11 @@ export function ClientList({
                       <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABELS[client.status as keyof typeof CLIENT_STATUS_LABELS] ?? client.status}</Badge>
                     </td>
                     <td className="lb-figures px-4 py-3 text-text-secondary">{client.contractsCount}</td>
-                    <td className="lb-figures px-4 py-3 text-text-secondary">
-                      {client.pendingAmount > 0 ? formatCurrency(client.pendingAmount, currency) : "—"}
-                    </td>
+                    {permissions.canViewFinance && (
+                      <td className="lb-figures px-4 py-3 text-text-secondary">
+                        {client.pendingAmount > 0 ? formatCurrency(client.pendingAmount, currency) : "—"}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

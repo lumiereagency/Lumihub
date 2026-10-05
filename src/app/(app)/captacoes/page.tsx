@@ -7,14 +7,14 @@ import { CapturesView } from "./captures-view";
 export default async function CapturesPage() {
   const user = await requirePermission(permKey("CAPTURES", "VIEW"));
 
-  const [captures, clients, projects, teamMembers] = await Promise.all([
+  const [captures, clients, projects, crewUsers, paidFolhas] = await Promise.all([
     db.capture.findMany({
       where: { organizationId: user.organizationId },
       orderBy: { date: "asc" },
       include: {
         client: { select: { companyName: true } },
         project: { select: { name: true } },
-        assignments: { select: { role: true, userId: true, status: true } },
+        assignments: { select: { id: true, role: true, userId: true, status: true, fee: true, feeManual: true, payableId: true, user: { select: { name: true } } } },
       },
     }),
     db.client.findMany({
@@ -27,20 +27,23 @@ export default async function CapturesPage() {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    db.teamMember.findMany({
-      where: { organizationId: user.organizationId, active: true, userId: { not: null } },
-      select: { userId: true, name: true, role: true },
+    // Qualquer pessoa ativa da base pode ser escalada (inclusive a gestão e a diretoria).
+    db.user.findMany({
+      where: { organizationId: user.organizationId, isActive: true, deletedAt: null, role: { key: { not: "MEDIA_ONLY" } } },
+      select: { id: true, name: true, role: { select: { name: true } }, teamMemberProfile: { select: { role: true } } },
       orderBy: { name: "asc" },
     }),
+    db.accountPayable.findMany({ where: { organizationId: user.organizationId, kind: "FOLHA", status: "PAGO" }, select: { id: true } }),
   ]);
 
-  const crewAccounts = teamMembers
-    .filter((m): m is typeof m & { userId: string } => !!m.userId)
-    .map((m) => ({ userId: m.userId, name: m.name, role: m.role }));
-
+  const crewAccounts = crewUsers.map((u) => ({ userId: u.id, name: u.name, role: u.teamMemberProfile?.role ?? u.role.name }));
+  const paidSet = new Set(paidFolhas.map((p) => p.id));
   const permissions = {
     canCreate: hasPermission(user, permKey("CAPTURES", "CREATE")),
     canEdit: hasPermission(user, permKey("CAPTURES", "EDIT")),
+    canDelete: hasPermission(user, permKey("CAPTURES", "DELETE")),
+    // Quem monta equipe vê os cachês (diretoria e gestão com edição de captações).
+    canSeeFees: hasPermission(user, permKey("CAPTURES", "EDIT")),
   };
 
   return (
@@ -68,6 +71,15 @@ export default async function CapturesPage() {
           photographerUserId: c.assignments.find((a) => a.role === "PHOTOGRAPHER")?.userId ?? null,
           storymakerUserId: c.assignments.find((a) => a.role === "STORYMAKER")?.userId ?? null,
           droneOperatorUserId: c.assignments.find((a) => a.role === "DRONE_OPERATOR")?.userId ?? null,
+          crew: c.assignments.map((a) => ({
+            id: a.id,
+            role: a.role,
+            name: a.user.name,
+            status: a.status,
+            fee: a.fee !== null ? Number(a.fee) : null,
+            feeManual: a.feeManual,
+            paid: !!a.payableId && paidSet.has(a.payableId),
+          })),
           assignmentStatuses: Object.fromEntries(c.assignments.map((a) => [a.role, a.status])) as Record<
             string,
             "PENDENTE" | "ACEITO" | "RECUSADO"

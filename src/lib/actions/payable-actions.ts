@@ -8,6 +8,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
 import { payableSchema, confirmPayableSchema } from "@/lib/validation/payables";
 import type { ActionState } from "@/lib/actions/auth-actions";
+import { FOLHA, onFolhaPaid, onFolhaUnpaid } from "@/lib/payroll/folha";
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -184,6 +185,7 @@ export async function confirmPayablePaymentAction(
     if (existing.movementId) {
       await tx.financialMovement.update({ where: { id: existing.movementId }, data: { status: "PAGO", paidAt: parsed.data.paidAt } });
     }
+    if (existing.kind === FOLHA) await onFolhaPaid(tx, payableId, parsed.data.paidAt, user.id);
 
     // Conta recorrente paga → gera automaticamente a próxima ocorrência
     // (sem infraestrutura de cron, este é o gatilho real disponível).
@@ -248,6 +250,7 @@ export async function undoPayablePaymentAction(payableId: string) {
     if (existing.movementId) {
       await tx.financialMovement.update({ where: { id: existing.movementId }, data: { status: "PENDENTE", paidAt: null } });
     }
+    if (existing.kind === FOLHA) await onFolhaUnpaid(tx, payableId);
   });
 
   await audit({
@@ -274,6 +277,11 @@ export async function cancelPayableAction(payableId: string) {
     await tx.accountPayable.update({ where: { id: payableId }, data: { status: "CANCELADO" } });
     if (existing.movementId) {
       await tx.financialMovement.update({ where: { id: existing.movementId }, data: { status: "CANCELADO" } });
+    }
+    // Folha cancelada: comissões e cachês voltam a ficar sem folha e entram na próxima.
+    if (existing.kind === FOLHA) {
+      await tx.commission.updateMany({ where: { payableId, status: "A_PAGAR" }, data: { payableId: null } });
+      await tx.captureAssignment.updateMany({ where: { payableId }, data: { payableId: null } });
     }
   });
 

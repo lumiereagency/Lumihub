@@ -1,4 +1,4 @@
-import { requirePermission, hasPermission } from "@/lib/auth/guard";
+import { requirePermission, hasPermission, isDirector } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/layout/page-header";
@@ -24,6 +24,9 @@ export default async function FreelancersPage() {
   const permissions = {
     canCreate: hasPermission(user, permKey("TEAM", "CREATE")),
     canEdit: hasPermission(user, permKey("TEAM", "EDIT")),
+    canDelete: hasPermission(user, permKey("TEAM", "DELETE")),
+    // Salário só para a diretoria e para quem cuida das contas a pagar.
+    canSeePay: isDirector(user) || hasPermission(user, permKey("PAYABLES", "VIEW")),
   };
 
   return (
@@ -39,6 +42,7 @@ export default async function FreelancersPage() {
           paymentValue: m.paymentValue ? Number(m.paymentValue) : null,
           paymentMethod: m.paymentMethod,
           paymentDay: m.paymentDay,
+          paymentDayMode: m.paymentDayMode,
           active: m.active,
           projectsCount: m._count.projects,
         }))}

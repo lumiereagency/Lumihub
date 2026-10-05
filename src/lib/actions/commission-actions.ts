@@ -6,6 +6,7 @@ import { requireDirector } from "@/lib/auth/guard";
 import { audit } from "@/lib/audit";
 import { formatCurrency } from "@/lib/format";
 import { notifyUsers } from "@/lib/notifications/notify";
+import { syncPayroll } from "@/lib/payroll/folha";
 
 type Result = { ok: true; count?: number } | { ok: false; error: string };
 
@@ -33,6 +34,7 @@ export async function releaseCommissionAction(id: string): Promise<Result> {
   await db.commission.update({ where: { id }, data: { status: "A_PAGAR", releasedAt: new Date() } });
   await audit({ organizationId: user.organizationId, userId: user.id, action: "COMMISSION_RELEASED", entityType: "Commission", entityId: id });
   await notifySeller(user.organizationId, c.sellerUserId, "Comissão liberada 💰", `${formatCurrency(Number(c.amount))} de "${c.proposal.title}" — o cliente pagou.`);
+  await syncPayroll(user.organizationId);
   done(c.proposalId);
   return { ok: true };
 }
@@ -44,9 +46,10 @@ export async function payCommissionAction(id: string): Promise<Result> {
   if (c.status === "PAGA") return { ok: false, error: "Esta comissão já está paga." };
   if (c.status === "CANCELADA") return { ok: false, error: "Comissão estornada não pode ser paga. Reabra antes." };
   const now = new Date();
-  await db.commission.update({ where: { id }, data: { status: "PAGA", paidAt: now, paidByUserId: user.id, releasedAt: c.releasedAt ?? now } });
+  await db.commission.update({ where: { id }, data: { status: "PAGA", paidAt: now, paidByUserId: user.id, releasedAt: c.releasedAt ?? now, payableId: null } });
   await audit({ organizationId: user.organizationId, userId: user.id, action: "COMMISSION_PAID", entityType: "Commission", entityId: id, metadata: { amount: Number(c.amount) } });
   await notifySeller(user.organizationId, c.sellerUserId, "Comissão paga ✅", `${formatCurrency(Number(c.amount))} de "${c.proposal.title}".`);
+  await syncPayroll(user.organizationId);
   done(c.proposalId);
   return { ok: true };
 }
@@ -57,10 +60,11 @@ export async function payAllForSellerAction(sellerUserId: string): Promise<Resul
   const pending = await db.commission.findMany({ where: { organizationId: user.organizationId, sellerUserId, status: "A_PAGAR" } });
   if (!pending.length) return { ok: false, error: "Nada a pagar para esta pessoa agora." };
   const now = new Date();
-  await db.commission.updateMany({ where: { id: { in: pending.map((p) => p.id) } }, data: { status: "PAGA", paidAt: now, paidByUserId: user.id } });
+  await db.commission.updateMany({ where: { id: { in: pending.map((p) => p.id) } }, data: { status: "PAGA", paidAt: now, paidByUserId: user.id, payableId: null } });
   const total = pending.reduce((s, p) => s + Number(p.amount), 0);
   await audit({ organizationId: user.organizationId, userId: user.id, action: "COMMISSION_PAID_BATCH", entityType: "Commission", metadata: { sellerUserId, count: pending.length, total } });
   await notifySeller(user.organizationId, sellerUserId, "Comissões pagas ✅", `${pending.length} comiss${pending.length === 1 ? "ão" : "ões"} somando ${formatCurrency(total)}.`);
+  await syncPayroll(user.organizationId);
   done();
   return { ok: true, count: pending.length };
 }
@@ -74,6 +78,7 @@ export async function cancelCommissionAction(id: string, reason: string): Promis
   await db.commission.update({ where: { id }, data: { status: "CANCELADA", cancelReason: reason.trim().slice(0, 300) || null } });
   await audit({ organizationId: user.organizationId, userId: user.id, action: "COMMISSION_CANCELLED", entityType: "Commission", entityId: id, metadata: { reason, wasPaid: c.status === "PAGA" } });
   await notifySeller(user.organizationId, c.sellerUserId, "Comissão estornada", `"${c.proposal.title}"${reason.trim() ? `: ${reason.trim()}` : "."}`);
+  await syncPayroll(user.organizationId);
   done(c.proposalId);
   return { ok: true };
 }
@@ -87,13 +92,14 @@ export async function undoCommissionAction(id: string): Promise<Result> {
     c.status === "PAGA"
       ? { status: "A_PAGAR" as const, paidAt: null, paidByUserId: null }
       : c.status === "A_PAGAR"
-        ? { status: "AGUARDANDO_CLIENTE" as const, releasedAt: null }
+        ? { status: "AGUARDANDO_CLIENTE" as const, releasedAt: null, payableId: null }
         : c.status === "CANCELADA"
           ? { status: (c.paidAt ? "PAGA" : c.releasedAt ? "A_PAGAR" : "AGUARDANDO_CLIENTE") as "PAGA" | "A_PAGAR" | "AGUARDANDO_CLIENTE", cancelReason: null }
           : null;
   if (!data) return { ok: false, error: "Não há o que desfazer." };
   await db.commission.update({ where: { id }, data });
   await audit({ organizationId: user.organizationId, userId: user.id, action: "COMMISSION_UNDO", entityType: "Commission", entityId: id, metadata: { from: c.status, to: data.status } });
+  await syncPayroll(user.organizationId);
   done(c.proposalId);
   return { ok: true };
 }

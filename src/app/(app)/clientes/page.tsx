@@ -32,6 +32,7 @@ export default async function ClientsPage() {
   const permissions = {
     canCreate: hasPermission(user, permKey("CLIENTS", "CREATE")),
     canEdit: hasPermission(user, permKey("CLIENTS", "EDIT")),
+    canViewFinance: hasPermission(user, permKey("FINANCE", "VIEW")) || hasPermission(user, permKey("RECEIVABLES", "VIEW")),
   };
 
   return (
@@ -46,7 +47,7 @@ export default async function ClientsPage() {
           phone: c.phone,
           status: c.status,
           contractsCount: c._count.contracts,
-          pendingAmount: pendingByClient.get(c.id) ?? 0,
+          pendingAmount: permissions.canViewFinance ? (pendingByClient.get(c.id) ?? 0) : 0,
         }))}
         currency={organization.currency}
         permissions={permissions}

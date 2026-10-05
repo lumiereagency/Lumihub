@@ -142,25 +142,20 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM" | "MEDIA
     ...grant("DOCUMENTS", RW),
   ],
 
+  // Gestão operacional (braço direito): toca a operação e o comercial, sem
+  // acesso a faturamento, caixa, folha, impostos ou configurações.
   GESTAO: [
     ...grant("DASHBOARD", RO),
-    ...grant("CRM", RO),
-    ...grant("CLIENTS", RO),
+    ...grant("CRM", FULL),
+    ...grant("CLIENTS", RW),
     ...grant("CONTRACTS", RO),
-    ...grant("PROJECTS", RO),
-    ...grant("TASKS", RO),
+    ...grant("PROJECTS", RW),
+    ...grant("TASKS", FULL),
     ...grant("TEAM", RO),
-    ...grant("CAPTURES", RO),
-    ...grant("CALENDAR", RO),
-    ...grant("FINANCE", RO),
-    ...grant("RECEIVABLES", RO),
-    ...grant("PAYABLES", RO),
-    ...grant("CARDS", RO),
-    ...grant("INVESTMENTS", RO),
-    ...grant("GOALS", FULL),
+    ...grant("CAPTURES", FULL),
+    ...grant("CALENDAR", FULL),
     ...grant("ALERTS", RO),
-    ...grant("REPORTS", RO_EXPORT),
-    ...grant("DOCUMENTS", RO),
+    ...grant("DOCUMENTS", RW),
     ...grant("AI", RO),
   ],
 };
@@ -202,7 +197,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   FINANCEIRO: "Financeiro",
   OPERACAO: "Operação",
   COMERCIAL: "Comercial",
-  GESTAO: "Gestão",
+  GESTAO: "Gestão operacional",
   CUSTOM: "Personalizado",
   MEDIA_ONLY: "Mídia ADESF (somente portal)",
 };
