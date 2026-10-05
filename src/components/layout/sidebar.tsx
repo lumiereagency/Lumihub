@@ -57,7 +57,7 @@ export function Sidebar({
   }, [activeHref]);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[268px] shrink-0 p-3 lg:flex">
+    <aside className="sticky top-0 z-40 hidden h-screen w-[268px] shrink-0 p-3 lg:flex">
       <div className="flex w-full flex-col rounded-3xl border border-border bg-card">
         <div className="flex h-[68px] items-center justify-between px-5">
           <Wordmark />

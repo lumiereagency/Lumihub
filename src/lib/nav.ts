@@ -23,8 +23,9 @@ import {
   UserCircle,
   Clapperboard,
   CalendarClock,
-  HandCoins, Banknote } from "lucide-react";
+  HandCoins, Banknote, KeyRound } from "lucide-react";
 import { permKey } from "@/lib/auth/permissions";
+import { ACCESS_MANAGE_ALL, ACCESS_MANAGE_OPERATIONAL, MEDIA_ADESF_IN_LUMIBASE, MEDIA_ADESF_MANAGE_IN_LUMIBASE } from "@/lib/auth/access";
 
 export interface NavItem {
   label: string;
@@ -164,6 +165,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Funcionários", href: "/equipe", icon: UserSquare2, permission: permKey("TEAM", "VIEW") },
       { label: "Freelancers", href: "/equipe/freelancers", icon: UserSquare2, permission: permKey("TEAM", "VIEW") },
       { label: "Pagamentos", href: "/equipe/pagamentos", icon: Banknote, permission: permKey("PAYABLES", "VIEW") },
+      { label: "Acessos", href: "/equipe/acessos", icon: KeyRound, permission: [ACCESS_MANAGE_ALL, ACCESS_MANAGE_OPERATIONAL] },
     ],
   },
   {
@@ -185,15 +187,15 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Mídia ADESF",
     items: [
-      { label: "Dashboard", href: "/midia-adesf", icon: Clapperboard, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Escalas", href: "/midia-adesf/escalas", icon: CalendarClock, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Cultos", href: "/midia-adesf/cultos", icon: Calendar, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Calendário", href: "/midia-adesf/calendario", icon: Calendar, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Equipe", href: "/midia-adesf/equipe", icon: Users, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Solicitações", href: "/midia-adesf/solicitacoes", icon: Send, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Histórico", href: "/midia-adesf/historico", icon: FileText, permission: permKey("MEDIA_ADESF", "VIEW") },
-      { label: "Relatórios", href: "/midia-adesf/relatorios", icon: BarChart3, permission: permKey("MEDIA_ADESF", "MANAGE") },
-      { label: "Configurações", href: "/midia-adesf/configuracoes", icon: Settings, permission: permKey("MEDIA_ADESF", "MANAGE") },
+      { label: "Dashboard", href: "/midia-adesf", icon: Clapperboard, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Escalas", href: "/midia-adesf/escalas", icon: CalendarClock, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Cultos", href: "/midia-adesf/cultos", icon: Calendar, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Calendário", href: "/midia-adesf/calendario", icon: Calendar, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Equipe", href: "/midia-adesf/equipe", icon: Users, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Solicitações", href: "/midia-adesf/solicitacoes", icon: Send, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Histórico", href: "/midia-adesf/historico", icon: FileText, permission: MEDIA_ADESF_IN_LUMIBASE },
+      { label: "Relatórios", href: "/midia-adesf/relatorios", icon: BarChart3, permission: MEDIA_ADESF_MANAGE_IN_LUMIBASE },
+      { label: "Configurações", href: "/midia-adesf/configuracoes", icon: Settings, permission: MEDIA_ADESF_MANAGE_IN_LUMIBASE },
     ],
   },
   {

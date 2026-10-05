@@ -59,6 +59,10 @@ export default async function DashboardPage() {
   const canViewProjects = hasPermission(user, permKey("PROJECTS", "VIEW"));
   const canViewContracts = hasPermission(user, permKey("CONTRACTS", "VIEW"));
   const canViewCalendar = hasPermission(user, permKey("CALENDAR", "VIEW"));
+  // Números da empresa (funil inteiro, saúde da Lumi) só para a diretoria e o
+  // financeiro; quem é da equipe vê os próprios números.
+  const director = isDirector(user);
+  const companyView = director || canViewFinance;
   // Atalhos de criação no topo (§ pedido do usuário: "agilizar tudo através
   // do dashboard, não precisar ficar toda hora entrando nas abas") — vão
   // direto pra tela certa já prontos pra criar, sem precisar navegar até
@@ -79,7 +83,7 @@ export default async function DashboardPage() {
   const [finance, commercial, activeProjects, commitments, attention, health, currentGoal] =
     await Promise.all([
       getFinancialSummary(user.organizationId),
-      getCommercialSummary(user.organizationId),
+      getCommercialSummary(user.organizationId, companyView ? undefined : user.id),
       getActiveProjectsCount(user.organizationId),
       getUpcomingCommitments(user.organizationId),
       getAttentionItems(user.organizationId),
@@ -97,7 +101,7 @@ export default async function DashboardPage() {
   const currency = organization.currency;
   const monthResult = canViewFinance ? await getMonthResult(user.organizationId, competenceOf(new Date())) : null;
   const insights =
-    canViewFinance || canViewCRM
+    companyView
       ? buildDashboardInsights({
           currency,
           // Sem acesso ao financeiro, nenhum número de caixa entra nos insights.
@@ -105,8 +109,8 @@ export default async function DashboardPage() {
           aPagar: canViewFinance ? finance.aPagar : 0,
           overdueReceivablesCount: canViewFinance ? attention.overdueReceivables.length : 0,
           overdueReceivablesTotal: canViewFinance ? attention.overdueReceivables.reduce((s, r) => s + Number(r.amount), 0) : 0,
-          pipelineTotal: canViewCRM ? commercial.pipelineTotal : 0,
-          pipelineWeighted: canViewCRM ? commercial.pipelineWeighted : 0,
+          pipelineTotal: canViewCRM && companyView ? commercial.pipelineTotal : 0,
+          pipelineWeighted: canViewCRM && companyView ? commercial.pipelineWeighted : 0,
           goalTarget: canViewFinance && currentGoal ? Number(currentGoal.targetValue) : null,
         })
       : [];
@@ -165,7 +169,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`${greeting()}, ${user.name.split(" ")[0]}`}
-        description="Acompanhe suas tarefas, o progresso da equipe e os números da Lumière."
+        description={companyView ? "Acompanhe suas tarefas, o progresso da equipe e os números da Lumière." : "Seu mês, suas tarefas e seus próximos compromissos."}
         actions={
           quickCreateLinks.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -213,9 +217,14 @@ export default async function DashboardPage() {
         )}
         {canViewCRM && (
           <>
-            <MetricCard label="Pipeline comercial" value={formatCurrency(commercial.pipelineTotal, currency)} caption="leads em aberto" icon={<Target />} />
             <MetricCard
-              label="Pipeline ponderado"
+              label={companyView ? "Pipeline comercial" : "Meu pipeline"}
+              value={formatCurrency(commercial.pipelineTotal, currency)}
+              caption={companyView ? "leads em aberto" : `${commercial.openLeadsCount} lead${commercial.openLeadsCount === 1 ? "" : "s"} seus em aberto`}
+              icon={<Target />}
+            />
+            <MetricCard
+              label={companyView ? "Pipeline ponderado" : "Meu pipeline ponderado"}
               value={formatCurrency(commercial.pipelineWeighted, currency)}
               caption="valor × chance de fechar"
               icon={<Target />}
@@ -230,8 +239,8 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className={`grid grid-cols-1 gap-4 ${canViewFinance || canViewCRM || canViewProjects ? "lg:grid-cols-3" : ""}`}>
-        {(canViewFinance || canViewCRM || canViewProjects) && (
+      <div className={`grid grid-cols-1 gap-4 ${companyView ? "lg:grid-cols-3" : ""}`}>
+        {companyView && (
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Saúde da Lumi</CardTitle>
@@ -256,7 +265,7 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        <Card className={canViewFinance || canViewCRM || canViewProjects ? "lg:col-span-2" : undefined}>
+        <Card className={companyView ? "lg:col-span-2" : undefined}>
           <CardHeader>
             <CardTitle>Próximos compromissos</CardTitle>
           </CardHeader>

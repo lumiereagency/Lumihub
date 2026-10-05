@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import { buildPixCode } from "@/lib/billing/pix";
 import { getPixSetup } from "@/lib/billing/charge";
 import { brasiliaDay, dueDay, formatDueDate } from "@/lib/billing/dates";
+import { groupTiming, openChargesFor } from "@/lib/billing/group";
 import { PaymentView } from "./payment-view";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["300", "400", "500", "600"], variable: "--font-poppins" });
@@ -29,11 +30,32 @@ export default async function PaymentPage({ params }: PageProps<"/pagar/[token]"
   if (!r) notFound();
 
   const pix = await getPixSetup(r.organizationId);
-  const amount = Number(r.amount);
-  const code = pix.key ? buildPixCode({ key: pix.key, name: pix.name, city: pix.city, amount, txid: r.id }) : null;
+  const currency = r.organization.currency;
+  const today = brasiliaDay(new Date());
+
+  // Outras faturas em aberto do mesmo cliente (vencidas ou da mesma semana)
+  // aparecem juntas, com um Pix para pagar tudo de uma vez.
+  const open = r.status === "PENDENTE" || r.status === "ATRASADO";
+  const items = open ? (await openChargesFor(r.id)).items : [];
+  const grouped = items.length > 1;
+  const amount = grouped ? Math.round(items.reduce((s, i) => s + i.amount, 0) * 100) / 100 : Number(r.amount);
+  const code = pix.key ? buildPixCode({ key: pix.key, name: pix.name, city: pix.city, amount, txid: grouped ? `G${r.id}` : r.id }) : null;
   const qrSvg = code ? await QRCode.toString(code, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#0B0A08", light: "#FFFFFF" } }) : null;
   const due = dueDay(r.dueDate);
-  const today = brasiliaDay(new Date());
+  const timing = grouped ? groupTiming(items) : due < today ? "late" : due === today ? "today" : "upcoming";
+  const groupItems = grouped
+    ? items.map((i) => {
+        const d = dueDay(i.dueDate);
+        return {
+          id: i.id,
+          description: i.description,
+          amountLabel: formatCurrency(i.amount, currency),
+          dueLabel: d < today ? `venceu em ${formatDueDate(i.dueDate)}` : d === today ? "vence hoje" : `vence em ${formatDueDate(i.dueDate)}`,
+          late: d < today,
+          pixCode: pix.key ? buildPixCode({ key: pix.key, name: pix.name, city: pix.city, amount: i.amount, txid: i.id }) : null,
+        };
+      })
+    : null;
 
   return (
     <div className={poppins.variable}>
@@ -41,10 +63,11 @@ export default async function PaymentPage({ params }: PageProps<"/pagar/[token]"
         token={token}
         company={pix.name}
         clientName={(r.client.contactName || r.client.companyName).split(" ")[0]}
-        description={r.description}
-        amountLabel={formatCurrency(amount, r.organization.currency)}
-        dueLabel={formatDueDate(r.dueDate)}
-        timing={due < today ? "late" : due === today ? "today" : "upcoming"}
+        description={grouped ? `${items.length} faturas em aberto` : r.description}
+        amountLabel={formatCurrency(amount, currency)}
+        dueLabel={formatDueDate(grouped ? items[0].dueDate : r.dueDate)}
+        timing={timing}
+        items={groupItems}
         status={r.status === "PAGO" ? "paid" : r.status === "CANCELADO" ? "cancelled" : r.proofSubmittedAt ? "proof" : "open"}
         pixKey={pix.key}
         pixCode={code}

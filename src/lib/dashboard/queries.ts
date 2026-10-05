@@ -65,9 +65,10 @@ export async function getFinancialSummary(organizationId: string) {
   };
 }
 
-export async function getCommercialSummary(organizationId: string) {
+// ownerUserId: só os leads da pessoa (funcionário não vê o funil da empresa).
+export async function getCommercialSummary(organizationId: string, ownerUserId?: string) {
   const openLeads = await db.lead.findMany({
-    where: { organizationId, deletedAt: null, stage: { notIn: ["FECHADO", "PERDIDO"] } },
+    where: { organizationId, deletedAt: null, stage: { notIn: ["FECHADO", "PERDIDO"] }, ...(ownerUserId ? { ownerUserId } : {}) },
     select: { potentialValue: true, probability: true },
   });
 

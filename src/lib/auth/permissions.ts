@@ -120,26 +120,25 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Exclude<RoleKey, "CUSTOM" | "MEDIA
     ...grant("DOCUMENTS", RW),
   ],
 
+  // Funcionários (operação e comercial/social media) ficam só com o que usam
+  // no dia a dia: nada de clientes, contratos ou documentos da empresa. Cada
+  // pessoa pode ganhar abas a mais em Equipe → Acessos.
   OPERACAO: [
     ...grant("DASHBOARD", RO),
     ...grant("PROJECTS", RW),
     ...grant("TASKS", FULL),
     ...grant("CALENDAR", FULL),
     ...grant("CAPTURES", FULL),
-    ...grant("CLIENTS", RO),
-    ...grant("TEAM", RW),
+    ...grant("TEAM", RO),
     ...grant("ALERTS", RO),
-    ...grant("DOCUMENTS", RW),
   ],
 
   COMERCIAL: [
     ...grant("DASHBOARD", RO),
     ...grant("CRM", FULL),
-    ...grant("CLIENTS", RW),
-    ...grant("CONTRACTS", RW),
+    ...grant("TASKS", RW),
     ...grant("CALENDAR", RW),
     ...grant("ALERTS", RO),
-    ...grant("DOCUMENTS", RW),
   ],
 
   // Gestão operacional (braço direito): toca a operação e o comercial, sem

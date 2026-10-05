@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { syncAlerts } from "@/lib/alerts/rules";
 import { formatCurrency } from "@/lib/format";
 import { notifyUsers } from "@/lib/notifications/notify";
+import { loadTeamPermissions } from "@/lib/auth/team-permissions";
+import { alertVisibleTo } from "@/lib/alerts/visibility";
 import { brasiliaHour, parseNotificationSettings, type NotificationCategory } from "@/lib/notifications/settings";
 
 // Rotina de pendências, chamada pelo crontab a cada 15 minutos. Cada aviso
@@ -35,16 +37,13 @@ interface TeamUser {
 }
 
 async function loadTeam(organizationId: string): Promise<TeamUser[]> {
-  const users = await db.user.findMany({
-    where: { organizationId, isActive: true, deletedAt: null },
-    select: { id: true, name: true, organizationId: true, isOwner: true, notificationSettings: true, role: { select: { key: true, permissions: { select: { permission: { select: { key: true } } } } } } },
-  });
+  const users = await loadTeamPermissions(organizationId);
   return users.map((u) => ({
     id: u.id,
     name: u.name,
-    organizationId: u.organizationId,
-    director: u.isOwner || u.role.key === "ADMIN",
-    permissions: new Set(u.role.permissions.map((p) => p.permission.key)),
+    organizationId,
+    director: u.director,
+    permissions: u.permissions,
     wants: ((disabled) => (c: NotificationCategory) => !disabled.includes(c))(parseNotificationSettings(u.notificationSettings).disabled),
   }));
 }
@@ -56,8 +55,7 @@ async function urgentAlerts(organizationId: string, team: TeamUser[], now: Date)
     select: { id: true, title: true, message: true, category: true },
   });
   for (const a of alerts) {
-    const money = a.category === "FINANCEIRO" || a.category === "CLIENTES";
-    const recipients = team.filter((u) => u.director || (u.permissions.has("ALERTS_VIEW") && (!money || u.permissions.has("FINANCE_VIEW")))).map((u) => u.id);
+    const recipients = team.filter((u) => u.director || alertVisibleTo(a.category, u.permissions)).map((u) => u.id);
     await notifyUsers({ organizationId, userIds: recipients, title: a.title, body: a.message, link: "/alertas", category: "alertas", dedupeKey: `alert:${a.id}` });
   }
 }

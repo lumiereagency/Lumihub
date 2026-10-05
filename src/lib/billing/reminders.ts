@@ -4,6 +4,7 @@ import { TRIGGER_OFFSET_DAYS } from "@/lib/validation/billing";
 import { sendReminderMessage, isChannelConnected } from "@/lib/integrations/messaging";
 import { buildChargeContext, renderCharge, type ChargeContext } from "@/lib/billing/charge";
 import { notifyUsers } from "@/lib/notifications/notify";
+import { buildGroupContext, groupMessage, openChargesFor } from "@/lib/billing/group";
 import { addDays, brasiliaDay, dueDay, noonOf } from "@/lib/billing/dates";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -16,7 +17,9 @@ type TxClient = Prisma.TransactionClient;
 //     (nada de despejar lembretes acumulados de uma vez);
 //   • "vence em X dias" nunca sai depois do vencimento;
 //   • cobrança paga ou cancelada não recebe mais nada;
-//   • no máximo uma mensagem por cobrança por dia;
+//   • no máximo UMA mensagem por cliente por dia: várias faturas do mesmo
+//     cliente saem juntas, com o total e um Pix só; quem já recebeu cobrança
+//     no dia (inclusive manual) não recebe outra;
 //   • intervalo entre envios no WhatsApp, para proteger o número.
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -35,6 +38,15 @@ export function isSendingWindow(now = new Date()): boolean {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function dayBoundsBRT(day: string) {
+  return { start: new Date(`${day}T00:00:00-03:00`), end: new Date(`${day}T23:59:59.999-03:00`) };
+}
+
+async function orgCurrency(organizationId: string): Promise<string> {
+  const o = await db.organization.findUnique({ where: { id: organizationId }, select: { currency: true } });
+  return o?.currency ?? "BRL";
+}
 
 // Agenda a régua de uma cobrança a partir dos modelos ativos (só os que
 // ainda não tem e só para hoje em diante). Cada lembrete fica ao meio-dia
@@ -145,7 +157,7 @@ export async function processDuePaymentReminders(
       scheduledFor: { lte: noonOf(today) },
       receivable: { ...(organizationId ? { organizationId } : {}), status: { in: ["PENDENTE", "ATRASADO"] } },
     },
-    include: { messageTemplate: true, receivable: { select: { organizationId: true } } },
+    include: { messageTemplate: true, receivable: { select: { organizationId: true, clientId: true } } },
     orderBy: { offsetDays: "desc" },
   });
 
@@ -158,32 +170,66 @@ export async function processDuePaymentReminders(
   }
   if (skipped.length) await db.paymentReminder.updateMany({ where: { id: { in: skipped } }, data: { status: "CANCELADO" } });
 
+  // E uma mensagem por CLIENTE por dia: várias faturas do mesmo cliente
+  // (ex.: 3 parcelas vencendo no mesmo dia) viram uma cobrança só.
+  const byClient = new Map<string, (typeof due)[number][]>();
+  for (const r of chosen.values()) {
+    const key = `${r.receivable.organizationId}:${r.receivable.clientId}`;
+    byClient.set(key, [...(byClient.get(key) ?? []), r]);
+  }
+
+  const { start: dayStart } = dayBoundsBRT(today);
   let sent = 0;
   let failed = 0;
   const failures = new Map<string, { count: number; reason: string }>();
   let first = true;
-  for (const reminder of [...chosen.values()].slice(0, MAX_PER_RUN)) {
-    if (!reminder.messageTemplate) continue;
-    // Nenhuma cobrança paga recebe lembrete, mesmo que tenha sido paga durante o processamento.
-    const fresh = await db.accountReceivable.findUnique({ where: { id: reminder.receivableId }, select: { status: true } });
-    if (!fresh || fresh.status === "PAGO" || fresh.status === "CANCELADO") {
-      await db.paymentReminder.update({ where: { id: reminder.id }, data: { status: "CANCELADO" } });
+  for (const group of [...byClient.values()].slice(0, MAX_PER_RUN)) {
+    const ids = group.map((g) => g.id);
+    const org = group[0].receivable.organizationId;
+    const clientId = group[0].receivable.clientId;
+
+    // Cliente que já recebeu cobrança hoje (manual ou automática) não recebe outra.
+    const already = await db.paymentReminder.count({
+      where: { id: { notIn: ids }, status: "ENVIADO", sentAt: { gte: dayStart }, receivable: { organizationId: org, clientId } },
+    });
+    if (already > 0) {
+      await db.paymentReminder.updateMany({ where: { id: { in: ids } }, data: { status: "CANCELADO", messageBody: "Não enviado: o cliente já recebeu uma cobrança hoje." } });
       continue;
     }
-    if (!first && reminder.channel === "WHATSAPP") await sleep(6000 + Math.floor(Math.random() * 6000));
+
+    // Nenhuma cobrança paga recebe lembrete, mesmo que tenha sido paga durante o processamento.
+    const fresh = await db.accountReceivable.findMany({ where: { id: { in: group.map((g) => g.receivableId) } }, select: { id: true, status: true } });
+    const stillOpen = new Set(fresh.filter((f) => f.status === "PENDENTE" || f.status === "ATRASADO").map((f) => f.id));
+    const live = group.filter((g) => stillOpen.has(g.receivableId) && g.messageTemplate);
+    const dead = group.filter((g) => !live.includes(g)).map((g) => g.id);
+    if (dead.length) await db.paymentReminder.updateMany({ where: { id: { in: dead } }, data: { status: "CANCELADO" } });
+    if (live.length === 0) continue;
+
+    const lead = live[0];
+    const channel = live.some((g) => g.channel === "WHATSAPP") ? "WHATSAPP" : lead.channel;
+    if (!first && channel === "WHATSAPP") await sleep(6000 + Math.floor(Math.random() * 6000));
     first = false;
 
-    const ctx = await buildChargeContext(reminder.receivableId);
-    const body = renderCharge(reminder.messageTemplate.body, ctx);
-    const result = await deliverCharge(ctx, reminder.channel, body);
-    await db.paymentReminder.update({
-      where: { id: reminder.id },
+    // Todas as faturas em aberto do cliente que vencem até a semana que vem
+    // entram na mesma mensagem (as que dispararam hoje e as já vencidas).
+    const { items } = await openChargesFor(lead.receivableId);
+    let ctx: ChargeContext;
+    let body: string;
+    if (items.length > 1) {
+      ctx = await buildGroupContext(lead.receivableId, items);
+      body = groupMessage(ctx, items, await orgCurrency(org));
+    } else {
+      ctx = await buildChargeContext(lead.receivableId);
+      body = renderCharge(lead.messageTemplate!.body, ctx);
+    }
+    const result = await deliverCharge(ctx, channel, body);
+    await db.paymentReminder.updateMany({
+      where: { id: { in: live.map((g) => g.id) } },
       data: { status: result.delivered ? "ENVIADO" : "FALHOU", sentAt: new Date(), messageBody: result.delivered ? body : `${body}\n\n[Falha: ${result.error}]` },
     });
     if (result.delivered) sent++;
     else {
       failed++;
-      const org = reminder.receivable.organizationId;
       const f = failures.get(org) ?? { count: 0, reason: result.error ?? "Falha no envio." };
       f.count++;
       failures.set(org, f);

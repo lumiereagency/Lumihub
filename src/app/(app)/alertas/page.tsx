@@ -1,4 +1,5 @@
-import { requirePermission, hasPermission } from "@/lib/auth/guard";
+import { requirePermission, hasPermission, isDirector } from "@/lib/auth/guard";
+import { visibleAlertCategories } from "@/lib/alerts/visibility";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { syncAlerts } from "@/lib/alerts/rules";
@@ -11,10 +12,11 @@ export default async function AlertsPage() {
 
   await syncAlerts(user.organizationId);
 
-  // Alertas de dinheiro (contas, cobranças, inadimplência) só para quem vê o financeiro.
-  const canViewFinance = hasPermission(user, permKey("FINANCE", "VIEW"));
+  // Cada pessoa vê só os alertas das áreas em que trabalha (dinheiro para o
+  // financeiro, mídia para quem gerencia a Mídia ADESF, e assim por diante).
+  const categories = isDirector(user) ? undefined : visibleAlertCategories(user.permissions);
   const alerts = await db.alert.findMany({
-    where: { organizationId: user.organizationId, ...(canViewFinance ? {} : { category: { notIn: ["FINANCEIRO", "CLIENTES"] } }) },
+    where: { organizationId: user.organizationId, ...(categories ? { category: { in: categories } } : {}) },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 

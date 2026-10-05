@@ -37,6 +37,9 @@ interface Props {
   pixKey: string | null;
   pixCode: string | null;
   qrSvg: string | null;
+  // Várias faturas do mesmo cliente: lista com o Pix de cada uma; o Pix
+  // principal é o do total.
+  items: { id: string; description: string; amountLabel: string; dueLabel: string; late: boolean; pixCode: string | null }[] | null;
 }
 
 function useCopy() {
@@ -70,6 +73,7 @@ export function PaymentView(p: Props) {
     e.preventDefault();
     setError(null);
     const data = new FormData(e.currentTarget);
+    if (p.items) data.set("scope", "all");
     startTransition(async () => {
       const res = await submitPaymentProofAction(p.token, data);
       if (res.ok) {
@@ -79,8 +83,17 @@ export function PaymentView(p: Props) {
     });
   }
 
-  const dueChip =
-    p.timing === "today" ? "Vence hoje" : p.timing === "late" ? `Venceu em ${p.dueLabel}` : `Vence em ${p.dueLabel}`;
+  const dueChip = p.items
+    ? p.timing === "late"
+      ? "Há faturas vencidas"
+      : p.timing === "today"
+        ? "Uma delas vence hoje"
+        : `A primeira vence em ${p.dueLabel}`
+    : p.timing === "today"
+      ? "Vence hoje"
+      : p.timing === "late"
+        ? `Venceu em ${p.dueLabel}`
+        : `Vence em ${p.dueLabel}`;
 
   return (
     <div style={THEME} className="relative min-h-dvh">
@@ -105,6 +118,32 @@ export function PaymentView(p: Props) {
             </span>
           )}
         </section>
+
+        {p.items && status !== "paid" && status !== "cancelled" && (
+          <section className="flex flex-col divide-y divide-[var(--p-line)] rounded-3xl border border-[var(--p-line)] bg-[var(--p-surface)] px-5">
+            {p.items.map((it) => (
+              <div key={it.id} className="flex items-center justify-between gap-3 py-3.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm">{it.description}</p>
+                  <p className={`text-xs ${it.late ? "text-[#E8A48C]" : "text-[var(--p-faint)]"}`}>{it.dueLabel}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-sm font-medium">{it.amountLabel}</span>
+                  {it.pixCode && (
+                    <button type="button" onClick={() => copy(it.id, it.pixCode!)} className="flex items-center gap-1 text-[11px] text-[var(--p-gold)] hover:underline">
+                      {copied === it.id ? <Check size={11} /> : <Copy size={11} />}
+                      {copied === it.id ? "Copiado" : "Pix só desta"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between py-3.5">
+              <span className="text-xs uppercase tracking-[0.18em] text-[var(--p-faint)]">Total</span>
+              <span className={`text-base font-semibold ${goldText}`}>{p.amountLabel}</span>
+            </div>
+          </section>
+        )}
 
         {status === "paid" ? (
           <section className="flex flex-col items-center gap-3 rounded-3xl border border-[var(--p-line)] bg-[var(--p-surface)] px-6 py-10 text-center">
@@ -138,7 +177,7 @@ export function PaymentView(p: Props) {
                   className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[image:var(--p-gold-grad)] text-[15px] font-semibold text-[#1A1408] shadow-[0_10px_30px_-12px_rgba(214,178,102,0.7)] active:scale-[0.99]"
                 >
                   {copied === "code" ? <Check size={18} /> : <Copy size={18} />}
-                  {copied === "code" ? "Código copiado" : "Copiar código Pix"}
+                  {copied === "code" ? "Código copiado" : p.items ? "Copiar Pix do total" : "Copiar código Pix"}
                 </button>
 
                 <ol className="flex flex-col gap-1.5 text-[13px] text-[var(--p-muted)]">

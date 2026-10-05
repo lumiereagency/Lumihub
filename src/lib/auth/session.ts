@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session-cookie";
 import { MEDIA_MEMBER_PORTAL_PERMISSIONS } from "@/lib/auth/permissions";
+import { ACCESS_MANAGE_ALL, ACCESS_MANAGE_OPERATIONAL, MEDIA_ADESF_IN_LUMIBASE, MEDIA_ADESF_MANAGE_IN_LUMIBASE, effectivePermissions } from "@/lib/auth/access";
 import type { MediaMemberRole, MediaMemberStatus } from "@/generated/prisma/enums";
 
 export { SESSION_COOKIE_NAME };
@@ -57,6 +58,8 @@ export type CurrentUser = {
   email: string;
   avatarUrl: string | null;
   role: { id: string; key: string; name: string };
+  // Perfil principal + perfis adicionais.
+  roleKeys: string[];
   permissions: Set<string>;
   sessionId: string;
   isOwner: boolean;
@@ -102,7 +105,23 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     });
   }
 
-  const permissions = new Set(session.user.role.permissions.map((rp) => rp.permission.key));
+  // Perfis adicionais somam acessos; os ajustes aba por aba vêm por cima.
+  const extraRoles = session.user.extraRoleIds.length
+    ? await db.role.findMany({
+        where: { id: { in: session.user.extraRoleIds }, organizationId: session.user.organizationId, key: { not: "ADMIN" } },
+        select: { key: true, permissions: { select: { permission: { select: { key: true } } } } },
+      })
+    : [];
+  const permissions = effectivePermissions({
+    rolePermissions: session.user.role.permissions.map((rp) => rp.permission.key),
+    extraRolePermissions: extraRoles.map((r) => r.permissions.map((p) => p.permission.key)),
+    moduleAccess: session.user.moduleAccess,
+  });
+  const roleKeys = [session.user.role.key, ...extraRoles.map((r) => r.key)];
+  if (session.user.isOwner || session.user.role.key === "ADMIN") permissions.add(ACCESS_MANAGE_ALL);
+  else if (roleKeys.includes("GESTAO")) permissions.add(ACCESS_MANAGE_OPERATIONAL);
+  if (permissions.has("MEDIA_ADESF_VIEW")) permissions.add(MEDIA_ADESF_IN_LUMIBASE);
+  if (permissions.has("MEDIA_ADESF_MANAGE")) permissions.add(MEDIA_ADESF_MANAGE_IN_LUMIBASE);
 
   // Acesso ao portal Mídia ADESF é aditivo: só é unido ao conjunto de
   // permissões da sessão quando o vínculo está ACTIVE — um membro
@@ -122,6 +141,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: session.user.email,
     avatarUrl: session.user.avatarUrl,
     role: { id: session.user.role.id, key: session.user.role.key, name: session.user.role.name },
+    roleKeys,
     permissions,
     sessionId: session.id,
     isOwner: session.user.isOwner,

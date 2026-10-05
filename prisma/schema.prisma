@@ -155,6 +155,10 @@ model User {
   lastLoginAt     DateTime?
   // Preferências de notificação (categorias e horário de silêncio); nulo = padrão, tudo ligado.
   notificationSettings Json?
+  // Perfis adicionais (a pessoa soma os acessos de todos) e ajustes aba por
+  // aba ({ MODULO: "off" | "view" | "full" }) aplicados por cima dos perfis.
+  extraRoleIds    String[]  @default([])
+  moduleAccess    Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?

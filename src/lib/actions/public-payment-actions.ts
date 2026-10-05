@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { saveLocalFile } from "@/lib/storage/local";
 import { notifyUsers } from "@/lib/notifications/notify";
 import { formatCurrency } from "@/lib/format";
+import { openChargesFor } from "@/lib/billing/group";
 
 // Página pública de pagamento (/pagar/<token>): o token aleatório é a
 // credencial. O cliente só consegue anexar comprovante da própria cobrança.
@@ -50,6 +51,19 @@ export async function submitPaymentProofAction(token: string, formData: FormData
     data: { proofUrl, proofSubmittedAt: new Date(), notes: note ? [r.notes, `Cliente (${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}): ${note}`].filter(Boolean).join("\n") : r.notes },
   });
 
+  // Página com várias faturas: o comprovante vale para todas as que estavam na tela.
+  let total = Number(r.amount);
+  let label = r.description;
+  if (formData.get("scope") === "all") {
+    const { items } = await openChargesFor(r.id);
+    const others = items.filter((i) => i.id !== r.id);
+    if (others.length) {
+      await db.accountReceivable.updateMany({ where: { id: { in: others.map((o) => o.id) }, clientId: r.clientId }, data: { proofUrl, proofSubmittedAt: new Date() } });
+      total = items.reduce((s, i) => s + i.amount, 0);
+      label = `${items.length} faturas`;
+    }
+  }
+
   const team = await db.user.findMany({
     where: {
       organizationId: r.organizationId,
@@ -63,7 +77,7 @@ export async function submitPaymentProofAction(token: string, formData: FormData
     organizationId: r.organizationId,
     userIds: team.map((u) => u.id),
     title: "Comprovante recebido 🧾",
-    body: `${r.client.companyName} informou o pagamento de ${formatCurrency(Number(r.amount), r.organization.currency)} (${r.description}). Confira e dê baixa.`,
+    body: `${r.client.companyName} informou o pagamento de ${formatCurrency(total, r.organization.currency)} (${label}). Confira e dê baixa.`,
     link: "/financeiro/receber",
     category: "financeiro",
   });

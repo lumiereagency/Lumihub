@@ -147,7 +147,7 @@ export function CobrancasView({
           href={status.pixKey ? undefined : "/propostas/configuracoes"}
           hrefLabel="Cadastrar chave Pix"
         />
-        <StatusTile ok icon={Clock} title="Envio automático" text="De segunda a sábado, entre 9h e 18h. No máximo uma mensagem por cobrança por dia." />
+        <StatusTile ok icon={Clock} title="Envio automático" text="De segunda a sábado, entre 9h e 18h. No máximo uma mensagem por cliente por dia: várias faturas saem juntas, com o total e um Pix só." />
       </div>
 
       {(noPhone.length > 0 || status.waitingProof > 0) && (
