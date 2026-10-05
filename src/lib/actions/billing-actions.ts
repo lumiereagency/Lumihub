@@ -13,6 +13,13 @@ import { isChannelConnected } from "@/lib/integrations/messaging";
 import { getPricingSettings } from "@/lib/pricing/settings";
 import { TRIGGER_OFFSET_DAYS } from "@/lib/validation/billing";
 import type { ActionState } from "@/lib/actions/auth-actions";
+import { writeChargeWithAi, writeTemplateWithAi } from "@/lib/ai/billing-writer";
+import { buildGroupContext, groupMessage, openChargesFor } from "@/lib/billing/group";
+
+async function orgCurrency(organizationId: string): Promise<string> {
+  const o = await db.organization.findUnique({ where: { id: organizationId }, select: { currency: true } });
+  return o?.currency ?? "BRL";
+}
 
 function parseTemplateForm(formData: FormData) {
   return messageTemplateSchema.safeParse({
@@ -195,8 +202,11 @@ export async function previewChargeAction(receivableId: string): Promise<ChargeP
     .map((t) => ({ t, off: TRIGGER_OFFSET_DAYS[t.trigger] }))
     .filter(({ off }) => (diff < 0 ? off < 0 : diff === 0 ? off === 0 : off > 0))
     .sort((a, b) => Math.abs(a.off - diff) - Math.abs(b.off - diff));
-  const ctx = await buildChargeContext(receivableId);
-  const body = renderCharge(candidates[0]?.t.body ?? defaultChargeMessage(diff), ctx);
+  // Cliente com mais de uma fatura em aberto: mesma mensagem única da régua.
+  const { items } = await openChargesFor(receivableId);
+  const grouped = items.length > 1;
+  const ctx = grouped ? await buildGroupContext(receivableId, items) : await buildChargeContext(receivableId);
+  const body = grouped ? groupMessage(ctx, items, await orgCurrency(user.organizationId)) : renderCharge(candidates[0]?.t.body ?? defaultChargeMessage(diff), ctx);
   return {
     ok: true,
     body,
@@ -216,7 +226,8 @@ export async function sendChargeNowAction(receivableId: string, body: string): P
   if (r.status === "PAGO" || r.status === "CANCELADO") return { ok: false, error: "Esta cobrança já está paga ou cancelada." };
   const text = String(body ?? "").trim().slice(0, 3000);
   if (text.length < 5) return { ok: false, error: "Escreva a mensagem." };
-  const ctx = await buildChargeContext(receivableId);
+  const { items } = await openChargesFor(receivableId);
+  const ctx = items.length > 1 ? await buildGroupContext(receivableId, items) : await buildChargeContext(receivableId);
   const result = await deliverCharge(ctx, "WHATSAPP", text);
   await db.paymentReminder.create({
     data: {
@@ -233,4 +244,101 @@ export async function sendChargeNowAction(receivableId: string, body: string): P
   revalidatePath("/financeiro/cobrancas");
   revalidatePath("/financeiro/receber");
   return result.delivered ? { ok: true } : { ok: false, error: result.error ?? "Não foi possível enviar." };
+}
+
+// Ações da equipe sobre os lembretes: "já cobrei por fora" (feito à mão),
+// cancelar, reativar um cancelado e parar a régua de uma fatura inteira.
+const REMINDER_ACTIONS = ["manual", "cancel", "reactivate", "stop"] as const;
+type ReminderAction = (typeof REMINDER_ACTIONS)[number];
+
+export async function updateRemindersAction(ids: string[], action: ReminderAction): Promise<{ ok: boolean; changed?: number; error?: string }> {
+  const user = await requirePermission(permKey("RECEIVABLES", "EDIT"));
+  if (!REMINDER_ACTIONS.includes(action) || !Array.isArray(ids) || ids.length === 0 || ids.length > 200) return { ok: false, error: "Nada selecionado." };
+  const reminders = await db.paymentReminder.findMany({
+    where: { id: { in: ids.filter((i) => typeof i === "string") }, receivable: { organizationId: user.organizationId } },
+    select: { id: true, status: true, offsetDays: true, receivableId: true, receivable: { select: { status: true, dueDate: true } } },
+  });
+  if (reminders.length === 0) return { ok: false, error: "Lembrete não encontrado." };
+
+  const stamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const who = user.name.split(" ")[0];
+  const open = (s: string) => s === "AGENDADO" || s === "FALHOU";
+  let changed = 0;
+
+  if (action === "manual") {
+    const target = reminders.filter((r) => open(r.status)).map((r) => r.id);
+    if (target.length) {
+      const res = await db.paymentReminder.updateMany({
+        where: { id: { in: target } },
+        data: { status: "MANUAL", sentAt: new Date(), messageBody: `Cobrado por fora — marcado por ${who} em ${stamp}.` },
+      });
+      changed = res.count;
+    }
+  } else if (action === "cancel") {
+    const target = reminders.filter((r) => open(r.status)).map((r) => r.id);
+    if (target.length) {
+      const res = await db.paymentReminder.updateMany({ where: { id: { in: target } }, data: { status: "CANCELADO", messageBody: `Cancelado por ${who} em ${stamp}.` } });
+      changed = res.count;
+    }
+  } else if (action === "stop") {
+    const receivableIds = [...new Set(reminders.map((r) => r.receivableId))];
+    const res = await db.paymentReminder.updateMany({
+      where: { receivableId: { in: receivableIds }, status: "AGENDADO" },
+      data: { status: "CANCELADO", messageBody: `Régua parada por ${who} em ${stamp}.` },
+    });
+    changed = res.count;
+  } else {
+    // Só volta a agendar o que ainda tem dia pela frente e cuja fatura segue em aberto.
+    const today = brasiliaDay(new Date());
+    const target = reminders.filter(
+      (r) =>
+        r.status === "CANCELADO" &&
+        (r.receivable.status === "PENDENTE" || r.receivable.status === "ATRASADO") &&
+        addDays(dueDay(r.receivable.dueDate), r.offsetDays) >= today &&
+        !(r.offsetDays < 0 && dueDay(r.receivable.dueDate) < today),
+    );
+    if (target.length) {
+      const res = await db.paymentReminder.updateMany({ where: { id: { in: target.map((r) => r.id) } }, data: { status: "AGENDADO", messageBody: null } });
+      changed = res.count;
+    }
+    if (changed === 0) return { ok: false, error: "Só dá para reativar lembretes de hoje em diante, de faturas ainda em aberto." };
+  }
+
+  await audit({ organizationId: user.organizationId, userId: user.id, action: "REMINDERS_UPDATED", entityType: "PaymentReminder", metadata: { action, ids, changed } });
+  revalidatePath("/financeiro/cobrancas");
+  return { ok: true, changed };
+}
+
+// ---------- IA: mensagens de cobrança ----------
+
+export async function aiTemplateAction(input: { trigger: string; tone: string; instructions?: string; current?: string }): Promise<{ ok: boolean; body?: string; error?: string }> {
+  const user = await requirePermission(permKey("RECEIVABLES", "MANAGE"));
+  try {
+    const body = await writeTemplateWithAi(user.organizationId, {
+      trigger: String(input.trigger ?? "D_0"),
+      tone: String(input.tone ?? "amigavel"),
+      instructions: String(input.instructions ?? "").slice(0, 500),
+      current: String(input.current ?? "").slice(0, 2000),
+    });
+    return { ok: true, body };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+export async function aiChargeMessageAction(receivableId: string, input: { tone: string; instructions?: string; current?: string }): Promise<{ ok: boolean; body?: string; error?: string }> {
+  const user = await requirePermission(permKey("RECEIVABLES", "EDIT"));
+  const r = await loadReceivable(receivableId, user.organizationId);
+  if (!r) return { ok: false, error: "Cobrança não encontrada." };
+  if (r.status === "PAGO" || r.status === "CANCELADO") return { ok: false, error: "Esta cobrança já está paga ou cancelada." };
+  try {
+    const body = await writeChargeWithAi(user.organizationId, receivableId, {
+      tone: String(input.tone ?? "amigavel"),
+      instructions: String(input.instructions ?? "").slice(0, 500),
+      current: String(input.current ?? "").slice(0, 3000),
+    });
+    return { ok: true, body };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }

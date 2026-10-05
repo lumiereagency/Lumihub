@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock, MessageCircle, Pencil, Plus, QrCode, Send, Sparkles, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, Ban, Check, CheckCircle2, Clock, MessageCircle, Pencil, Plus, QrCode, RotateCcw, Send, Sparkles, Trash2, XCircle } from "lucide-react";
 import {
   createDefaultTemplatesAction,
   deleteMessageTemplateAction,
   processReminderQueueAction,
   toggleMessageTemplateAction,
   updateBillingSettingsAction,
+  updateRemindersAction,
 } from "@/lib/actions/billing-actions";
 import { DEFAULT_MESSAGE_TEMPLATES, MESSAGE_TRIGGER_LABELS, REMINDER_CHANNEL_LABELS, REMINDER_STATUS_LABELS } from "@/lib/validation/billing";
 import { formatDateTime } from "@/lib/format";
@@ -42,12 +43,225 @@ interface Status {
   waitingProof: number;
 }
 
-const REMINDER_STATUS_TONE: Record<string, "neutral" | "success" | "error" | "accent"> = {
+const REMINDER_STATUS_TONE: Record<string, "neutral" | "success" | "error" | "accent" | "warning"> = {
   AGENDADO: "accent",
   ENVIADO: "success",
   FALHOU: "error",
   CANCELADO: "neutral",
+  MANUAL: "success",
 };
+
+const FILTERS = ["todos", "AGENDADO", "ENVIADO", "MANUAL", "FALHOU", "CANCELADO"] as const;
+type Filter = (typeof FILTERS)[number];
+const actionable = (s: string) => s === "AGENDADO" || s === "FALHOU";
+
+function noteOf(r: ReminderRow): string | null {
+  if (r.status === "FALHOU") return failureReason(r.messageBody);
+  if (r.status === "MANUAL" || r.status === "CANCELADO") return r.messageBody;
+  return null;
+}
+
+function RowActions({ r, busy, run }: { r: ReminderRow; busy: boolean; run: (ids: string[], action: "manual" | "cancel" | "reactivate" | "stop") => void }) {
+  if (actionable(r.status)) {
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run([r.id], "manual")}
+          title="Já cobrei por fora (ligação, WhatsApp pessoal)"
+          className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-text-secondary hover:border-success/50 hover:text-success disabled:opacity-50"
+        >
+          <Check size={12} /> Já cobrei
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run([r.id], "cancel")}
+          className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-text-secondary hover:border-error/50 hover:text-error disabled:opacity-50"
+        >
+          <Ban size={12} /> Cancelar
+        </button>
+        {r.status === "AGENDADO" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => confirm(`Parar todos os lembretes agendados de "${r.description}"?`) && run([r.id], "stop")}
+            className="rounded-full px-2 py-1 text-xs text-text-tertiary hover:text-text-primary disabled:opacity-50"
+          >
+            Parar régua desta fatura
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (r.status === "CANCELADO") {
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => run([r.id], "reactivate")}
+        className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-text-tertiary hover:text-text-primary disabled:opacity-50"
+      >
+        <RotateCcw size={12} /> Reativar
+      </button>
+    );
+  }
+  return null;
+}
+
+function ReminderList({ reminders, canEdit }: { reminders: ReminderRow[]; canEdit: boolean }) {
+  const [filter, setFilter] = useState<Filter>("todos");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, start] = useTransition();
+
+  const shown = filter === "todos" ? reminders : reminders.filter((r) => r.status === filter);
+  const count = (f: Filter) => reminders.filter((r) => r.status === f).length;
+  const selectable = shown.filter((r) => actionable(r.status));
+  const allOn = selectable.length > 0 && selectable.every((r) => selected.has(r.id));
+
+  function run(ids: string[], action: "manual" | "cancel" | "reactivate" | "stop") {
+    setMsg(null);
+    start(async () => {
+      const res = await updateRemindersAction(ids, action);
+      if (!res.ok) return setMsg({ ok: false, text: res.error ?? "Não foi possível atualizar." });
+      const n = res.changed ?? 0;
+      const label = action === "manual" ? "marcado(s) como feito(s) à mão" : action === "reactivate" ? "reativado(s)" : "cancelado(s)";
+      setMsg({ ok: true, text: `${n} lembrete(s) ${label}.` });
+      setSelected(new Set());
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Lembretes</CardTitle>
+          {canEdit && <p className="mt-1 text-sm text-text-tertiary">Já cobrou o cliente por fora? Marque &ldquo;Já cobrei&rdquo; e a base não manda outra cobrança para ele hoje.</p>}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => {
+            const n = f === "todos" ? 0 : count(f);
+            if (f !== "todos" && f !== "AGENDADO" && n === 0) return null;
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  setFilter(f);
+                  setSelected(new Set());
+                }}
+                className={cn("rounded-full px-3 py-1 text-xs", filter === f ? "bg-ink text-ink-on" : "border border-border text-text-secondary hover:text-text-primary")}
+              >
+                {f === "todos" ? "Todos" : REMINDER_STATUS_LABELS[f]}
+                {f !== "todos" && n > 0 ? ` · ${n}` : ""}
+              </button>
+            );
+          })}
+        </div>
+      </CardHeader>
+
+      {canEdit && selected.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-accent/30 bg-accent/[0.07] px-4 py-2.5">
+          <span className="text-sm text-text-primary">{selected.size} selecionado(s)</span>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => run([...selected], "manual")}>
+            <Check size={14} /> Já cobrei
+          </Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => confirm(`Cancelar ${selected.size} lembrete(s)?`) && run([...selected], "cancel")}>
+            <Ban size={14} /> Cancelar
+          </Button>
+          <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-text-tertiary hover:text-text-primary">
+            Limpar seleção
+          </button>
+        </div>
+      )}
+      {msg && <p className={cn("mb-3 text-sm", msg.ok ? "text-success" : "text-error")}>{msg.text}</p>}
+
+      {shown.length === 0 ? (
+        <EmptyState title="Nenhum lembrete por aqui" description="Os lembretes aparecem conforme as cobranças em aberto se aproximam do vencimento." />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
+                {canEdit && (
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Selecionar todos"
+                      checked={allOn}
+                      disabled={selectable.length === 0}
+                      onChange={() => setSelected(allOn ? new Set() : new Set(selectable.map((r) => r.id)))}
+                      className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
+                    />
+                  </th>
+                )}
+                <th className="px-4 py-3 font-medium">Cliente</th>
+                <th className="px-4 py-3 font-medium">Lembrete</th>
+                <th className="px-4 py-3 font-medium">Quando</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                {canEdit && <th className="px-4 py-3 font-medium">Ações</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r) => {
+                const note = noteOf(r);
+                return (
+                  <tr key={r.id} className="border-b border-border align-top last:border-0 hover:bg-card-elevated/50">
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        {actionable(r.status) && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Selecionar lembrete de ${r.clientName}`}
+                            checked={selected.has(r.id)}
+                            onChange={() =>
+                              setSelected((s) => {
+                                const n = new Set(s);
+                                if (n.has(r.id)) n.delete(r.id);
+                                else n.add(r.id);
+                                return n;
+                              })
+                            }
+                            className="h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]"
+                          />
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <p className="text-text-primary">{r.clientName}</p>
+                      <p className="text-xs text-text-tertiary">
+                        {r.description} · vence {r.dueLabel}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      {r.templateName ?? "—"}
+                      <span className="block text-xs text-text-tertiary">{REMINDER_CHANNEL_LABELS[r.channel as keyof typeof REMINDER_CHANNEL_LABELS] ?? r.channel}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">{formatDateTime(new Date(r.sentAt ?? r.scheduledFor))}</td>
+                    <td className="px-4 py-3">
+                      <span className="flex items-center gap-1.5">
+                        {r.status === "ENVIADO" || r.status === "MANUAL" ? <CheckCircle2 size={13} className="text-success" /> : r.status === "FALHOU" ? <XCircle size={13} className="text-error" /> : null}
+                        <Badge tone={REMINDER_STATUS_TONE[r.status] ?? "neutral"}>{REMINDER_STATUS_LABELS[r.status] ?? r.status}</Badge>
+                      </span>
+                      {note && <p className={cn("mt-1 max-w-[260px] text-xs", r.status === "FALHOU" ? "text-error" : "text-text-tertiary")}>{note}</p>}
+                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        <RowActions r={r} busy={busy} run={run} />
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 const TRIGGER_ORDER = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_1", "D_MAIS_5"];
 
@@ -103,23 +317,22 @@ export function CobrancasView({
   templates,
   reminders,
   canManage,
+  canEdit,
 }: {
   status: Status;
   noPhone: { id: string; companyName: string }[];
   templates: TemplateValues[];
   reminders: ReminderRow[];
   canManage: boolean;
+  canEdit: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TemplateValues | null>(null);
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
   const [settings, setSettings] = useState({ thanks: status.thanks, pixSeparate: status.pixSeparate });
-  const [filter, setFilter] = useState<"todos" | "AGENDADO" | "ENVIADO" | "FALHOU">("todos");
 
   const sorted = [...templates].sort((a, b) => TRIGGER_ORDER.indexOf(a.trigger) - TRIGGER_ORDER.indexOf(b.trigger));
-  const shown = filter === "todos" ? reminders : reminders.filter((r) => r.status === filter);
-  const failedCount = reminders.filter((r) => r.status === "FALHOU").length;
 
   function saveSettings(next: typeof settings) {
     setSettings(next);
@@ -284,70 +497,7 @@ export function CobrancasView({
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lembretes</CardTitle>
-          <div className="flex flex-wrap gap-1.5">
-            {(["todos", "AGENDADO", "ENVIADO", "FALHOU"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs",
-                  filter === f ? "bg-ink text-ink-on" : "border border-border text-text-secondary hover:text-text-primary",
-                )}
-              >
-                {f === "todos" ? "Todos" : REMINDER_STATUS_LABELS[f]}
-                {f === "FALHOU" && failedCount > 0 ? ` · ${failedCount}` : ""}
-              </button>
-            ))}
-          </div>
-        </CardHeader>
-        {shown.length === 0 ? (
-          <EmptyState title="Nenhum lembrete por aqui" description="Os lembretes aparecem conforme as cobranças em aberto se aproximam do vencimento." />
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-text-tertiary">
-                  <th className="px-4 py-3 font-medium">Cliente</th>
-                  <th className="px-4 py-3 font-medium">Lembrete</th>
-                  <th className="px-4 py-3 font-medium">Quando</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((r) => {
-                  const reason = r.status === "FALHOU" ? failureReason(r.messageBody) : null;
-                  return (
-                    <tr key={r.id} className="border-b border-border align-top last:border-0 hover:bg-card-elevated/50">
-                      <td className="px-4 py-3">
-                        <p className="text-text-primary">{r.clientName}</p>
-                        <p className="text-xs text-text-tertiary">
-                          {r.description} · vence {r.dueLabel}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        {r.templateName ?? "—"}
-                        <span className="block text-xs text-text-tertiary">{REMINDER_CHANNEL_LABELS[r.channel as keyof typeof REMINDER_CHANNEL_LABELS] ?? r.channel}</span>
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">{formatDateTime(new Date(r.sentAt ?? r.scheduledFor))}</td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1.5">
-                          {r.status === "ENVIADO" ? <CheckCircle2 size={13} className="text-success" /> : r.status === "FALHOU" ? <XCircle size={13} className="text-error" /> : null}
-                          <Badge tone={REMINDER_STATUS_TONE[r.status] ?? "neutral"}>{REMINDER_STATUS_LABELS[r.status] ?? r.status}</Badge>
-                        </span>
-                        {reason && <p className="mt-1 max-w-[260px] text-xs text-error">{reason}</p>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <ReminderList reminders={reminders} canEdit={canEdit} />
 
       <Drawer open={creating} onClose={() => setCreating(false)} title="Novo modelo de mensagem">
         <TemplateForm onSuccess={() => setCreating(false)} />

@@ -190,7 +190,7 @@ export async function processDuePaymentReminders(
 
     // Cliente que já recebeu cobrança hoje (manual ou automática) não recebe outra.
     const already = await db.paymentReminder.count({
-      where: { id: { notIn: ids }, status: "ENVIADO", sentAt: { gte: dayStart }, receivable: { organizationId: org, clientId } },
+      where: { id: { notIn: ids }, status: { in: ["ENVIADO", "MANUAL"] }, sentAt: { gte: dayStart }, receivable: { organizationId: org, clientId } },
     });
     if (already > 0) {
       await db.paymentReminder.updateMany({ where: { id: { in: ids } }, data: { status: "CANCELADO", messageBody: "Não enviado: o cliente já recebeu uma cobrança hoje." } });

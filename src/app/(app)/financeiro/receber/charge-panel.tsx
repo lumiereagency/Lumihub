@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Check, Copy, ExternalLink, MessageCircle, Send } from "lucide-react";
-import { getPaymentLinkAction, previewChargeAction, sendChargeNowAction, type ChargePreview } from "@/lib/actions/billing-actions";
+import { aiChargeMessageAction, getPaymentLinkAction, previewChargeAction, sendChargeNowAction, type ChargePreview } from "@/lib/actions/billing-actions";
+import { AiWriter } from "@/components/ai/ai-writer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -77,6 +78,11 @@ export function ChargePanel({ receivableId }: { receivableId: string }) {
           {!preview.hasPixKey && (
             <p className="rounded-xl bg-warning/10 px-3 py-2 text-xs text-warning">Nenhuma chave Pix configurada: cadastre em Orçamentos → Configurações para o Pix copia e cola sair na mensagem.</p>
           )}
+          <AiWriter
+            hasText={body.trim().length > 0}
+            generate={({ tone, instructions }) => aiChargeMessageAction(receivableId, { tone, instructions, current: body })}
+            onResult={setBody}
+          />
           <Textarea label={`Mensagem para ${preview.phone ?? "o cliente"}`} value={body} onChange={(e) => setBody(e.target.value)} rows={8} />
           {preview.pixSeparate && preview.pixCode && <p className="text-xs text-text-tertiary">O código Pix copia e cola vai numa segunda mensagem, logo em seguida, para o cliente copiar com um toque.</p>}
           <div className="flex gap-2">

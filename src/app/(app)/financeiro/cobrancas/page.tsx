@@ -54,6 +54,7 @@ export default async function CobrancasPage() {
           messageBody: r.messageBody,
         }))}
         canManage={canManage}
+        canEdit={hasPermission(user, permKey("RECEIVABLES", "EDIT"))}
       />
     </div>
   );

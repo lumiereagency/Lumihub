@@ -1300,6 +1300,8 @@ enum ReminderStatus {
   ENVIADO
   FALHOU
   CANCELADO
+  // A equipe já cobrou o cliente por fora (ligação, WhatsApp pessoal) e marcou como feito.
+  MANUAL
 }
 
 // LUMI COBRANÇAS — régua de cobrança configurável (Fase 9)

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { createMessageTemplateAction, updateMessageTemplateAction } from "@/lib/actions/billing-actions";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { aiTemplateAction, createMessageTemplateAction, updateMessageTemplateAction } from "@/lib/actions/billing-actions";
+import { AiWriter } from "@/components/ai/ai-writer";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { MESSAGE_TRIGGERS, MESSAGE_TRIGGER_LABELS, REMINDER_CHANNELS, REMINDER_CHANNEL_LABELS, TEMPLATE_PLACEHOLDERS } from "@/lib/validation/billing";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,8 @@ export interface TemplateValues {
 export function TemplateForm({ onSuccess, template }: { onSuccess?: () => void; template?: TemplateValues }) {
   const [state, formAction, pending] = useActionState(template ? updateMessageTemplateAction.bind(null, template.id) : createMessageTemplateAction, initialState);
   const successRef = useRef(state.success);
+  const [trigger, setTrigger] = useState(template?.trigger ?? "D_0");
+  const [body, setBody] = useState(template?.body ?? "");
 
   useEffect(() => {
     if (state.success && state.success !== successRef.current) {
@@ -40,7 +43,7 @@ export function TemplateForm({ onSuccess, template }: { onSuccess?: () => void; 
       <Input label="Nome do modelo" name="name" required placeholder="Ex: Lembrete amigável" defaultValue={template?.name} />
 
       <div className="grid grid-cols-2 gap-3">
-        <Select label="Quando enviar" name="trigger" defaultValue={template?.trigger ?? "D_0"}>
+        <Select label="Quando enviar" name="trigger" value={trigger} onChange={(e) => setTrigger(e.target.value)}>
           {MESSAGE_TRIGGERS.map((t) => (
             <option key={t} value={t}>
               {MESSAGE_TRIGGER_LABELS[t]}
@@ -56,7 +59,21 @@ export function TemplateForm({ onSuccess, template }: { onSuccess?: () => void; 
         </Select>
       </div>
 
-      <Textarea label="Mensagem" name="body" rows={9} required placeholder="Oi, {{nome}}! A fatura de {{descricao}}, no valor de {{valor}}, vence em {{vencimento}}. Para pagar: {{link}}" defaultValue={template?.body} />
+      <AiWriter
+        hasText={body.trim().length > 0}
+        generate={({ tone, instructions }) => aiTemplateAction({ trigger, tone, instructions, current: body })}
+        onResult={setBody}
+      />
+
+      <Textarea
+        label="Mensagem"
+        name="body"
+        rows={9}
+        required
+        placeholder="Oi, {{nome}}! A fatura de {{descricao}}, no valor de {{valor}}, vence em {{vencimento}}. Para pagar: {{link}}"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+      />
 
       <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-tertiary">
         <p className="mb-1.5 font-medium text-text-secondary">Campos que a base preenche sozinha</p>

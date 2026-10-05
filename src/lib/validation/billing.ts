@@ -35,6 +35,7 @@ export const REMINDER_STATUS_LABELS: Record<string, string> = {
   ENVIADO: "Enviado",
   FALHOU: "Falhou",
   CANCELADO: "Cancelado",
+  MANUAL: "Feito à mão",
 };
 
 export const messageTemplateSchema = z.object({
