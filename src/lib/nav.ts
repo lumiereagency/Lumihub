@@ -89,7 +89,7 @@ export const CRM_TABS: NavTab[] = [
 ];
 
 export const PROJECT_TABS: NavTab[] = [
-  { label: "Tarefas", href: "/tarefas", permission: permKey("TASKS", "VIEW") },
+  { label: "Workspace", href: "/tarefas", permission: permKey("TASKS", "VIEW") },
   { label: "Projetos", href: "/projetos", permission: permKey("PROJECTS", "VIEW") },
 ];
 
@@ -131,7 +131,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operação",
     items: [
       {
-        label: "Tarefas",
+        label: "Workspace",
         href: "/tarefas",
         icon: SquareKanban,
         permission: permKey("TASKS", "VIEW"),

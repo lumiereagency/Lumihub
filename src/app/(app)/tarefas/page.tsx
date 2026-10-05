@@ -80,6 +80,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tarefas">)
     status: t.status,
     priority: t.priority,
     coverColor: t.coverColor,
+    coverUrl: t.coverAttachmentId ? `/api/workspace/arquivos/${t.coverAttachmentId}` : null,
     startDate: t.startDate?.toISOString() ?? null,
     dueDate: t.dueDate?.toISOString() ?? null,
     completedAt: t.completedAt?.toISOString() ?? null,
@@ -102,7 +103,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tarefas">)
 
   return (
     <div>
-      <PageHeader title="Tarefas" description="Quadros da equipe: arraste os cartões, acompanhe prazos e converse em cada tarefa." />
+      <PageHeader title="Workspace" description="O espaço de trabalho da equipe: briefings, ideias e tarefas em quadros, com arquivos, links e conversa em cada cartão — todo mundo junto, ao mesmo tempo." />
       <SectionTabs tabs={filterTabsForUser(PROJECT_TABS, user.permissions)} />
       <TaskWorkspace
         key={board.id}

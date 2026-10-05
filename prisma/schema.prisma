@@ -712,6 +712,8 @@ model Task {
   status          TaskStatus   @default(A_FAZER)
   priority        TaskPriority @default(MEDIA)
   coverColor      String?
+  // Imagem de capa do cartão (um anexo do próprio cartão).
+  coverAttachmentId String?
   startDate       DateTime?
   dueDate         DateTime?
   clientId        String?
@@ -849,6 +851,10 @@ model TaskAttachment {
   taskId          String
   name            String
   url             String
+  // Arquivo enviado (imagem, PDF, vídeo curto…) — vazio quando é só um link.
+  storageKey      String?
+  mimeType        String?
+  size            Int?
   createdByUserId String?
   createdAt       DateTime @default(now())
 

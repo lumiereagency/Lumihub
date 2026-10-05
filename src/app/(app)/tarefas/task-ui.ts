@@ -18,6 +18,7 @@ export interface BoardTask {
   status: TaskStatusKey;
   priority: TaskPriorityKey;
   coverColor: string | null;
+  coverUrl: string | null;
   startDate: string | null;
   dueDate: string | null;
   completedAt: string | null;

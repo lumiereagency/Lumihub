@@ -15,6 +15,7 @@ import {
   nextPosition,
 } from "@/lib/tasks/board-service";
 import { notifyUsers } from "@/lib/notifications/notify";
+import { saveLocalFile, deleteLocalFile } from "@/lib/storage/local";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -508,7 +509,23 @@ export async function addTaskCommentAction(taskId: string, body: string): Promis
   if (!task || !trimmed) return { ok: false, error: "Escreva o comentário." };
 
   await db.taskComment.create({ data: { taskId, userId: user.id, body: trimmed.slice(0, 5000) } });
-  const watchers = new Set([task.assigneeUserId, task.createdByUserId, ...task.members.map((m) => m.userId)].filter((id): id is string => !!id));
+  // @menções: "@Carla" ou "@Carla Souza" avisa a pessoa mesmo que não esteja no cartão.
+  const people = await db.user.findMany({ where: { organizationId: user.organizationId, isActive: true, deletedAt: null }, select: { id: true, name: true } });
+  const lower = trimmed.toLowerCase();
+  const mentioned = new Set(
+    people
+      .filter((p) => {
+        const full = p.name.toLowerCase();
+        const first = full.split(" ")[0];
+        const escaped = first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return lower.includes(`@${full}`) || new RegExp(`@${escaped}(?!\\p{L})`, "u").test(lower);
+      })
+      .map((p) => p.id),
+  );
+  for (const id of mentioned) {
+    await notify(user.organizationId, id, user.id, "Você foi mencionado 💬", `${user.name} em "${task.title}": ${trimmed.slice(0, 120)}`, cardLink(task.boardId, taskId));
+  }
+  const watchers = new Set([task.assigneeUserId, task.createdByUserId, ...task.members.map((m) => m.userId)].filter((id): id is string => !!id && !mentioned.has(id)));
   for (const watcher of watchers) {
     await notify(user.organizationId, watcher, user.id, "Novo comentário", `${user.name} comentou em "${task.title}".`, cardLink(task.boardId, taskId));
   }
@@ -548,8 +565,10 @@ export async function addTaskAttachmentAction(taskId: string, name: string, url:
 export async function deleteTaskAttachmentAction(attachmentId: string): Promise<Result> {
   const user = await requirePermission(EDIT);
   const attachment = await db.taskAttachment.findFirst({ where: { id: attachmentId, task: { organizationId: user.organizationId } } });
-  if (!attachment) return { ok: false, error: "Link não encontrado." };
+  if (!attachment) return { ok: false, error: "Anexo não encontrado." };
   await db.taskAttachment.delete({ where: { id: attachmentId } });
+  await db.task.updateMany({ where: { id: attachment.taskId, coverAttachmentId: attachmentId }, data: { coverAttachmentId: null } });
+  if (attachment.storageKey) await deleteLocalFile(user.organizationId, `workspace/${attachment.storageKey}`).catch(() => {});
   done();
   return { ok: true };
 }
@@ -563,7 +582,8 @@ export interface TaskDetails {
   createdByName: string | null;
   checklist: { id: string; text: string; done: boolean }[];
   comments: { id: string; body: string; createdAt: string; userId: string | null; userName: string; avatarUrl: string | null }[];
-  attachments: { id: string; name: string; url: string; createdAt: string }[];
+  attachments: { id: string; name: string; url: string; createdAt: string; mimeType: string | null; size: number | null; isFile: boolean; isCover: boolean }[];
+  coverAttachmentId: string | null;
   activity: { id: string; action: string; userName: string; createdAt: string; metadata: Record<string, unknown> }[];
 }
 
@@ -601,7 +621,17 @@ export async function getTaskDetailsAction(taskId: string): Promise<TaskDetails 
       userName: c.user?.name ?? "Usuário removido",
       avatarUrl: c.user?.avatarUrl ?? null,
     })),
-    attachments: task.attachments.map((a) => ({ id: a.id, name: a.name, url: a.url, createdAt: a.createdAt.toISOString() })),
+    attachments: task.attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      url: a.url,
+      createdAt: a.createdAt.toISOString(),
+      mimeType: a.mimeType,
+      size: a.size,
+      isFile: !!a.storageKey,
+      isCover: task.coverAttachmentId === a.id,
+    })),
+    coverAttachmentId: task.coverAttachmentId,
     activity: logs.map((l) => ({
       id: l.id,
       action: l.action,
@@ -610,4 +640,49 @@ export async function getTaskDetailsAction(taskId: string): Promise<TaskDetails 
       metadata: (l.metadata ?? {}) as Record<string, unknown>,
     })),
   };
+}
+
+// ---------------------------------------------------------------- Arquivos e capa
+
+const MAX_TASK_FILE = 20 * 1024 * 1024;
+
+// Envia arquivos para o cartão (arrastar, colar print ou escolher). A primeira
+// imagem vira capa se o cartão ainda não tem uma.
+export async function uploadTaskFilesAction(taskId: string, formData: FormData): Promise<Result<{ count: number }>> {
+  const user = await requirePermission(EDIT);
+  const task = await findTask(user.organizationId, taskId);
+  if (!task) return { ok: false, error: "Cartão não encontrado." };
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return { ok: false, error: "Escolha um arquivo." };
+  if (files.length > 10) return { ok: false, error: "Envie até 10 arquivos por vez." };
+  let cover = task.coverAttachmentId;
+  for (const file of files) {
+    if (file.size > MAX_TASK_FILE) return { ok: false, error: `"${file.name}" passa de 20 MB.` };
+    const renamed = new File([file], file.name, { type: file.type });
+    const { storageKey, size } = await saveLocalFile(`${user.organizationId}/workspace`, renamed);
+    const created = await db.taskAttachment.create({
+      data: { taskId, name: (file.name || "arquivo").slice(0, 160), url: "", storageKey, mimeType: file.type || "application/octet-stream", size, createdByUserId: user.id },
+    });
+    await db.taskAttachment.update({ where: { id: created.id }, data: { url: `/api/workspace/arquivos/${created.id}` } });
+    if (!cover && file.type.startsWith("image/")) {
+      cover = created.id;
+      await db.task.update({ where: { id: taskId }, data: { coverAttachmentId: created.id } });
+    }
+  }
+  await audit({ organizationId: user.organizationId, userId: user.id, action: "TASK_FILES_UPLOADED", entityType: "Task", entityId: taskId, metadata: { count: files.length } });
+  done();
+  return { ok: true, count: files.length };
+}
+
+export async function setTaskCoverAction(taskId: string, attachmentId: string | null): Promise<Result> {
+  const user = await requirePermission(EDIT);
+  const task = await findTask(user.organizationId, taskId);
+  if (!task) return { ok: false, error: "Cartão não encontrado." };
+  if (attachmentId) {
+    const a = await db.taskAttachment.findFirst({ where: { id: attachmentId, taskId } });
+    if (!a?.mimeType?.startsWith("image/")) return { ok: false, error: "A capa precisa ser uma imagem." };
+  }
+  await db.task.update({ where: { id: taskId }, data: { coverAttachmentId: attachmentId } });
+  done();
+  return { ok: true };
 }

@@ -47,6 +47,10 @@ export function TaskCardView({
         task.pending && "opacity-60",
       )}
     >
+      {task.coverUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={task.coverUrl} alt="" loading="lazy" draggable={false} className="-mx-3.5 -mt-3.5 mb-0 h-36 w-[calc(100%+1.75rem)] max-w-none rounded-t-2xl object-cover" />
+      )}
       {taskLabels.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {taskLabels.map((label) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
+import { useRef, useCallback, useEffect, useMemo, useOptimistic, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -175,6 +175,24 @@ export function TaskWorkspace({
     }),
   );
 
+  // Trabalho simultâneo: o quadro se atualiza sozinho enquanto está aberto,
+  // para cada pessoa ver o que as outras mexeram sem recarregar.
+  const draggingRef = useRef(false);
+  useEffect(() => {
+    draggingRef.current = !!activeId;
+  }, [activeId]);
+  useEffect(() => {
+    const tick = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !draggingRef.current) router.refresh();
+    }, 15_000);
+    const onFocus = () => !draggingRef.current && router.refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(tick);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [router]);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 4000);
@@ -321,6 +339,7 @@ export function TaskWorkspace({
       status: list.status,
       priority: "MEDIA",
       coverColor: null,
+      coverUrl: null,
       startDate: null,
       dueDate: null,
       completedAt: null,

@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     hasPermission(user, permKey("CLIENTS", "CREATE")) && { label: "Novo cliente", href: "/clientes" },
     hasPermission(user, permKey("CRM", "CREATE")) && { label: "Novo lead", href: "/crm" },
     hasPermission(user, permKey("PROJECTS", "CREATE")) && { label: "Novo projeto", href: "/projetos" },
-    hasPermission(user, permKey("TASKS", "CREATE")) && { label: "Nova tarefa", href: "/tarefas" },
+    hasPermission(user, permKey("TASKS", "CREATE")) && { label: "Novo cartão", href: "/tarefas" },
   ].filter((l): l is { label: string; href: string } => Boolean(l));
 
   const organization = await db.organization.findUniqueOrThrow({

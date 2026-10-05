@@ -35,6 +35,8 @@ import {
   type TaskDetails,
 } from "@/lib/actions/task-board-actions";
 import { Avatar } from "@/components/ui/avatar";
+import { TaskFiles } from "./task-files";
+import { CARD_TEMPLATES } from "./task-templates";
 import { Popover } from "@/components/ui/popover";
 import {
   DUE_CHIP,
@@ -135,11 +137,10 @@ export function TaskModal({
   const [newItem, setNewItem] = useState("");
   const [editingItem, setEditingItem] = useState<{ id: string; text: string } | null>(null);
   const [comment, setComment] = useState("");
-  const [linkName, setLinkName] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [addingLink, setAddingLink] = useState(false);
   const [newLabel, setNewLabel] = useState({ name: "", color: "orange" });
   const [showActivity, setShowActivity] = useState(true);
+  const mentionMatch = comment.match(/@([\p{L}]*)$/u);
+  const mentionQuery = mentionMatch ? mentionMatch[1].toLowerCase() : null;
   const canEdit = permissions.canEdit;
 
   const reload = () => getTaskDetailsAction(task.id).then(setDetails);
@@ -435,6 +436,26 @@ export function TaskModal({
                   {task.description || "Adicione uma descrição mais detalhada…"}
                 </button>
               )}
+              {canEdit && !task.description && !editingDescription && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-text-tertiary">Começar com um modelo:</span>
+                  {CARD_TEMPLATES.map((t) => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={async () => {
+                        callbacks.patch(task.id, { description: t.description }, { description: t.description });
+                        setDescription(t.description);
+                        for (const item of t.checklist) await addChecklistItemAction(task.id, item);
+                        reload();
+                      }}
+                      className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary hover:border-accent hover:text-text-primary"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className="flex flex-col gap-3">
@@ -537,67 +558,7 @@ export function TaskModal({
               )}
             </section>
 
-            <section className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h3 className={sectionTitle}>
-                  <Link2 size={16} className="text-text-tertiary" /> Links e arquivos
-                </h3>
-                {canEdit && !addingLink && (
-                  <button type="button" onClick={() => setAddingLink(true)} className="text-sm font-medium text-accent-light hover:underline">
-                    Adicionar link
-                  </button>
-                )}
-              </div>
-              {details?.attachments.length ? (
-                <ul className="flex flex-col gap-1.5">
-                  {details.attachments.map((a) => (
-                    <li key={a.id} className="group/link flex items-center gap-3 rounded-xl bg-card-elevated px-3 py-2">
-                      <ExternalLink size={14} className="shrink-0 text-text-tertiary" />
-                      <a href={a.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary hover:text-accent-light">
-                        {a.name}
-                      </a>
-                      <span className="hidden shrink-0 text-xs text-text-tertiary sm:inline">{relativeTime(a.createdAt, now)}</span>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => run(() => deleteTaskAttachmentAction(a.id))}
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-text-tertiary opacity-0 hover:text-error group-hover/link:opacity-100 focus:opacity-100"
-                          aria-label={`Remover ${a.name}`}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                !addingLink && <p className="text-sm text-text-tertiary">Drive, Canva, Figma, referências — cole o link aqui para ninguém se perder.</p>
-              )}
-              {addingLink && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    run(() => addTaskAttachmentAction(task.id, linkName, linkUrl), () => {
-                      setLinkName("");
-                      setLinkUrl("");
-                      setAddingLink(false);
-                    });
-                  }}
-                  className="flex flex-col gap-2 rounded-2xl border border-border p-3"
-                >
-                  <input autoFocus value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." className={fieldClass} aria-label="Endereço do link" />
-                  <input value={linkName} onChange={(e) => setLinkName(e.target.value)} placeholder="Nome (opcional) — ex: Roteiro aprovado" className={fieldClass} aria-label="Nome do link" />
-                  <div className="flex gap-2">
-                    <button type="submit" className="h-9 rounded-full bg-ink px-4 text-sm font-medium text-ink-on hover:opacity-90">
-                      Salvar link
-                    </button>
-                    <button type="button" onClick={() => setAddingLink(false)} className="h-9 rounded-full px-4 text-sm font-medium text-text-secondary hover:bg-card-elevated">
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              )}
-            </section>
+            <TaskFiles taskId={task.id} details={details} canEdit={canEdit} reload={reload} notify={callbacks.notify} />
 
             <section className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -627,14 +588,34 @@ export function TaskModal({
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) (e.currentTarget.form as HTMLFormElement).requestSubmit();
                     }}
-                    placeholder="Escreva um comentário… (Ctrl+Enter envia)"
+                    placeholder="Escreva um comentário… use @ para chamar alguém (Ctrl+Enter envia)"
                     className="w-full resize-none rounded-2xl border border-border bg-card px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-4 focus:ring-accent/15"
                     aria-label="Novo comentário"
                   />
+                  {mentionQuery !== null && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {users
+                        .filter((u) => u.id !== currentUserId && u.name.toLowerCase().includes(mentionQuery))
+                        .slice(0, 6)
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => setComment((c) => c.replace(/@([\p{L}]*)$/u, `@${u.name.split(" ")[0]} `))}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border py-0.5 pl-0.5 pr-2.5 text-xs text-text-secondary hover:border-accent"
+                          >
+                            <Avatar name={u.name} src={u.avatarUrl} size="sm" /> {u.name}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                   {comment && (
-                    <button type="submit" className="h-9 self-start rounded-full bg-ink px-4 text-sm font-medium text-ink-on hover:opacity-90">
-                      Comentar
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button type="submit" className="h-9 self-start rounded-full bg-ink px-4 text-sm font-medium text-ink-on hover:opacity-90">
+                        Comentar
+                      </button>
+                      <span className="text-xs text-text-tertiary">Use @nome para avisar alguém no celular</span>
+                    </div>
                   )}
                 </div>
               </form>
