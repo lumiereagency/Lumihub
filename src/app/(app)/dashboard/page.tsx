@@ -33,6 +33,9 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MyMonthCard, TeamPayrollSummary } from "./payroll-blocks";
+import { MonthResultPanel } from "@/components/finance/month-result";
+import { getMonthResult } from "@/lib/finance/taxes";
+import { competenceOf } from "@/lib/payroll/folha";
 
 function greeting(): string {
   // O servidor roda em UTC — a saudação precisa seguir o horário de Brasília.
@@ -92,6 +95,7 @@ export default async function DashboardPage() {
     ]);
 
   const currency = organization.currency;
+  const monthResult = canViewFinance ? await getMonthResult(user.organizationId, competenceOf(new Date())) : null;
   const insights =
     canViewFinance || canViewCRM
       ? buildDashboardInsights({
@@ -186,6 +190,8 @@ export default async function DashboardPage() {
       <PendingCaptureAssignments userId={user.id} />
 
       <MyMonthCard organizationId={user.organizationId} userId={user.id} />
+
+      {monthResult && <MonthResultPanel r={monthResult} href="/financeiro" />}
 
       {(isDirector(user) || hasPermission(user, permKey("PAYABLES", "VIEW"))) && <TeamPayrollSummary organizationId={user.organizationId} />}
 

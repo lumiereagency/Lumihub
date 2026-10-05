@@ -98,6 +98,8 @@ export const FINANCE_TABS: NavTab[] = [
   { label: "Contas a Receber", href: "/financeiro/receber", permission: permKey("RECEIVABLES", "VIEW") },
   { label: "Cobranças", href: "/financeiro/cobrancas", permission: permKey("RECEIVABLES", "VIEW") },
   { label: "Contas a Pagar", href: "/financeiro/pagar", permission: permKey("PAYABLES", "VIEW") },
+  { label: "Impostos", href: "/financeiro/impostos", permission: permKey("FINANCE", "VIEW") },
+  { label: "Contabilidade", href: "/financeiro/contabilidade", permission: permKey("REPORTS", "EXPORT") },
 ];
 
 export const ASSETS_TABS: NavTab[] = [

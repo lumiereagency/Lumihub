@@ -88,3 +88,17 @@ export async function undoFolhaAction(payableId: string): Promise<{ ok: boolean;
   refresh();
   return { ok: true };
 }
+
+export async function updateTaxSettingsAction(input: { taxRate: number; taxDueDay: number }): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireUser();
+  if (!isDirector(user)) return { ok: false, error: "Só a diretoria altera o imposto." };
+  const current = await getPricingSettings(user.organizationId);
+  return updatePayrollSettingsAction({ captureFeeSolo: current.captureFeeSolo, captureFeeShared: current.captureFeeShared, taxRate: input.taxRate, taxDueDay: input.taxDueDay }).then(async (r) => {
+    if (r.ok) {
+      const { syncTaxes } = await import("@/lib/finance/taxes");
+      await syncTaxes(user.organizationId);
+      revalidatePath("/financeiro/impostos");
+    }
+    return r;
+  });
+}

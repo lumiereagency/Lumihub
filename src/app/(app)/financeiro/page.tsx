@@ -11,15 +11,20 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { HorizontalBarChart } from "@/components/charts/horizontal-bar-chart";
 import { GroupedBarChart } from "@/components/charts/grouped-bar-chart";
 import { CategoriesPanel } from "./categories-panel";
+import { MonthResultPanel } from "@/components/finance/month-result";
+import { getMonthResult, syncTaxes } from "@/lib/finance/taxes";
+import { competenceOf } from "@/lib/payroll/folha";
 
 export default async function FinancePage() {
   const user = await requirePermission(permKey("FINANCE", "VIEW"));
 
-  const [overview, organization, categories, costCenters] = await Promise.all([
+  await syncTaxes(user.organizationId);
+  const [overview, organization, categories, costCenters, monthResult] = await Promise.all([
     getFinanceOverview(user.organizationId),
     db.organization.findUniqueOrThrow({ where: { id: user.organizationId }, select: { currency: true } }),
     db.financialCategory.findMany({ where: { organizationId: user.organizationId }, orderBy: { name: "asc" } }),
     db.costCenter.findMany({ where: { organizationId: user.organizationId }, orderBy: { name: "asc" } }),
+    getMonthResult(user.organizationId, competenceOf(new Date())),
   ]);
 
   const currency = organization.currency;
@@ -28,14 +33,16 @@ export default async function FinancePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Visão Financeira" description="Saldo, receitas, despesas, margem e indicadores financeiros consolidados." />
+      <PageHeader title="Visão Financeira" description="O resultado real do mês, o caixa e os indicadores da Lumière." />
       <SectionTabs tabs={filterTabsForUser(FINANCE_TABS, user.permissions)} />
+
+      <MonthResultPanel r={monthResult} />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricCard label="Saldo atual" value={formatCurrency(kpis.saldoAtual, currency)} tone="accent" />
         <MetricCard label="Receita do mês" value={formatCurrency(kpis.receitaMes, currency)} />
         <MetricCard label="Despesas do mês" value={formatCurrency(kpis.despesaMes, currency)} />
-        <MetricCard label="Lucro estimado" value={formatCurrency(kpis.lucroEstimado, currency)} />
+        <MetricCard label="Imposto a separar" value={formatCurrency(monthResult.taxes, currency)} caption={`${monthResult.taxRate.toLocaleString("pt-BR")}% do recebido no mês`} />
         <MetricCard label="A receber" value={formatCurrency(kpis.aReceber, currency)} />
         <MetricCard label="A pagar" value={formatCurrency(kpis.aPagar, currency)} />
         <MetricCard label="Atrasados" value={formatCurrency(kpis.atrasados, currency)} />

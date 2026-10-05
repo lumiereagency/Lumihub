@@ -9,6 +9,7 @@ import { receivableSchema, confirmPaymentSchema } from "@/lib/validation/receiva
 import { generateRemindersForReceivable, sendPaymentThanks } from "@/lib/billing/reminders";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import { after } from "next/server";
+import { syncTaxes } from "@/lib/finance/taxes";
 
 function parseReceivableForm(formData: FormData) {
   return receivableSchema.safeParse({
@@ -187,6 +188,7 @@ export async function confirmPaymentAction(
 
   // Agradecimento ao cliente pelo WhatsApp, depois da resposta (não atrasa a tela).
   after(() => sendPaymentThanks(receivableId));
+  await syncTaxes(user.organizationId);
 
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
@@ -228,6 +230,7 @@ export async function undoPaymentAction(receivableId: string) {
     entityId: receivableId,
   });
 
+  await syncTaxes(user.organizationId);
   revalidatePath("/financeiro/receber");
   revalidatePath("/financeiro/cobrancas");
   revalidatePath("/financeiro");

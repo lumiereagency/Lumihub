@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateDueRecurringReceivables } from "@/lib/billing/recurring";
 import { generateDuePayrollPayables } from "@/lib/billing/payroll";
+import { syncAllTaxes } from "@/lib/finance/taxes";
 import { generateDueMediaEventOccurrences } from "@/lib/media/schedule/event-service";
 
 // Disparado diariamente pelo crontab do servidor (curl com o header abaixo)
@@ -24,5 +25,7 @@ export async function POST(request: Request) {
     generateDuePayrollPayables(),
     generateDueMediaEventOccurrences(),
   ]);
+  // Reserva do Simples (6% do que entrou) sempre em dia.
+  await syncAllTaxes();
   return NextResponse.json({ receivablesCreated, payrollCreated, mediaEventsCreated });
 }
