@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { cancelOpenReceivables } from "@/lib/finance/sync";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
@@ -91,7 +92,12 @@ export async function deleteClientAction(clientId: string): Promise<ActionState>
   const client = await db.client.findFirst({ where: { id: clientId, organizationId: user.organizationId, deletedAt: null } });
   if (!client) return { error: "Cliente não encontrado." };
 
-  await db.client.update({ where: { id: clientId }, data: { deletedAt: new Date() } });
+  await db.$transaction(async (tx) => {
+    await tx.client.update({ where: { id: clientId }, data: { deletedAt: new Date() } });
+    // Cliente excluído não tem mais o que cobrar: cobranças em aberto canceladas (pagas ficam).
+    await cancelOpenReceivables(tx, { clientId }, "Cancelada automaticamente: cliente excluído.");
+  });
+  for (const p of ["/financeiro", "/financeiro/receber", "/financeiro/cobrancas", "/dashboard"]) revalidatePath(p);
 
   await audit({
     organizationId: user.organizationId,

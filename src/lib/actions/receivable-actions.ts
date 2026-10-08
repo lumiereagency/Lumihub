@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { propagateReceivableToContract } from "@/lib/finance/sync";
+import { brasiliaDay, dueDay } from "@/lib/billing/dates";
 import { requirePermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { audit } from "@/lib/audit";
@@ -124,7 +126,14 @@ export async function updateReceivableAction(
       await tx.paymentReminder.deleteMany({ where: { receivableId, status: "AGENDADO" } });
       await generateRemindersForReceivable(tx, receivableId);
     }
+    // Vencida que foi adiada volta a "Pendente" (e o contrário).
+    const overdue = dueDay(parsed.data.dueDate) < brasiliaDay(new Date());
+    await tx.accountReceivable.update({ where: { id: receivableId }, data: { status: overdue ? "ATRASADO" : "PENDENTE" } });
+    if (existing.movementId) await tx.financialMovement.update({ where: { id: existing.movementId }, data: { status: overdue ? "ATRASADO" : "PENDENTE" } });
+    // Cobrança de contrato: leva a nova data/valor para o contrato e as próximas cobranças.
+    if (existing.contractId && formData.get("applyToContract") === "on") await propagateReceivableToContract(tx, receivableId);
   });
+  revalidatePath("/contratos");
 
   await audit({
     organizationId: user.organizationId,
@@ -251,6 +260,7 @@ export async function cancelReceivableAction(receivableId: string) {
     }
     await tx.paymentReminder.updateMany({ where: { receivableId, status: "AGENDADO" }, data: { status: "CANCELADO" } });
   });
+  await syncTaxes(user.organizationId);
 
   await audit({
     organizationId: user.organizationId,

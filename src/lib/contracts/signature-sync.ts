@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { syncContractFinance } from "@/lib/finance/sync";
 import { audit } from "@/lib/audit";
 import { getAutentiqueCredentials, getAutentiqueDocument, type AutentiqueSigner } from "@/lib/integrations/autentique";
 import { notifyUsers } from "@/lib/notifications/notify";
@@ -51,6 +52,9 @@ export async function syncContractSignature(contractId: string): Promise<{ statu
         : {}),
     },
   });
+
+  // Assinado = contrato ativo: já gera a primeira cobrança no financeiro.
+  if (allSigned) await db.$transaction((tx) => syncContractFinance(tx, contract.id));
 
   if (changed && (status === "SIGNED" || status === "REJECTED")) {
     const admins = await db.user.findMany({

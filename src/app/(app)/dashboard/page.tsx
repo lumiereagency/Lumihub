@@ -1,3 +1,4 @@
+import { ensureFinanceInSync } from "@/lib/finance/sync";
 import Link from "next/link";
 import {
   Wallet,
@@ -49,6 +50,8 @@ function greeting(): string {
 
 export default async function DashboardPage() {
   const user = await requirePermission(permKey("DASHBOARD", "VIEW"));
+  // Antes de mostrar números: tudo conferido e na mesma versão em todas as abas.
+  await ensureFinanceInSync(user.organizationId);
 
   // Fase 46: o Dashboard é a tela inicial de todo mundo, inclusive de quem
   // não tem acesso ao Financeiro/CRM/Projetos (ex: videomaker) — cada bloco
@@ -204,10 +207,11 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {canViewFinance && (
           <>
-            <MetricCard label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} caption="entradas menos saídas pagas" icon={<Wallet />} tone="accent" />
-            <MetricCard label="A receber" value={formatCurrency(finance.aReceber, currency)} caption="cobranças em aberto" icon={<ArrowDownCircle />} />
-            <MetricCard label="A pagar" value={formatCurrency(finance.aPagar, currency)} caption="contas em aberto" icon={<ArrowUpCircle />} />
+            <MetricCard href="/financeiro" label="Saldo atual" value={formatCurrency(finance.saldoAtual, currency)} caption="entradas menos saídas pagas" icon={<Wallet />} tone="accent" />
+            <MetricCard href="/financeiro/receber" label="A receber" value={formatCurrency(finance.aReceber, currency)} caption="cobranças em aberto" icon={<ArrowDownCircle />} />
+            <MetricCard href="/financeiro/pagar" label="A pagar" value={formatCurrency(finance.aPagar, currency)} caption="contas em aberto" icon={<ArrowUpCircle />} />
             <MetricCard
+              href="/financeiro/fluxo-de-caixa"
               label="Resultado projetado"
               value={formatCurrency(finance.resultadoProjetado30, currency)}
               caption="próximos 30 dias"
@@ -218,6 +222,7 @@ export default async function DashboardPage() {
         {canViewCRM && (
           <>
             <MetricCard
+              href="/crm"
               label={companyView ? "Pipeline comercial" : "Meu pipeline"}
               value={formatCurrency(commercial.pipelineTotal, currency)}
               caption={companyView ? "leads em aberto" : `${commercial.openLeadsCount} lead${commercial.openLeadsCount === 1 ? "" : "s"} seus em aberto`}
@@ -232,7 +237,7 @@ export default async function DashboardPage() {
           </>
         )}
         {canViewProjects && (
-          <MetricCard label="Projetos ativos" value={String(activeProjects)} caption="em andamento" icon={<FolderKanban />} />
+          <MetricCard href="/projetos" label="Projetos ativos" value={String(activeProjects)} caption="em andamento" icon={<FolderKanban />} />
         )}
         {(canViewFinance || canViewProjects || canViewContracts) && (
           <MetricCard label="Precisam de atenção" value={String(attentionCount)} caption="atrasos e vencimentos" icon={<AlertTriangle />} />

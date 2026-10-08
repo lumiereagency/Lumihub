@@ -3,6 +3,7 @@ import { requireUser, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { LiveRefresh } from "@/components/layout/live-refresh";
 import { AppPrompts } from "@/components/notifications/app-prompts";
 import { getVapidKeys } from "@/lib/notifications/push";
 
@@ -38,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <AppPrompts vapidPublicKey={publicKey} />
+      <LiveRefresh />
     </div>
   );
 }

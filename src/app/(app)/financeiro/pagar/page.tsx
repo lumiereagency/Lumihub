@@ -1,3 +1,4 @@
+import { ensureFinanceInSync } from "@/lib/finance/sync";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -8,6 +9,8 @@ import { PayableList } from "./payable-list";
 
 export default async function PayablesPage() {
   const user = await requirePermission(permKey("PAYABLES", "VIEW"));
+  // Antes de mostrar números: tudo conferido e na mesma versão em todas as abas.
+  await ensureFinanceInSync(user.organizationId);
 
   const [payables, categories, costCenters, users, organization] = await Promise.all([
     db.accountPayable.findMany({

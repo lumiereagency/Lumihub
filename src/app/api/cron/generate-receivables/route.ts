@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateDueRecurringReceivables } from "@/lib/billing/recurring";
 import { generateDuePayrollPayables } from "@/lib/billing/payroll";
 import { syncAllTaxes } from "@/lib/finance/taxes";
+import { reconcileAllOrganizations } from "@/lib/finance/sync";
 import { generateDueMediaEventOccurrences } from "@/lib/media/schedule/event-service";
 
 // Disparado diariamente pelo crontab do servidor (curl com o header abaixo)
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
 
+  // Conferência diária: contratos, clientes e movimentos alinhados antes de gerar as próximas cobranças.
+  await reconcileAllOrganizations();
   const [receivablesCreated, payrollCreated, mediaEventsCreated] = await Promise.all([
     generateDueRecurringReceivables(),
     generateDuePayrollPayables(),

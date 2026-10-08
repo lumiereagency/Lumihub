@@ -1,3 +1,4 @@
+import { ensureFinanceInSync } from "@/lib/finance/sync";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -9,6 +10,8 @@ import { formatDueDate } from "@/lib/billing/dates";
 
 export default async function ReceivablesPage() {
   const user = await requirePermission(permKey("RECEIVABLES", "VIEW"));
+  // Antes de mostrar números: tudo conferido e na mesma versão em todas as abas.
+  await ensureFinanceInSync(user.organizationId);
 
   const [receivables, clients, contracts, organization] = await Promise.all([
     db.accountReceivable.findMany({

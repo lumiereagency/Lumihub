@@ -1,3 +1,4 @@
+import { ensureFinanceInSync } from "@/lib/finance/sync";
 import { requirePermission, hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -17,6 +18,8 @@ import { competenceOf } from "@/lib/payroll/folha";
 
 export default async function FinancePage() {
   const user = await requirePermission(permKey("FINANCE", "VIEW"));
+  // Antes de mostrar números: tudo conferido e na mesma versão em todas as abas.
+  await ensureFinanceInSync(user.organizationId);
 
   await syncTaxes(user.organizationId);
   const [overview, organization, categories, costCenters, monthResult] = await Promise.all([

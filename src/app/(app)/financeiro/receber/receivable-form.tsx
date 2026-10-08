@@ -98,6 +98,16 @@ export function ReceivableForm({
         Os lembretes da régua de cobrança são gerados automaticamente a partir dos modelos ativos.
       </p>
 
+      {defaultValues?.contractId && submitLabel !== "Criar cobrança" && (
+        <label className="flex items-start gap-2.5 rounded-xl border border-border bg-card-elevated/60 px-3 py-2.5 text-sm text-text-secondary">
+          <input type="checkbox" name="applyToContract" defaultChecked className="mt-0.5 h-4 w-4 rounded border-border bg-card accent-[var(--lh-accent)]" />
+          <span>
+            <span className="block text-text-primary">Atualizar também o contrato e as próximas cobranças</span>
+            <span className="text-xs text-text-tertiary">O contrato passa a usar esta data e este valor, e as cobranças seguintes em aberto acompanham.</span>
+          </span>
+        </label>
+      )}
+
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Salvando..." : submitLabel}
       </Button>

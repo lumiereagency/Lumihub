@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -11,11 +12,22 @@ interface MetricCardProps {
   tone?: "default" | "accent";
   className?: string;
   children?: ReactNode;
+  // Card clicável: leva à lista que compõe o número.
+  href?: string;
 }
 
 // Widget da referência: rótulo + ícone em chip redondo, número grande,
 // pílula de tendência e legenda. `accent` é o card em destaque (dourado, texto escuro).
-export function MetricCard({ label, value, trend, caption, icon, tone = "default", className, children }: MetricCardProps) {
+export function MetricCard({ href, ...props }: MetricCardProps) {
+  if (!href) return <MetricCardBody {...props} />;
+  return (
+    <Link href={href} className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60" title="Ver de onde vem este número">
+      <MetricCardBody {...props} className={cn(props.className, "h-full transition-colors group-hover:border-text-tertiary/60")} />
+    </Link>
+  );
+}
+
+function MetricCardBody({ label, value, trend, caption, icon, tone = "default", className, children }: Omit<MetricCardProps, "href">) {
   const accent = tone === "accent";
   const numeric = /\d/.test(value);
   // Valores longos ("R$ 10.507,00") encolhem para caber no cartão em vez de

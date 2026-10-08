@@ -12,39 +12,19 @@ import {
   RECURRENCE_LABELS,
 } from "@/lib/validation/contracts";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { createContractReceivable, nextCycleOnOrAfter, nextPaymentDayOnOrAfter } from "@/lib/billing/recurring";
+import { syncContractFinance } from "@/lib/finance/sync";
 import type { ActionState } from "@/lib/actions/auth-actions";
 import type { Prisma } from "@/generated/prisma/client";
 
 type TxClient = Prisma.TransactionClient;
 
-// Contrato aprovado (status ATIVO) gera receita — Fase 26, princípio de
-// integração entre módulos. Gera apenas a primeira cobrança aqui; as
-// parcelas seguintes de contratos recorrentes são geradas pela rodada
-// diária em @/lib/billing/recurring (Fase 46, completa a régua da Fase 9).
-// Início/término do contrato só contam a duração dele — quem ancora a
-// cobrança é o "dia do pagamento" (se informado); sem ele, cai no início
-// do contrato. De qualquer forma a data nunca fica no passado: se a
-// referência já passou, avança para a próxima ocorrência igual ou
-// posterior a hoje.
-async function generateInitialReceivable(tx: TxClient, contractId: string) {
-  const existing = await tx.accountReceivable.findFirst({ where: { contractId } });
-  if (existing) return;
-
-  const contract = await tx.contract.findUniqueOrThrow({ where: { id: contractId } });
-  const dueDate = contract.paymentDay
-    ? nextPaymentDayOnOrAfter(contract.paymentDay)
-    : nextCycleOnOrAfter(contract.startDate, contract.recurrence);
-
-  await createContractReceivable(
-    tx,
-    contract,
-    dueDate,
-    contract.recurrence === "UNICO"
-      ? "Gerado automaticamente na ativação do contrato."
-      : "Primeira cobrança gerada automaticamente na ativação do contrato.",
-  );
+function revalidateFinance() {
+  for (const p of ["/financeiro", "/financeiro/receber", "/financeiro/cobrancas", "/financeiro/fluxo-de-caixa", "/dashboard"]) revalidatePath(p);
 }
+
+// Contrato ⇄ financeiro: a primeira cobrança, mudanças de valor/datas e a
+// saída do contrato (cancelar, encerrar, excluir) passam por
+// syncContractFinance (@/lib/finance/sync), a mesma regra usada em toda a base.
 
 // Contrato ativo com data de término → Agenda (Fase 26): mantém um evento
 // de vencimento sincronizado, permitindo alertar sobre renovação/expiração.
@@ -140,9 +120,7 @@ export async function createContractAction(_prev: ActionState, formData: FormDat
     const created = await tx.contract.create({
       data: { organizationId: user.organizationId, ...parsed.data, generatedBody },
     });
-    if (created.status === "ATIVO") {
-      await generateInitialReceivable(tx, created.id);
-    }
+    await syncContractFinance(tx, created.id);
     await syncContractExpiryEvent(tx, created.id);
     return created;
   });
@@ -198,9 +176,14 @@ export async function updateContractAction(
 
   await db.$transaction(async (tx) => {
     await tx.contract.update({ where: { id: contractId }, data: parsed.data });
-    if (!wasActive && becomesActive) {
-      await generateInitialReceivable(tx, contractId);
-    }
+    // Valor, datas ou recorrência mudaram: as cobranças em aberto acompanham.
+    const termsChanged =
+      Number(existing.value) !== Number(parsed.data.value) ||
+      existing.startDate.getTime() !== new Date(parsed.data.startDate).getTime() ||
+      (existing.endDate?.getTime() ?? null) !== (parsed.data.endDate ? new Date(parsed.data.endDate).getTime() : null) ||
+      (existing.paymentDay ?? null) !== (parsed.data.paymentDay ?? null) ||
+      existing.recurrence !== parsed.data.recurrence;
+    await syncContractFinance(tx, contractId, { termsChanged });
     await syncContractExpiryEvent(tx, contractId);
   });
 
@@ -214,12 +197,7 @@ export async function updateContractAction(
 
   revalidatePath("/contratos");
   revalidatePath(`/clientes/${parsed.data.clientId}`);
-  if (!wasActive && becomesActive) {
-    revalidatePath("/financeiro/receber");
-    revalidatePath("/financeiro");
-    revalidatePath("/financeiro/fluxo-de-caixa");
-    revalidatePath("/dashboard");
-  }
+  revalidateFinance();
   return { success: "Contrato atualizado." };
 }
 
@@ -241,6 +219,8 @@ export async function deleteContractAction(contractId: string): Promise<ActionSt
   await db.$transaction(async (tx) => {
     await tx.contract.update({ where: { id: contractId }, data: { deletedAt: new Date() } });
     await tx.calendarEvent.deleteMany({ where: { contractId, type: "CONTRATO" } });
+    // Cobranças em aberto do contrato saem junto (as pagas ficam no histórico).
+    await syncContractFinance(tx, contractId);
   });
 
   await audit({
@@ -254,6 +234,7 @@ export async function deleteContractAction(contractId: string): Promise<ActionSt
 
   revalidatePath("/contratos");
   revalidatePath(`/clientes/${contract.clientId}`);
+  revalidateFinance();
   return { success: "Contrato excluído." };
 }
 
