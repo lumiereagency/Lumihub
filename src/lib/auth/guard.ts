@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/session";
 import { MEDIA_PORTAL_ACCESS, MEDIA_PORTAL_TEAM_VIEW } from "@/lib/auth/permissions";
 
@@ -19,7 +20,10 @@ export async function requireUser(): Promise<CurrentUser> {
 export async function requireMediaMember(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user || !hasPermission(user, MEDIA_PORTAL_ACCESS)) {
-    redirect("/midia/login");
+    // Sessão vencida: volta ao login do portal já com a página que a pessoa queria abrir.
+    const wanted = (await headers()).get("x-lb-path");
+    const next = wanted && wanted.startsWith("/midia/") && !wanted.startsWith("/midia/login") ? `?next=${encodeURIComponent(wanted)}` : "";
+    redirect(`/midia/login${next}`);
   }
   return user;
 }

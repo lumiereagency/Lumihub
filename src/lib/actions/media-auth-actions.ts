@@ -69,5 +69,8 @@ export async function loginMediaAction(_prev: ActionState, formData: FormData): 
     entityId: user.mediaMember.id,
   });
 
-  redirect("/midia/inicio");
+  // Volta para a página que a pessoa tentava abrir (só dentro do portal).
+  const next = String(formData.get("next") ?? "");
+  const safe = next.startsWith("/midia/") && !next.startsWith("//") && !next.includes("\\") && !next.startsWith("/midia/login");
+  redirect(safe ? next : "/midia/inicio");
 }

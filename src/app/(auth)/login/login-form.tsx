@@ -33,6 +33,12 @@ export function LoginForm() {
       <Button type="submit" disabled={pending} className="mt-1 h-12 w-full">
         {pending ? "Entrando…" : "Entrar"}
       </Button>
+      <p className="text-center text-xs text-text-tertiary">
+        Faz parte da equipe de mídia?{" "}
+        <Link href="/midia/login" className="text-accent-light hover:underline">
+          Entrar no portal da mídia
+        </Link>
+      </p>
     </form>
   );
 }

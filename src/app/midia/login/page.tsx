@@ -6,9 +6,12 @@ import { MediaLoginForm } from "./media-login-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function MediaLoginPage() {
+export default async function MediaLoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
+  const sp = await searchParams;
+  const rawNext = Array.isArray(sp.next) ? sp.next[0] : sp.next;
+  const next = rawNext && rawNext.startsWith("/midia/") && !rawNext.startsWith("//") && !rawNext.startsWith("/midia/login") ? rawNext : undefined;
   const user = await getCurrentUser();
-  if (user?.media) redirect("/midia/inicio");
+  if (user?.media) redirect(next ?? "/midia/inicio");
 
   // LUMIBASE hoje opera com uma organização por implantação — a marca do
   // portal (pública, exibida antes de qualquer login) usa a primeira
@@ -31,7 +34,7 @@ export default async function MediaLoginPage() {
           </span>
           <span className="text-sm text-text-tertiary">Portal da equipe de mídia</span>
         </div>
-        <MediaLoginForm />
+        <MediaLoginForm next={next} />
       </div>
     </div>
   );

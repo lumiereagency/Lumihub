@@ -46,17 +46,28 @@ export function proxy(request: NextRequest) {
     // já existia, nem o de escalonamento novo).
     pathname.startsWith("/api/cron/");
 
+  // Guarda o endereço pedido para o portal de mídia voltar para ele depois do login.
+  const forwarded = new Headers(request.headers);
+  forwarded.set("x-lb-path", pathname + request.nextUrl.search);
+
   if (isPublic) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: forwarded } });
   }
 
   const hasSessionCookie = request.cookies.has(SESSION_COOKIE_NAME);
   if (!hasSessionCookie) {
+    // Quem abre uma página do portal de mídia sem estar logado vai para o login
+    // do portal (e volta para a página pedida), não para o login da LUMIBASE.
+    if (pathname.startsWith("/midia/")) {
+      const mediaLogin = new URL("/midia/login", request.url);
+      mediaLogin.searchParams.set("next", pathname + request.nextUrl.search);
+      return NextResponse.redirect(mediaLogin);
+    }
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: forwarded } });
 }
 
 export const config = {
