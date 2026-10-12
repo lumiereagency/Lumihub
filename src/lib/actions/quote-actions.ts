@@ -387,3 +387,34 @@ export async function setQuoteStatusAction(proposalId: string, status: "RECUSADA
   revalidateQuotes(proposalId);
   return { ok: true };
 }
+
+// Acompanhamento automático por WhatsApp: pausar/retomar um orçamento.
+export async function setQuoteFollowUpPausedAction(proposalId: string, paused: boolean): Promise<{ ok: boolean; error?: string }> {
+  const user = await requirePermission(permKey("CRM", "EDIT"));
+  const p = await db.proposal.findFirst({ where: { id: proposalId, organizationId: user.organizationId }, select: { id: true } });
+  if (!p) return { ok: false, error: "Orçamento não encontrado." };
+  await db.proposal.update({ where: { id: proposalId }, data: { followUpPaused: !!paused } });
+  revalidateQuotes(proposalId);
+  return { ok: true };
+}
+
+// Liga/desliga o acompanhamento para toda a empresa (diretoria). Ao ligar,
+// só valem os orçamentos enviados a partir de agora.
+export async function setQuoteFollowUpEnabledAction(enabled: boolean): Promise<{ ok: boolean; error?: string }> {
+  const user = await requirePermission(permKey("CRM", "MANAGE"));
+  const current = await getPricingSettings(user.organizationId);
+  await db.pricingSettings.upsert({
+    where: { organizationId: user.organizationId },
+    create: {
+      organizationId: user.organizationId,
+      installmentFees: current.config.rows as object,
+      debitFee: current.config.debitFee,
+      creditMargin: current.config.creditMargin,
+      maxInstallments: current.config.maxInstallments,
+      quoteFollowUp: !!enabled,
+    },
+    update: { quoteFollowUp: !!enabled, ...(enabled ? { quoteFollowUpSince: new Date() } : {}) },
+  });
+  revalidatePath("/propostas", "layout");
+  return { ok: true };
+}

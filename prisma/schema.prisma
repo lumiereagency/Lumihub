@@ -377,9 +377,12 @@ model Proposal {
   respondedAt     DateTime?
   chosenPayment   String?
   signerData      Json?
+  // Acompanhamento automático (WhatsApp) pausado para este orçamento.
+  followUpPaused  Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
+  followUps    ProposalFollowUp[]
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lead         Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
   client       Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
@@ -478,9 +481,32 @@ model Commission {
 
 // Taxas da maquininha, margem do crédito e dados que entram no contrato —
 // um registro por organização, editado pelo admin.
+// Acompanhamento automático de orçamentos: uma linha por passo já tentado.
+// step: NAO_ABRIU | ABRIU | TOQUE | VENCE
+model ProposalFollowUp {
+  id         String    @id @default(cuid())
+  proposalId String
+  step       String
+  // ENVIADO | FALHOU
+  status     String
+  attempts   Int       @default(1)
+  sentAt     DateTime?
+  messageBody String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, step])
+  @@map("proposal_follow_ups")
+}
+
 model PricingSettings {
   id                  String   @id @default(cuid())
   organizationId      String   @unique
+  // Acompanhamento automático: só vale para orçamentos enviados depois de quoteFollowUpSince.
+  quoteFollowUp       Boolean  @default(true)
+  quoteFollowUpSince  DateTime @default(now())
   debitFee            Decimal  @default(0.94) @db.Decimal(6, 3)
   // [{ n: 1, seller: 2.84, buyer: 0 }, { n: 2, seller: 2.85, buyer: 9.64 }, ...]
   installmentFees     Json

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { runQuoteFollowUps } from "@/lib/quotes/follow-up";
 import { processDuePaymentReminders } from "@/lib/billing/reminders";
 
 // Disparado periodicamente pelo crontab do servidor (mesmo padrão de
@@ -18,5 +19,10 @@ export async function POST(request: Request) {
   }
 
   const { sent, failed } = await processDuePaymentReminders();
-  return NextResponse.json({ sent, failed });
+  // Acompanhamento de orçamentos enviados (mesmo cron de 15 em 15 minutos).
+  const quotes = await runQuoteFollowUps().catch((e) => {
+    console.error("[orcamentos] acompanhamento falhou", (e as Error).message);
+    return { sent: 0, failed: 0, outsideWindow: false };
+  });
+  return NextResponse.json({ sent, failed, quoteFollowUps: quotes });
 }

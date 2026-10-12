@@ -14,6 +14,9 @@ import type { StoredSigner } from "@/lib/contracts/signature-sync";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import { CRM_TABS, filterTabsForUser } from "@/lib/nav";
 import { QuoteDetail } from "./quote-detail";
+import { FollowUpCard, type FollowUpItem } from "./follow-up-card";
+import { FOLLOW_UP_LABELS, planSteps, type FollowUpStep } from "@/lib/quotes/follow-up";
+import { brasiliaDay, formatDueDate } from "@/lib/billing/dates";
 
 export default async function QuoteDetailPage({ params }: PageProps<"/propostas/[id]">) {
   const user = await requirePermission(permKey("CRM", "VIEW"));
@@ -31,6 +34,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
   });
   if (!proposal) notFound();
 
+  const followUps = await db.proposalFollowUp.findMany({ where: { proposalId: id } });
   const [settings, whatsappConnected, autentique] = await Promise.all([
     getPricingSettings(user.organizationId),
     isChannelConnected(user.organizationId, "WHATSAPP"),
@@ -73,6 +77,26 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
       )
     : null;
   const canContract = hasPermission(user, permKey("CONTRACTS", "CREATE")) || hasPermission(user, permKey("CRM", "MANAGE"));
+
+  // Acompanhamento automático: o que já foi, o que falhou e o que vem pela frente.
+  const followDay = (d: Date) => new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(d);
+  const stopped =
+    proposal.response === "ACEITA" ? "Cliente aceitou"
+    : proposal.response === "RECUSADA" ? "Cliente recusou"
+    : proposal.response ? "Cliente respondeu"
+    : ["ACEITA", "RECUSADA", "EXPIRADA"].includes(proposal.status) ? "Orçamento encerrado"
+    : !proposal.sentAt ? "Orçamento ainda não enviado"
+    : proposal.validUntil && proposal.validUntil.getTime() < Date.now() ? "Proposta vencida"
+    : null;
+  const doneByStep = new Map(followUps.map((f) => [f.step, f]));
+  const followItems: FollowUpItem[] = [
+    ...followUps.filter((f) => f.sentAt).map((f) => ({ step: f.step, label: FOLLOW_UP_LABELS[f.step as FollowUpStep] ?? f.step, state: (f.status === "ENVIADO" ? "sent" : "failed") as "sent" | "failed", when: followDay(f.sentAt!) })),
+    ...(stopped || !proposal.sentAt
+      ? []
+      : planSteps({ sentAt: proposal.sentAt, viewedAt: proposal.viewedAt, viewCount: proposal.viewCount, validUntil: proposal.validUntil })
+          .filter((st) => !doneByStep.has(st.step) && st.day >= brasiliaDay(new Date()))
+          .map((st) => ({ step: st.step, label: FOLLOW_UP_LABELS[st.step], state: "next" as const, when: formatDueDate(new Date(`${st.day}T15:00:00Z`)) }))),
+  ];
 
   return (
     <div>
@@ -162,6 +186,16 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
           canContract,
           canManage: isDirector(user),
         }}
+      />
+      <FollowUpCard
+        proposalId={proposal.id}
+        enabled={settings.quoteFollowUp}
+        paused={proposal.followUpPaused}
+        whatsapp={whatsappConnected}
+        hasPhone={!!proposal.recipientPhone}
+        stopped={stopped}
+        items={followItems}
+        canManage={hasPermission(user, permKey("CRM", "MANAGE"))}
       />
     </div>
   );

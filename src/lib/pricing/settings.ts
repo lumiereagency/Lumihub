@@ -21,6 +21,7 @@ export interface PricingSettingsView {
   whatsappTemplate: string;
   contractMessage: string;
   billingThanks: boolean;
+  quoteFollowUp: boolean;
   billingPixSeparate: boolean;
   captureFeeSolo: number;
   captureFeeShared: number;
@@ -56,6 +57,7 @@ export async function getPricingSettings(organizationId: string): Promise<Pricin
     whatsappTemplate: row?.whatsappTemplate || DEFAULT_WHATSAPP_TEMPLATE,
     contractMessage: row?.contractTemplateMsg || DEFAULT_CONTRACT_MESSAGE,
     billingThanks: row?.billingThanks ?? true,
+    quoteFollowUp: row?.quoteFollowUp ?? true,
     billingPixSeparate: row?.billingPixSeparate ?? true,
     captureFeeSolo: Number(row?.captureFeeSolo ?? 100),
     captureFeeShared: Number(row?.captureFeeShared ?? 50),
