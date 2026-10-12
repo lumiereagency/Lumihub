@@ -199,8 +199,8 @@ export async function previewChargeAction(receivableId: string): Promise<ChargeP
   while (addDays(due, diff) > today && diff > -400) diff--;
   const templates = await db.messageTemplate.findMany({ where: { organizationId: user.organizationId, active: true, channel: "WHATSAPP" } });
   const candidates = templates
-    .map((t) => ({ t, off: TRIGGER_OFFSET_DAYS[t.trigger] }))
-    .filter(({ off }) => (diff < 0 ? off < 0 : diff === 0 ? off === 0 : off > 0))
+    .map((t) => ({ t, off: TRIGGER_OFFSET_DAYS[t.trigger] ?? 0 }))
+    .filter(({ t, off }) => TRIGGER_OFFSET_DAYS[t.trigger] !== undefined && (diff < 0 ? off < 0 : diff === 0 ? off === 0 : off > 0))
     .sort((a, b) => Math.abs(a.off - diff) - Math.abs(b.off - diff));
   // Cliente com mais de uma fatura em aberto: mesma mensagem única da régua.
   const { items } = await openChargesFor(receivableId);

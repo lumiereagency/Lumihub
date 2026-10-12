@@ -291,7 +291,7 @@ function ReminderList({ reminders, canEdit }: { reminders: ReminderRow[]; canEdi
   );
 }
 
-const TRIGGER_ORDER = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_1", "D_MAIS_5"];
+const TRIGGER_ORDER = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_DIARIO"];
 
 function failureReason(body: string | null): string | null {
   const m = body?.match(/\[Falha: ([^\]]+)\]/);
@@ -445,7 +445,7 @@ export function CobrancasView({
           )}
         </CardHeader>
         {sorted.length === 0 ? (
-          <EmptyState title="Nenhum modelo na régua" description="Comece com os modelos prontos: 3 dias antes, no dia, 1 dia depois e 5 dias depois do vencimento." />
+          <EmptyState title="Nenhum modelo na régua" description="Comece com os modelos prontos: 3 dias antes, no dia do vencimento e, depois dele, todos os dias até pagar." />
         ) : (
           <div className="flex flex-col divide-y divide-border">
             {sorted.map((t) => (

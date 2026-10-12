@@ -17,6 +17,7 @@ type TxClient = Prisma.TransactionClient;
 //     (nada de despejar lembretes acumulados de uma vez);
 //   • "vence em X dias" nunca sai depois do vencimento;
 //   • cobrança paga ou cancelada não recebe mais nada;
+//   • depois do vencimento a cobrança repete todo dia, até pagar (até 60 dias de atraso);
 //   • no máximo UMA mensagem por cliente por dia: várias faturas do mesmo
 //     cliente saem juntas, com o total e um Pix só; quem já recebeu cobrança
 //     no dia (inclusive manual) não recebe outra;
@@ -24,6 +25,9 @@ type TxClient = Prisma.TransactionClient;
 
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_PER_RUN = 12;
+// Cobrança diária depois do vencimento: agenda 14 dias à frente e para de insistir após 60 dias de atraso.
+const DAILY_AHEAD_DAYS = 14;
+const MAX_OVERDUE_DAYS = 60;
 
 function brasiliaClock(date: Date): { hour: number; weekday: number } {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hour: "numeric", hourCycle: "h23", weekday: "short" }).formatToParts(date);
@@ -54,20 +58,24 @@ async function orgCurrency(organizationId: string): Promise<string> {
 export async function generateRemindersForReceivable(tx: TxClient, receivableId: string) {
   const receivable = await tx.accountReceivable.findUniqueOrThrow({ where: { id: receivableId } });
   if (receivable.status === "PAGO" || receivable.status === "CANCELADO") return;
-  const existing = await tx.paymentReminder.findMany({ where: { receivableId }, select: { messageTemplateId: true } });
-  const have = new Set(existing.map((e) => e.messageTemplateId));
+  const existing = await tx.paymentReminder.findMany({ where: { receivableId }, select: { messageTemplateId: true, offsetDays: true } });
+  const have = new Set(existing.map((e) => `${e.messageTemplateId}:${e.offsetDays}`));
   const templates = await tx.messageTemplate.findMany({ where: { organizationId: receivable.organizationId, active: true } });
   const today = brasiliaDay(new Date());
   const due = dueDay(receivable.dueDate);
-  const data = templates
-    .filter((t) => !have.has(t.id))
-    .map((t) => {
-      const offsetDays = TRIGGER_OFFSET_DAYS[t.trigger];
+  const data: { receivableId: string; messageTemplateId: string; offsetDays: number; channel: (typeof templates)[number]["channel"]; status: "AGENDADO"; scheduledFor: Date }[] = [];
+  for (const t of templates) {
+    const first = TRIGGER_OFFSET_DAYS[t.trigger];
+    if (first === undefined) continue;
+    // "Todos os dias depois do vencimento": agenda os próximos dias de uma vez e
+    // a rotina repõe mais enquanto a fatura seguir em aberto (até o teto abaixo).
+    const offsets = t.trigger === "D_MAIS_DIARIO" ? Array.from({ length: DAILY_AHEAD_DAYS }, (_, i) => first + i) : [first];
+    for (const offsetDays of offsets) {
       const day = addDays(due, offsetDays);
-      return { day, row: { receivableId, messageTemplateId: t.id, offsetDays, channel: t.channel, status: "AGENDADO" as const, scheduledFor: noonOf(day) } };
-    })
-    .filter((x) => x.day >= today)
-    .map((x) => x.row);
+      if (day < today || offsetDays > MAX_OVERDUE_DAYS || have.has(`${t.id}:${offsetDays}`)) continue;
+      data.push({ receivableId, messageTemplateId: t.id, offsetDays, channel: t.channel, status: "AGENDADO", scheduledFor: noonOf(day) });
+    }
+  }
   if (data.length) await tx.paymentReminder.createMany({ data });
 }
 
@@ -85,7 +93,7 @@ async function syncReminders(organizationId?: string) {
     data: { status: "CANCELADO" },
   });
   const open = await db.accountReceivable.findMany({
-    where: { ...orgFilter, status: { in: ["PENDENTE", "ATRASADO"] }, dueDate: { gte: new Date(Date.now() - 7 * DAY) } },
+    where: { ...orgFilter, status: { in: ["PENDENTE", "ATRASADO"] }, dueDate: { gte: new Date(Date.now() - MAX_OVERDUE_DAYS * DAY) } },
     select: { id: true },
   });
   for (const r of open) await db.$transaction((tx) => generateRemindersForReceivable(tx, r.id));

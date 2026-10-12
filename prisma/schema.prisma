@@ -1402,6 +1402,8 @@ enum MessageTrigger {
   D_0
   D_MAIS_1
   D_MAIS_5
+  // Todos os dias depois do vencimento, até pagar (os dois acima ficam só por histórico).
+  D_MAIS_DIARIO
 }
 
 model MessageTemplate {

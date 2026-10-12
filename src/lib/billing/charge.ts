@@ -92,5 +92,5 @@ export function defaultChargeMessage(daysFromDue: number): string {
     return "Oi, {{nome}}! Tudo bem? 😊\nPassando para lembrar que a fatura de {{descricao}}, no valor de {{valor}}, vence em {{vencimento}}.\n\nPara pagar é só abrir: {{link}}\n\nQualquer dúvida, estamos por aqui.";
   if (daysFromDue === 0)
     return "Oi, {{nome}}! A fatura de {{descricao}}, no valor de {{valor}}, vence hoje ({{vencimento}}).\n\nPara pagar é só abrir: {{link}}\n\nSe já pagou, pode desconsiderar. Obrigado!";
-  return "Oi, {{nome}}, tudo bem? Ainda não identificamos o pagamento da fatura de {{descricao}}, no valor de {{valor}}, que venceu em {{vencimento}}.\n\nPara pagar é só abrir: {{link}}\n\nSe já pagou, pode enviar o comprovante pelo mesmo link. Se precisar combinar outra data, é só responder esta mensagem.";
+  return "Oi, {{nome}}, tudo bem? Identificamos que a fatura de {{descricao}}, no valor de {{valor}}, venceu.\n\nPara regularizar é só abrir: {{link}}\n\nSe já pagou, pode enviar o comprovante pelo mesmo link. Se precisar combinar outra data, é só responder esta mensagem e a gente resolve.";
 }

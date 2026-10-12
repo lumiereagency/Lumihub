@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MESSAGE_TRIGGERS = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_1", "D_MAIS_5"] as const;
+export const MESSAGE_TRIGGERS = ["D_MENOS_7", "D_MENOS_3", "D_MENOS_1", "D_0", "D_MAIS_DIARIO"] as const;
 
 // Linguagem simples em vez da notação "D-3/D0/D+1" (§ pedido do usuário:
 // "tem D mais, D mais, eu não entendo muito disso") — o valor salvo no
@@ -10,17 +10,17 @@ export const MESSAGE_TRIGGER_LABELS: Record<(typeof MESSAGE_TRIGGERS)[number], s
   D_MENOS_3: "3 dias antes do vencimento",
   D_MENOS_1: "1 dia antes do vencimento",
   D_0: "No dia do vencimento",
-  D_MAIS_1: "1 dia depois do vencimento",
-  D_MAIS_5: "5 dias depois do vencimento",
+  D_MAIS_DIARIO: "Todos os dias depois do vencimento, até pagar",
 };
 
-export const TRIGGER_OFFSET_DAYS: Record<(typeof MESSAGE_TRIGGERS)[number], number> = {
+// Aceita também gatilhos antigos que possam existir no banco (retornam indefinido).
+export const TRIGGER_OFFSET_DAYS: Record<string, number | undefined> = {
   D_MENOS_7: -7,
   D_MENOS_3: -3,
   D_MENOS_1: -1,
   D_0: 0,
-  D_MAIS_1: 1,
-  D_MAIS_5: 5,
+  // Primeiro dia depois do vencimento; a partir daí a régua repete todo dia.
+  D_MAIS_DIARIO: 1,
 };
 
 export const REMINDER_CHANNELS = ["WHATSAPP", "EMAIL"] as const;
@@ -94,13 +94,8 @@ export const DEFAULT_MESSAGE_TEMPLATES: { name: string; trigger: (typeof MESSAGE
     body: "Oi, {{nome}}! A fatura de {{descricao}}, no valor de {{valor}}, vence hoje.\n\nPara pagar é só abrir: {{link}}\nO código Pix copia e cola vai na próxima mensagem.\n\nSe já pagou, pode desconsiderar. Obrigado!",
   },
   {
-    name: "Venceu ontem",
-    trigger: "D_MAIS_1",
-    body: "Oi, {{nome}}, tudo bem? Ainda não identificamos o pagamento da fatura de {{descricao}} ({{valor}}), que venceu ontem.\n\nPara pagar é só abrir: {{link}}\nO código Pix copia e cola vai na próxima mensagem.\n\nSe já pagou, pode enviar o comprovante pelo mesmo link.",
-  },
-  {
-    name: "Em aberto há 5 dias",
-    trigger: "D_MAIS_5",
-    body: "Oi, {{nome}}. A fatura de {{descricao}}, no valor de {{valor}}, está em aberto desde {{vencimento}}.\n\nPara regularizar é só abrir: {{link}}\n\nSe precisar combinar outra data, é só responder esta mensagem que a gente resolve. {{empresa}}",
+    name: "Venceu (todos os dias até pagar)",
+    trigger: "D_MAIS_DIARIO",
+    body: "Oi, {{nome}}, tudo bem? Identificamos que a fatura de {{descricao}}, no valor de {{valor}}, venceu.\n\nPara regularizar é só abrir: {{link}}\nO código Pix copia e cola vai na próxima mensagem.\n\nSe já pagou, pode enviar o comprovante pelo mesmo link. Se precisar combinar outra data, é só responder esta mensagem e a gente resolve. {{empresa}}",
   },
 ];
