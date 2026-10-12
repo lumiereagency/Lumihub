@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, Ban, Check, CheckCircle2, Clock, MessageCircle, Pencil, Plus, QrCode, RotateCcw, Send, Sparkles, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, Ban, Check, RefreshCw, CheckCircle2, Clock, MessageCircle, Pencil, Plus, QrCode, RotateCcw, Send, Sparkles, Trash2, XCircle } from "lucide-react";
 import {
   createDefaultTemplatesAction,
   deleteMessageTemplateAction,
@@ -10,6 +10,7 @@ import {
   toggleMessageTemplateAction,
   updateBillingSettingsAction,
   updateRemindersAction,
+  resendRemindersAction,
 } from "@/lib/actions/billing-actions";
 import { DEFAULT_MESSAGE_TEMPLATES, MESSAGE_TRIGGER_LABELS, REMINDER_CHANNEL_LABELS, REMINDER_STATUS_LABELS } from "@/lib/validation/billing";
 import { formatDateTime } from "@/lib/format";
@@ -61,10 +62,21 @@ function noteOf(r: ReminderRow): string | null {
   return null;
 }
 
-function RowActions({ r, busy, run }: { r: ReminderRow; busy: boolean; run: (ids: string[], action: "manual" | "cancel" | "reactivate" | "stop") => void }) {
+function RowActions({ r, busy, run, resend }: { r: ReminderRow; busy: boolean; run: (ids: string[], action: "manual" | "cancel" | "reactivate" | "stop") => void; resend: (ids: string[]) => void }) {
   if (actionable(r.status)) {
     return (
       <div className="flex flex-wrap items-center gap-1">
+        {r.status === "FALHOU" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => resend([r.id])}
+            title="Tentar enviar de novo agora"
+            className="inline-flex items-center gap-1 rounded-full bg-[image:var(--lh-accent-gradient)] px-2.5 py-1 text-xs font-medium text-accent-on disabled:opacity-50"
+          >
+            <RefreshCw size={12} /> Reenviar
+          </button>
+        )}
         <button
           type="button"
           disabled={busy}
@@ -133,6 +145,17 @@ function ReminderList({ reminders, canEdit }: { reminders: ReminderRow[]; canEdi
     });
   }
 
+  function resend(ids: string[]) {
+    setMsg(null);
+    start(async () => {
+      const res = await resendRemindersAction(ids);
+      if (!res.ok) return setMsg({ ok: false, text: res.error ?? "Não foi possível reenviar." });
+      const parts = [res.sent ? `${res.sent} cliente(s) receberam a cobrança` : null, res.failed ? `${res.failed} ainda com falha` : null, res.skipped ? `${res.skipped} já estavam pagas ou canceladas` : null].filter(Boolean);
+      setMsg({ ok: !res.failed, text: parts.join(" · ") + "." });
+      setSelected(new Set());
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -165,6 +188,11 @@ function ReminderList({ reminders, canEdit }: { reminders: ReminderRow[]; canEdi
       {canEdit && selected.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-accent/30 bg-accent/[0.07] px-4 py-2.5">
           <span className="text-sm text-text-primary">{selected.size} selecionado(s)</span>
+          {[...selected].some((id) => reminders.find((r) => r.id === id)?.status === "FALHOU") && (
+            <Button size="sm" variant="accent" disabled={busy} onClick={() => resend([...selected].filter((id) => reminders.find((r) => r.id === id)?.status === "FALHOU"))}>
+              <RefreshCw size={14} /> Reenviar
+            </Button>
+          )}
           <Button size="sm" variant="secondary" disabled={busy} onClick={() => run([...selected], "manual")}>
             <Check size={14} /> Já cobrei
           </Button>
@@ -249,7 +277,7 @@ function ReminderList({ reminders, canEdit }: { reminders: ReminderRow[]; canEdi
                     </td>
                     {canEdit && (
                       <td className="px-4 py-3">
-                        <RowActions r={r} busy={busy} run={run} />
+                        <RowActions r={r} busy={busy} run={run} resend={resend} />
                       </td>
                     )}
                   </tr>

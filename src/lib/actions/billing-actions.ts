@@ -342,3 +342,74 @@ export async function aiChargeMessageAction(receivableId: string, input: { tone:
     return { ok: false, error: (e as Error).message };
   }
 }
+
+// Reenviar lembretes que falharam (erro de plataforma, WhatsApp fora do ar...).
+// Um envio por cliente: várias faturas do mesmo cliente saem juntas, e o texto
+// é o de hoje (não o de "vence hoje" de dias atrás). Fatura já paga ou cancelada
+// não recebe nada.
+export async function resendRemindersAction(ids: string[]): Promise<{ ok: boolean; sent?: number; failed?: number; skipped?: number; error?: string }> {
+  const user = await requirePermission(permKey("RECEIVABLES", "EDIT"));
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 100) return { ok: false, error: "Nada selecionado." };
+  const reminders = await db.paymentReminder.findMany({
+    where: { id: { in: ids.filter((i) => typeof i === "string") }, status: "FALHOU", receivable: { organizationId: user.organizationId } },
+    include: { receivable: { select: { id: true, clientId: true, status: true, dueDate: true } } },
+    orderBy: { scheduledFor: "asc" },
+  });
+  if (reminders.length === 0) return { ok: false, error: "Só lembretes que falharam podem ser reenviados." };
+
+  const stamp = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  let skipped = 0;
+  const byClient = new Map<string, typeof reminders>();
+  for (const r of reminders) {
+    if (r.receivable.status === "PAGO" || r.receivable.status === "CANCELADO") {
+      await db.paymentReminder.update({ where: { id: r.id }, data: { status: "CANCELADO", messageBody: `Não reenviado: a fatura já está ${r.receivable.status === "PAGO" ? "paga" : "cancelada"}.` } });
+      skipped++;
+      continue;
+    }
+    byClient.set(r.receivable.clientId, [...(byClient.get(r.receivable.clientId) ?? []), r]);
+  }
+
+  const currency = (await db.organization.findUnique({ where: { id: user.organizationId }, select: { currency: true } }))?.currency ?? "BRL";
+  let sent = 0;
+  let failed = 0;
+  let lastError: string | undefined;
+  let first = true;
+  for (const group of [...byClient.values()].slice(0, 10)) {
+    if (!first) await new Promise((r) => setTimeout(r, 4000 + Math.floor(Math.random() * 3000)));
+    first = false;
+    const lead = group[0];
+    const channel = group.some((g) => g.channel === "WHATSAPP") ? "WHATSAPP" : lead.channel;
+    const { items } = await openChargesFor(lead.receivableId);
+    let ctx;
+    let body: string;
+    if (items.length > 1) {
+      ctx = await buildGroupContext(lead.receivableId, items);
+      body = groupMessage(ctx, items, currency);
+    } else {
+      ctx = await buildChargeContext(lead.receivableId);
+      const today = brasiliaDay(new Date());
+      const due = dueDay(lead.receivable.dueDate);
+      let diff = 0;
+      while (addDays(due, diff) < today && diff < 400) diff++;
+      while (addDays(due, diff) > today && diff > -400) diff--;
+      body = renderCharge(defaultChargeMessage(diff), ctx);
+    }
+    const result = await deliverCharge(ctx, channel, body);
+    await db.paymentReminder.updateMany({
+      where: { id: { in: group.map((g) => g.id) } },
+      data: result.delivered
+        ? { status: "ENVIADO", sentAt: new Date(), messageBody: `${body}\n\n[Reenviado por ${user.name.split(" ")[0]} em ${stamp}]` }
+        : { status: "FALHOU", sentAt: new Date(), messageBody: `${body}\n\n[Falha: ${result.error}]` },
+    });
+    if (result.delivered) sent++;
+    else {
+      failed++;
+      lastError = result.error;
+    }
+  }
+
+  await audit({ organizationId: user.organizationId, userId: user.id, action: "REMINDERS_RESENT", entityType: "PaymentReminder", metadata: { ids, sent, failed, skipped } });
+  revalidatePath("/financeiro/cobrancas");
+  if (sent === 0 && failed > 0) return { ok: false, sent, failed, skipped, error: lastError ?? "Não foi possível enviar." };
+  return { ok: true, sent, failed, skipped };
+}
