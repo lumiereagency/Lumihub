@@ -86,7 +86,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/propostas/
     : proposal.response ? "Cliente respondeu"
     : ["ACEITA", "RECUSADA", "EXPIRADA"].includes(proposal.status) ? "Orçamento encerrado"
     : !proposal.sentAt ? "Orçamento ainda não enviado"
-    : proposal.validUntil && proposal.validUntil.getTime() < Date.now() ? "Proposta vencida"
+    : proposal.validUntil && proposal.validUntil < new Date() ? "Proposta vencida"
     : null;
   const doneByStep = new Map(followUps.map((f) => [f.step, f]));
   const followItems: FollowUpItem[] = [
