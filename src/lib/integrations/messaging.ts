@@ -38,5 +38,7 @@ export async function sendReminderMessage(
       ? await sendWhatsApp({ organizationId, to, message })
       : await sendEmail({ organizationId, to, subject, text: message });
 
-  return result.delivered ? { delivered: true } : { delivered: false, error: result.error ?? "Falha no envio." };
+  if (result.delivered) return { delivered: true };
+  const pending = "pending" in result && result.pending;
+  return { delivered: false, error: result.error ?? (pending ? "O WhatsApp está reconectando. Tente de novo em 1 minuto." : "O WhatsApp não confirmou o envio. Tente de novo em instantes.") };
 }

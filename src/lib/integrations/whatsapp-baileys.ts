@@ -154,18 +154,27 @@ export async function sendWhatsAppBaileysMessage(
   // onWhatsApp() se, por coincidência, corresponder a OUTRA conta real.
   const digits = normalizeBrazilPhoneDigits(to);
 
-  const session = sessions.get(organizationId);
+  // Sem sessão em memória (servidor reiniciou, queda de rede) mas com
+  // credenciais pareadas em disco: reconecta e espera alguns segundos pela
+  // conexão em vez de falhar o envio na hora.
+  let session = sessions.get(organizationId);
   if (!session || session.status === "disconnected") {
-    // Sem sessão em memória (ex: logo após um restart do servidor) mas com
-    // credenciais já pareadas em disco — tenta reconectar sozinho em
-    // segundo plano, sem pedir QR de novo. Não bloqueia este envio.
-    void startWhatsAppSession(organizationId);
-    console.info(`[LUMIBASE][whatsapp:pendente] WhatsApp reconectando (Baileys). Mensagem não enviada.\nPara: ${to}\n${message}`);
-    return { delivered: false, pending: true, to: digits };
+    await startWhatsAppSession(organizationId).catch((e) => console.error("[LUMIBASE][whatsapp] reconexão falhou", (e as Error).message));
+    session = await waitForConnection(organizationId, 25_000);
+  } else if (session.status === "connecting") {
+    session = await waitForConnection(organizationId, 25_000);
   }
-  if (!session.sock || session.status !== "connected") {
-    console.info(`[LUMIBASE][whatsapp:pendente] WhatsApp não conectado (Baileys). Mensagem não enviada.\nPara: ${to}\n${message}`);
-    return { delivered: false, pending: true, to: digits };
+  if (!session || !session.sock || session.status !== "connected") {
+    const qr = session?.status === "qr";
+    console.info(`[LUMIBASE][whatsapp:pendente] WhatsApp não conectado (Baileys). Mensagem não enviada.\nPara: ${to}`);
+    return {
+      delivered: false,
+      pending: true,
+      to: digits,
+      error: qr
+        ? "O WhatsApp da empresa precisa ser reconectado (leia o QR code em Configurações → Integrações)."
+        : "O WhatsApp ainda está reconectando depois da atualização do sistema. Tente de novo em 1 minuto.",
+    };
   }
 
   try {
@@ -198,4 +207,29 @@ function normalizeBrazilPhoneDigits(phone: string): string {
   if (digits.length === 12 && digits.startsWith("0")) digits = digits.slice(1);
   if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
   return digits;
+}
+
+async function waitForConnection(organizationId: string, timeoutMs: number): Promise<SessionState | undefined> {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    const s = sessions.get(organizationId);
+    if (s?.status === "connected" || s?.status === "qr") return s;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return sessions.get(organizationId);
+}
+
+// Religa os WhatsApps que estavam conectados (chamado quando o servidor sobe
+// e pela rotina de 15 em 15 minutos): sem isso, depois de cada atualização
+// do sistema o número ficava "conectado" na tela mas desligado de verdade.
+export async function ensureWhatsAppSessions(): Promise<number> {
+  const rows = await db.integration.findMany({ where: { provider: "WHATSAPP_BUSINESS", status: "CONECTADO" }, select: { organizationId: true } });
+  let started = 0;
+  for (const r of rows) {
+    const s = sessions.get(r.organizationId);
+    if (s && s.status !== "disconnected") continue;
+    await startWhatsAppSession(r.organizationId).catch((e) => console.error("[LUMIBASE][whatsapp] não foi possível religar", (e as Error).message));
+    started++;
+  }
+  return started;
 }
