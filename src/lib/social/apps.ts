@@ -10,6 +10,10 @@ export const FAMILY_PROVIDER: Record<ConnectFamily, IntegrationProviderKey> = {
   meta: "META_SOCIAL",
   youtube: "YOUTUBE_PUBLISH",
   tiktok: "TIKTOK_SOCIAL",
+  x: "X_SOCIAL",
+  threads: "THREADS_SOCIAL",
+  linkedin: "LINKEDIN_SOCIAL",
+  reddit: "REDDIT_SOCIAL",
 };
 
 export interface SocialApp {
@@ -17,6 +21,10 @@ export interface SocialApp {
   clientSecret: string;
   // TikTok: auditoria aprovada (publica como público). Sem isso, só privado.
   audited: boolean;
+  // LinkedIn: Community Management API aprovada (páginas de empresa).
+  organizations: boolean;
+  // Reddit: usuário dono do app (vai no User-Agent exigido pelo Reddit).
+  redditUser: string;
 }
 
 export async function getSocialApp(organizationId: string, family: ConnectFamily): Promise<SocialApp | null> {
@@ -32,6 +40,8 @@ export async function getSocialApp(organizationId: string, family: ConnectFamily
     clientId: config.clientId,
     clientSecret: decryptSecret({ encryptedValue: secretRow.encryptedValue, iv: secretRow.iv, authTag: secretRow.authTag }),
     audited: config.audited === "on",
+    organizations: config.organizations === "on",
+    redditUser: config.redditUser ?? "",
   };
 }
 

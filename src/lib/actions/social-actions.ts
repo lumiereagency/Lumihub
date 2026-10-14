@@ -46,6 +46,7 @@ export async function saveConnectedAccountsAction(sessionId: string, keys: strin
       tokenIv: sealed.iv,
       tokenTag: sealed.authTag,
       meta: c.meta,
+      expiresAt: c.tokens.accessExpiresAt ? new Date(c.tokens.accessExpiresAt) : null,
       connectedByUserId: user.id,
     };
     await db.socialAccount.upsert({
@@ -124,6 +125,7 @@ export interface ScheduleItem {
   accountId: string;
   caption?: string;
   format?: string;
+  subreddit?: string;
 }
 
 export async function scheduleTargetsAction(postId: string, items: ScheduleItem[], scheduledLocal: string): Promise<Res> {
@@ -147,7 +149,7 @@ export async function scheduleTargetsAction(postId: string, items: ScheduleItem[
     const account = accounts.find((a) => a.id === item.accountId)!;
     if (!isSocialNetwork(account.network)) continue;
     const format = item.format || defaultTargetFormat(account.network, post.format, hasVideo);
-    const checks = runChecks({ network: account.network, format, title: post.title, caption: item.caption?.trim() || post.caption || "", media: probes, account: { status: account.status, statusMessage: account.statusMessage }, scheduledFor: when, tiktokPublic: tiktokApp ? tiktokApp.audited : undefined });
+    const checks = runChecks({ network: account.network, format, title: post.title, caption: item.caption?.trim() || post.caption || "", media: probes, account: { status: account.status, statusMessage: account.statusMessage }, scheduledFor: when, tiktokPublic: tiktokApp ? tiktokApp.audited : undefined, subreddit: item.subreddit });
     if (hasBlockingError(checks)) problems.push(`${NETWORK_LABEL[account.network]}: ${checks.find((c) => c.level === "error")?.title}`);
   }
   if (problems.length) return { ok: false, error: `Resolva antes de agendar — ${problems.join("; ")}.` };
@@ -157,7 +159,7 @@ export async function scheduleTargetsAction(postId: string, items: ScheduleItem[
     const account = accounts.find((a) => a.id === item.accountId)!;
     const format = item.format || defaultTargetFormat(account.network as SocialNetwork, post.format, hasVideo);
     keep.add(account.id);
-    const data = { network: account.network, caption: item.caption?.trim() || null, options: { format }, scheduledFor: when, status: "AGENDADO", attempts: 0, nextAttemptAt: null, lastError: null, externalId: null, externalUrl: null, publishedAt: null, createdByUserId: user.id };
+    const data = { network: account.network, caption: item.caption?.trim() || null, options: { format, ...(item.subreddit ? { subreddit: item.subreddit } : {}) }, scheduledFor: when, status: "AGENDADO", attempts: 0, nextAttemptAt: null, lastError: null, externalId: null, externalUrl: null, publishedAt: null, createdByUserId: user.id };
     const existing = await db.contentPostTarget.findUnique({ where: { postId_accountId: { postId, accountId: account.id } } });
     // Quem já foi publicado não é republicado por engano.
     if (existing?.status === "PUBLICADO" || existing?.status === "PUBLICANDO") continue;

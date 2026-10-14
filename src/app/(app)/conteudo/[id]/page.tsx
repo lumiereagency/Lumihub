@@ -38,7 +38,7 @@ export default async function BatchPage({ params }: PageProps<"/conteudo/[id]">)
   const accounts: AccountRow[] = accountsRaw;
   const targetsByPost: Record<string, TargetRow[]> = {};
   for (const t of targetsRaw) {
-    (targetsByPost[t.postId] ??= []).push({ id: t.id, accountId: t.accountId, network: t.network, status: t.status, scheduledFor: t.scheduledFor.toISOString(), lastError: t.lastError, externalUrl: t.externalUrl, caption: t.caption, format: ((t.options as { format?: string } | null)?.format) ?? null });
+    (targetsByPost[t.postId] ??= []).push({ id: t.id, accountId: t.accountId, network: t.network, status: t.status, scheduledFor: t.scheduledFor.toISOString(), lastError: t.lastError, externalUrl: t.externalUrl, caption: t.caption, format: ((t.options as { format?: string } | null)?.format) ?? null, subreddit: ((t.options as { subreddit?: string } | null)?.subreddit) ?? null });
   }
   return (
     <BatchBoard

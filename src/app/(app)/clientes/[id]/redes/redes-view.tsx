@@ -23,6 +23,10 @@ const FAMILIES: { family: ConnectFamily; networks: string }[] = [
   { family: "meta", networks: "Instagram e Facebook" },
   { family: "youtube", networks: "YouTube" },
   { family: "tiktok", networks: "TikTok" },
+  { family: "x", networks: "X (Twitter)" },
+  { family: "threads", networks: "Threads" },
+  { family: "linkedin", networks: "LinkedIn" },
+  { family: "reddit", networks: "Reddit" },
 ];
 
 export function RedesView({
@@ -133,7 +137,7 @@ export function RedesView({
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-tertiary">Conectar uma rede</h2>
           <p className="text-sm text-text-tertiary">Quem conecta precisa ter acesso de administrador à página ou conta do cliente (por exemplo, pelo Gerenciador de Negócios).</p>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {FAMILIES.map(({ family, networks }) => (
               <div key={family} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
                 <p className="text-sm font-medium text-text-primary">{networks}</p>

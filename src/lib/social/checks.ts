@@ -29,6 +29,8 @@ export interface CheckInput {
   account: { status: string; statusMessage?: string | null } | null;
   scheduledFor: Date | null;
   tiktokPublic?: boolean;
+  // Reddit: comunidade escolhida para o post.
+  subreddit?: string;
 }
 
 const MB = 1024 * 1024;
@@ -162,6 +164,72 @@ export function runChecks(input: CheckInput): Check[] {
       else warn("Vídeo não é vertical", "Para virar Shorts o vídeo precisa ser vertical. Será publicado como vídeo normal.");
     }
     if (probed?.sizeBytes && probed.sizeBytes > l.videoMaxMB * MB) err("Arquivo muito grande", `Acima de ${l.videoMaxMB} MB o envio fica instável. Este tem ${Math.round(probed.sizeBytes / MB)} MB.`);
+  }
+
+  if (network === "TWITTER") {
+    const l = limits.TWITTER;
+    const text = caption.trim() || input.title;
+    if (videos.length > 0 && images.length > 0) err("Imagem e vídeo juntos", "No X, publique só imagens (até 4) ou só um vídeo por post.");
+    if (images.length > l.images) err("Imagens demais", `O X aceita até ${l.images} imagens por post. Este tem ${images.length}.`);
+    if (videos.length > 1) err("Um vídeo por post", "O X publica um vídeo por vez.");
+    if (text.length > l.textMaxPremium) err("Texto longo demais", `${text.length} de ${l.textMaxPremium} caracteres.`);
+    else if (text.length > l.textMax) warn("Texto passa de 280 caracteres", `Só contas com X Premium aceitam textos longos (${text.length} caracteres). Em conta comum, o X recusa a publicação.`);
+    else ok("Texto dentro do limite", `${text.length} de ${l.textMax} caracteres.`);
+    if (probed?.durationSec != null) {
+      if (probed.durationSec > l.videoMaxSeconds) err(`Duração ${fmtDuration(probed.durationSec)}`, "O limite é de 20 minutos por vídeo.");
+      else if (probed.durationSec > l.videoSoftSeconds) warn(`Duração ${fmtDuration(probed.durationSec)}`, "Contas sem X Premium aceitam vídeos de até 2:20. Acima disso o X pode recusar.");
+      else ok(`Duração ${fmtDuration(probed.durationSec)}`, "Dentro do limite do X.");
+    }
+    if (probed?.sizeBytes && probed.sizeBytes > l.videoMaxMB * MB) err("Arquivo muito grande", `Acima de ${l.videoMaxMB} MB o envio fica instável. Este tem ${Math.round(probed.sizeBytes / MB)} MB.`);
+  }
+
+  if (network === "THREADS") {
+    const l = limits.THREADS;
+    const text = caption.trim() || input.title;
+    if (media.length > l.carouselMax) err("Itens demais", `O Threads aceita até ${l.carouselMax} itens por post. Este tem ${media.length}.`);
+    if (text.length > l.textMax) err("Texto longo demais", `${text.length} de ${l.textMax} caracteres.`);
+    else ok("Texto dentro do limite", `${text.length} de ${l.textMax} caracteres.`);
+    if (countHashtags(text) > 1) warn("Mais de uma hashtag", "O Threads trata só uma hashtag por post como tópico.");
+    if (probed?.durationSec != null) {
+      if (probed.durationSec > l.videoMaxSeconds) err(`Duração ${fmtDuration(probed.durationSec)}`, "O Threads aceita vídeos de até 5 minutos.");
+      else ok(`Duração ${fmtDuration(probed.durationSec)}`, "Dentro do limite do Threads.");
+    }
+    if (probed?.sizeBytes && probed.sizeBytes > l.videoMaxMB * MB) err("Arquivo muito grande", `O Threads aceita até 1 GB. Este tem ${Math.round(probed.sizeBytes / MB)} MB.`);
+    if (probed?.width && probed?.height) {
+      const r = probed.width / probed.height;
+      if (r < 0.01 || r > 10) err("Proporção fora do aceito", "O Threads aceita proporções de 0,01:1 a 10:1.");
+    }
+    ok("Limite diário", "O Threads aceita até 250 posts por dia por perfil pela API.");
+  }
+
+  if (network === "LINKEDIN") {
+    const l = limits.LINKEDIN;
+    const text = caption.trim() || input.title;
+    if (videos.length > 0 && images.length > 0) err("Imagem e vídeo juntos", "No LinkedIn, publique só imagens ou só um vídeo por post.");
+    if (videos.length > 1) err("Um vídeo por post", "O LinkedIn publica um vídeo por vez.");
+    if (images.length > l.images) err("Imagens demais", `O LinkedIn aceita até ${l.images} imagens por post.`);
+    if (text.length > l.textMax) err("Texto longo demais", `${text.length} de ${l.textMax} caracteres.`);
+    else ok("Texto dentro do limite", `${text.length} de ${l.textMax} caracteres.`);
+    if (probed?.durationSec != null) {
+      if (probed.durationSec > l.videoMaxSeconds) err(`Duração ${fmtDuration(probed.durationSec)}`, "O LinkedIn aceita vídeos de até 30 minutos.");
+      else if (probed.durationSec < l.videoMinSeconds) err(`Duração ${fmtDuration(probed.durationSec)}`, "O LinkedIn exige pelo menos 3 segundos.");
+      else ok(`Duração ${fmtDuration(probed.durationSec)}`, "Dentro do limite do LinkedIn.");
+    }
+    if (probed?.sizeBytes && probed.sizeBytes > l.videoMaxMB * MB) err("Arquivo muito grande", `O LinkedIn aceita vídeos de até ${l.videoMaxMB} MB. Este tem ${Math.round(probed.sizeBytes / MB)} MB.`);
+    if (account && account.status === "ATIVA") ok("Autor da publicação", "A publicação sai no perfil ou na página escolhida ao conectar a conta.");
+  }
+
+  if (network === "REDDIT") {
+    const l = limits.REDDIT;
+    if (videos.length > 0) err("Reddit sem vídeo por aqui", "Nesta versão, o Reddit recebe texto e uma imagem. Para vídeo, publique direto no Reddit.");
+    if (images.length > 1) err("Uma imagem por post", "O Reddit recebe uma imagem por post nesta versão.");
+    if (!input.title.trim()) err("Título obrigatório", "O Reddit exige um título.");
+    else if (input.title.length > l.titleMax) err("Título longo demais", `${input.title.length} de ${l.titleMax} caracteres.`);
+    else ok("Título dentro do limite", `${input.title.length} de ${l.titleMax} caracteres.`);
+    if (!input.subreddit?.trim()) err("Escolha a comunidade", "Informe o subreddit (ex.: r/suamarca) ou u/usuario para publicar no perfil.");
+    else ok("Comunidade escolhida", input.subreddit.trim());
+    if (caption.length > l.textMax) err("Texto longo demais", `${caption.length} de ${l.textMax} caracteres.`);
+    warn("Regras da comunidade", "Cada comunidade tem regras próprias e moderadores podem remover o post. Confira antes de agendar.");
   }
 
   if (input.scheduledFor && input.scheduledFor.getTime() < Date.now() - 60_000) {

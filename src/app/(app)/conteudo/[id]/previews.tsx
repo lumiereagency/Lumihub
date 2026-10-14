@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Bookmark, Film, Heart, ImageIcon, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
+import { ArrowBigDown, ArrowBigUp, Bookmark, Film, Heart, ImageIcon, MessageCircle, MoreHorizontal, Repeat2, Send, Share2, ThumbsUp } from "lucide-react";
 import type { SocialNetwork } from "@/lib/social/networks";
 
 export interface PreviewMedia {
@@ -18,6 +18,7 @@ export interface PreviewProps {
   caption: string;
   media: PreviewMedia[];
   showZones: boolean;
+  subreddit?: string;
 }
 
 function Surface({ media, className = "" }: { media: PreviewMedia | undefined; className?: string }) {
@@ -140,9 +141,83 @@ function YoutubeVideo({ p }: { p: PreviewProps }) {
   );
 }
 
+function XPost({ p }: { p: PreviewProps }) {
+  const text = (p.caption || p.title).trim();
+  return (
+    <Phone>
+      <div className="flex items-center justify-center border-b border-white/10 bg-black py-2.5 text-[18px] font-bold">𝕏</div>
+      <div className="flex gap-2.5 bg-black px-3 py-3">
+        <i className="h-9 w-9 shrink-0 rounded-full bg-[#2f3336]" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px]"><b>{p.accountName.replace(/^@/, "")}</b> <span className="text-white/50">{p.accountName} · agora</span></p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-snug">{text.slice(0, 280)}{text.length > 280 && <span className="text-[#ff7a66]"> …passa de 280</span>}</p>
+          <Surface media={p.media[0]} className="mt-2 aspect-video w-full rounded-2xl border border-white/10" />
+          <div className="mt-2.5 flex justify-between pr-6 text-white/50"><MessageCircle size={15} /><Repeat2 size={15} /><Heart size={15} /><Share2 size={15} /></div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+function ThreadsPost({ p }: { p: PreviewProps }) {
+  const text = (p.caption || p.title).trim();
+  return (
+    <Phone>
+      <div className="flex items-center justify-center border-b border-white/10 bg-[#101010] py-2.5 text-[17px] font-bold">@</div>
+      <div className="flex gap-2.5 bg-[#101010] px-3 py-3">
+        <i className="h-9 w-9 shrink-0 rounded-full bg-[#2a2a2a]" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px]"><b>{p.accountName.replace(/^@/, "")}</b> <span className="text-white/45">agora</span></p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-snug">{text.slice(0, 500)}</p>
+          <Surface media={p.media[0]} className="mt-2 aspect-[4/5] w-full rounded-2xl border border-white/10" />
+          <div className="mt-2.5 flex gap-4 text-white/55"><Heart size={16} /><MessageCircle size={16} /><Repeat2 size={16} /><Send size={16} /></div>
+        </div>
+      </div>
+    </Phone>
+  );
+}
+
+function LinkedinPost({ p }: { p: PreviewProps }) {
+  const text = (p.caption || p.title).trim();
+  const cut = text.length > 210;
+  return (
+    <Phone>
+      <div className="flex items-center bg-[#1b1f23] px-4 py-3 text-[14px] font-bold text-[#70b5f9]">LinkedIn</div>
+      <div className="flex items-center gap-2 bg-[#1b1f23] px-3 pb-2">
+        <i className="h-9 w-9 rounded bg-[#2f5a63]" />
+        <div className="leading-tight"><b className="block text-[12.5px]">{p.accountName.replace(/ \(.*\)$/, "")}</b><small className="text-[10.5px] text-white/50">agora · 🌐</small></div>
+        <MoreHorizontal size={16} className="ml-auto" />
+      </div>
+      <p className="whitespace-pre-wrap break-words bg-[#1b1f23] px-3 pb-2.5 text-[12.5px] leading-snug">{cut ? text.slice(0, 210) : text}{cut && <span className="text-white/50"> …ver mais</span>}</p>
+      <Surface media={p.media[0]} className="aspect-[4/5] w-full" />
+      <div className="flex justify-around border-t border-white/10 bg-[#1b1f23] py-2.5 text-[11px] text-white/60"><span className="flex items-center gap-1"><ThumbsUp size={14} /> Gostei</span><span className="flex items-center gap-1"><MessageCircle size={14} /> Comentar</span><span className="flex items-center gap-1"><Repeat2 size={14} /> Compartilhar</span><span className="flex items-center gap-1"><Send size={14} /> Enviar</span></div>
+    </Phone>
+  );
+}
+
+function RedditPost({ p }: { p: PreviewProps }) {
+  const hasImage = p.media.some((m) => m.kind === "image");
+  return (
+    <Phone>
+      <div className="flex items-center bg-[#0b1416] px-4 py-3 text-[14px] font-bold text-[#ff6a3d]">reddit</div>
+      <div className="bg-[#0b1416] px-3 pb-3">
+        <p className="text-[10.5px] text-white/55"><b className="text-white/80">{p.subreddit?.trim() ? (p.subreddit.startsWith("r/") || p.subreddit.startsWith("u/") ? p.subreddit : `r/${p.subreddit}`) : "r/comunidade"}</b> · agora</p>
+        <p className="mt-1 text-[14px] font-semibold leading-snug">{p.title}</p>
+        {p.caption && !hasImage && <p className="mt-1 whitespace-pre-wrap break-words text-[12px] leading-snug text-white/75">{p.caption.slice(0, 300)}</p>}
+        {hasImage && <Surface media={p.media[0]} className="mt-2 aspect-[4/5] w-full rounded-xl" />}
+        <div className="mt-2.5 flex items-center gap-3 text-white/60"><span className="flex items-center gap-0.5 rounded-full bg-white/10 px-2 py-1 text-[11px]"><ArrowBigUp size={15} /> 1 <ArrowBigDown size={15} /></span><span className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px]"><MessageCircle size={13} /> 0</span><span className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px]"><Share2 size={13} /> Compartilhar</span></div>
+      </div>
+    </Phone>
+  );
+}
+
 export function NetworkPreview(p: PreviewProps) {
   if (p.network === "INSTAGRAM") return p.format === "REELS" ? <Vertical p={p} brand={<><span>Reels</span><span>📷</span></>} side={["2.481", "136", "Enviar"]} zoneLabel="Zona coberta pelo Instagram" /> : <InstagramFeed p={p} />;
   if (p.network === "FACEBOOK") return <FacebookPost p={p} />;
+  if (p.network === "TWITTER") return <XPost p={p} />;
+  if (p.network === "THREADS") return <ThreadsPost p={p} />;
+  if (p.network === "LINKEDIN") return <LinkedinPost p={p} />;
+  if (p.network === "REDDIT") return <RedditPost p={p} />;
   if (p.network === "TIKTOK") return <Vertical p={p} brand={<><span>Seguindo &nbsp; Para você</span><span>🔍</span></>} side={["1,2 mil", "84", "Salvar", "Enviar"]} zoneLabel="Zona coberta pelo TikTok" />;
   return p.format === "VIDEO" ? <YoutubeVideo p={p} /> : <Vertical p={p} brand={<><span>Shorts</span><span>🔍</span></>} side={["12 mil", "Não gostei", "312", "Compart."]} zoneLabel="Zona coberta pelo YouTube" />;
 }

@@ -12,8 +12,8 @@ export interface MediaItem {
   storageKey?: string;
 }
 
-export const NETWORKS = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE", "OUTRO"] as const;
-export const NETWORK_LABELS: Record<string, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook", TIKTOK: "TikTok", LINKEDIN: "LinkedIn", YOUTUBE: "YouTube", OUTRO: "Outra rede" };
+export const NETWORKS = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "YOUTUBE", "TWITTER", "THREADS", "LINKEDIN", "REDDIT", "OUTRO"] as const;
+export const NETWORK_LABELS: Record<string, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook", TIKTOK: "TikTok", LINKEDIN: "LinkedIn", YOUTUBE: "YouTube", TWITTER: "X (Twitter)", THREADS: "Threads", REDDIT: "Reddit", OUTRO: "Outra rede" };
 export const FORMATS = ["REELS", "FEED", "STORIES", "CARROSSEL", "VIDEO", "ARTIGO"] as const;
 export const FORMAT_LABELS: Record<string, string> = { REELS: "Reels", FEED: "Feed", STORIES: "Stories", CARROSSEL: "Carrossel", VIDEO: "Vídeo", ARTIGO: "Artigo" };
 export const STATUS_LABELS: Record<string, string> = { RASCUNHO: "Rascunho", AGUARDANDO: "Aguardando cliente", APROVADO: "Aprovado", AJUSTE: "Ajuste pedido", AGENDADO: "Agendado", PUBLICADO: "Publicado", FALHOU: "Falhou" };

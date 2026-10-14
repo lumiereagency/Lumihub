@@ -240,6 +240,52 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
     ],
   },
   {
+    key: "X_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "X (Twitter)",
+    description: "App da agência no X Developer Portal para publicar nas contas dos clientes. A API do X é paga por uso. Depois de salvar, conecte as contas em cada cliente → Redes.",
+    socialFamily: "x",
+    fields: [
+      { key: "clientId", label: "Client ID (OAuth 2.0)", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Client Secret (OAuth 2.0)", type: "password", secret: true, required: true },
+    ],
+  },
+  {
+    key: "THREADS_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "Threads",
+    description: "App do Threads dentro do app da Meta. Depois de salvar, conecte as contas em cada cliente → Redes.",
+    socialFamily: "threads",
+    fields: [
+      { key: "clientId", label: "ID do app do Threads (Threads App ID)", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Chave secreta do app do Threads", type: "password", secret: true, required: true },
+    ],
+  },
+  {
+    key: "LINKEDIN_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "LinkedIn",
+    description: "App da agência no LinkedIn Developers. Perfil pessoal funciona logo; páginas de empresa exigem a aprovação da Community Management API. Depois de salvar, conecte em cada cliente → Redes.",
+    socialFamily: "linkedin",
+    fields: [
+      { key: "clientId", label: "Client ID", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Client Secret", type: "password", secret: true, required: true },
+      { key: "organizations", label: "Community Management API aprovada (libera páginas de empresa)", type: "checkbox", secret: false, required: false },
+    ],
+  },
+  {
+    key: "REDDIT_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "Reddit",
+    description: "App do Reddit (precisa de aprovação do Reddit para uso comercial). Depois de salvar, conecte as contas em cada cliente → Redes.",
+    socialFamily: "reddit",
+    fields: [
+      { key: "clientId", label: "Client ID do app (web app)", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Secret do app", type: "password", secret: true, required: true },
+      { key: "redditUser", label: "Seu usuário do Reddit (aparece no identificador do app, ex.: minha_agencia)", type: "text", secret: false, required: true },
+    ],
+  },
+  {
     key: "AUTENTIQUE",
     category: "OUTROS",
     label: "Autentique",

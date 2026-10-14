@@ -13,6 +13,9 @@ export interface PublishInput {
   media: MediaItem[];
   // TikTok: app com auditoria aprovada publica como público.
   tiktokAudited: boolean;
+  // Reddit: comunidade (ex.: "r/minhamarca" ou "u/usuario") e identificação exigida pelo Reddit.
+  subreddit: string | null;
+  redditAgent: string | null;
 }
 
 export interface PublishResult {

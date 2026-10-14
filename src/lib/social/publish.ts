@@ -2,12 +2,16 @@ import "server-only";
 import { db } from "@/lib/db";
 import { directorIds, notifyUsers } from "@/lib/notifications/notify";
 import type { MediaItem } from "@/lib/content/media";
-import { getAccessToken } from "./accounts";
+import { getAccessToken, readTokens } from "./accounts";
 import { getSocialApp } from "./apps";
 import { isSocialNetwork, NETWORK_LABEL } from "./networks";
 import { publishFacebook } from "./publishers/facebook";
 import { publishInstagram } from "./publishers/instagram";
+import { publishLinkedin } from "./publishers/linkedin";
+import { publishReddit } from "./publishers/reddit";
+import { publishThreads } from "./publishers/threads";
 import { publishTiktok } from "./publishers/tiktok";
+import { publishTwitter } from "./publishers/twitter";
 import { publishYoutube } from "./publishers/youtube";
 import { PublishError, type PublishInput, type PublishResult } from "./publishers/types";
 
@@ -37,6 +41,14 @@ async function dispatch(i: PublishInput): Promise<PublishResult> {
       return publishYoutube(i);
     case "TIKTOK":
       return publishTiktok(i);
+    case "TWITTER":
+      return publishTwitter(i);
+    case "THREADS":
+      return publishThreads(i);
+    case "LINKEDIN":
+      return publishLinkedin(i);
+    case "REDDIT":
+      return publishReddit(i);
     default:
       throw new PublishError("Rede sem publicação automática.", true);
   }
@@ -88,8 +100,9 @@ export async function publishTarget(targetId: string): Promise<{ ok: boolean; er
   try {
     if (target.account.status !== "ATIVA") throw new PublishError("A conta do cliente precisa ser reconectada.", true);
     const media = (target.post.media as unknown as MediaItem[]) ?? [];
-    const options = (target.options as { format?: string } | null) ?? {};
+    const options = (target.options as { format?: string; subreddit?: string } | null) ?? {};
     const app = target.network === "TIKTOK" ? await getSocialApp(target.organizationId, "tiktok") : null;
+    const redditApp = target.network === "REDDIT" ? await getSocialApp(target.organizationId, "reddit") : null;
     const accessToken = target.account.externalId.startsWith("sim_") ? "sim" : await getAccessToken(target.account);
     const result = await dispatch({
       targetId,
@@ -102,6 +115,8 @@ export async function publishTarget(targetId: string): Promise<{ ok: boolean; er
       format: options.format ?? target.post.format,
       media,
       tiktokAudited: !!app?.audited,
+      subreddit: options.subreddit ?? null,
+      redditAgent: redditApp ? `web:lumibase:1.0 (by /u/${redditApp.redditUser})` : null,
     });
     await db.contentPostTarget.update({ where: { id: targetId }, data: { status: "PUBLICADO", externalId: result.externalId, externalUrl: result.externalUrl, publishedAt: new Date(), lastError: null, nextAttemptAt: null } });
     await db.contentPostEvent.create({ data: { postId: target.postId, kind: "PUBLICADO", actor: "Lumibase", note: `Publicado no ${NETWORK_LABEL[target.account.network as keyof typeof NETWORK_LABEL] ?? target.account.network}${result.externalUrl ? `: ${result.externalUrl}` : ""}` } });
@@ -161,4 +176,45 @@ export async function runDuePublications(): Promise<{ started: boolean; due: num
     running = false;
     throw e;
   }
+}
+
+// Contas que vão vencer ou já venceram: renova o que a rede deixa e avisa a equipe do resto.
+export async function checkAccountHealth(): Promise<{ renewed: number; warned: number }> {
+  let renewed = 0;
+  let warned = 0;
+  const soon = new Date(Date.now() + 20 * 86400_000);
+  const threads = await db.socialAccount.findMany({ where: { network: "THREADS", status: "ATIVA", expiresAt: { lt: soon } } });
+  for (const a of threads) {
+    try {
+      await getAccessToken(a);
+      renewed++;
+    } catch {
+      // getAccessToken já marcou a conta como expirada.
+    }
+  }
+  const week = new Date(Date.now() + 7 * 86400_000);
+  const watch = await db.socialAccount.findMany({
+    where: { OR: [{ status: "EXPIRADA" }, { network: "LINKEDIN", status: "ATIVA", expiresAt: { lt: week } }] },
+    include: { client: { select: { companyName: true } } },
+  });
+  for (const a of watch) {
+    // LinkedIn sem renovação automática: avisa antes de vencer.
+    if (a.status === "ATIVA") {
+      if (readTokens(a).refreshToken) continue;
+    }
+    const net = isSocialNetwork(a.network) ? NETWORK_LABEL[a.network] : a.network;
+    const day = (a.expiresAt ?? a.updatedAt).toISOString().slice(0, 10);
+    const dirs = await directorIds(a.organizationId);
+    const made = await notifyUsers({
+      organizationId: a.organizationId,
+      userIds: [...dirs, a.connectedByUserId].filter((x): x is string => !!x),
+      title: a.status === "EXPIRADA" ? "Conta social precisa reconectar" : "Conta social vai vencer",
+      body: `${net} de ${a.client.companyName} (${a.name}): ${a.status === "EXPIRADA" ? "a conexão venceu" : "a conexão vence em breve"}. Reconecte para não perder as publicações agendadas.`,
+      link: `/clientes/${a.clientId}/redes`,
+      category: "alertas",
+      dedupeKey: `social-health:${a.id}:${a.status}:${day}`,
+    });
+    warned += made.length > 0 ? 1 : 0;
+  }
+  return { renewed, warned };
 }

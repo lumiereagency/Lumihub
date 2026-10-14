@@ -6,6 +6,7 @@ import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/integrations/vault";
 import { getSocialApp } from "@/lib/social/apps";
+import type { ConnectFamily } from "@/lib/social/networks";
 import type { Candidate } from "@/lib/social/connect";
 import { simulationEnabled } from "@/lib/social/publish";
 import { RedesView } from "./redes-view";
@@ -18,7 +19,9 @@ export default async function ClientNetworksPage({ params, searchParams }: PageP
   if (!client) notFound();
 
   const accounts = await db.socialAccount.findMany({ where: { clientId: id, organizationId: user.organizationId }, orderBy: [{ network: "asc" }, { name: "asc" }], select: { id: true, network: true, name: true, avatarUrl: true, status: true, statusMessage: true, createdAt: true } });
-  const [meta, youtube, tiktok] = await Promise.all([getSocialApp(user.organizationId, "meta"), getSocialApp(user.organizationId, "youtube"), getSocialApp(user.organizationId, "tiktok")]);
+  const families: ConnectFamily[] = ["meta", "youtube", "tiktok", "x", "threads", "linkedin", "reddit"];
+  const found = await Promise.all(families.map((f) => getSocialApp(user.organizationId, f)));
+  const apps = Object.fromEntries(families.map((f, i) => [f, !!found[i]])) as Record<ConnectFamily, boolean>;
 
   let pick: { sessionId: string; candidates: { key: string; network: string; name: string; avatarUrl: string | null; already: boolean }[] } | null = null;
   const sessionId = typeof sp.escolher === "string" ? sp.escolher : null;
@@ -43,7 +46,7 @@ export default async function ClientNetworksPage({ params, searchParams }: PageP
       <RedesView
         clientId={id}
         accounts={accounts.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() }))}
-        apps={{ meta: !!meta, youtube: !!youtube, tiktok: !!tiktok }}
+        apps={apps}
         pick={pick}
         error={typeof sp.erro === "string" ? sp.erro : null}
         canEdit={hasPermission(user, permKey("TASKS", "EDIT"))}

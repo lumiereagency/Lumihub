@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/guard";
 import { permKey } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
-import { createOAuthState, generateCodeVerifier } from "@/lib/integrations/oauth-state";
+import { codeChallengeFromVerifier, createOAuthState, generateCodeVerifier } from "@/lib/integrations/oauth-state";
 import { getSocialApp } from "@/lib/social/apps";
 import { buildAuthUrl } from "@/lib/social/connect";
 import { isConnectFamily } from "@/lib/social/networks";
@@ -30,8 +30,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const app = await getSocialApp(user.organizationId, family);
   if (!app) return back("Cadastre as credenciais do app desta rede em Configurações → Integrações antes de conectar.");
 
-  const state = createOAuthState({ provider: `social:${family}`, organizationId: user.organizationId, userId: user.id, codeVerifier: generateCodeVerifier(), clientId: client.id });
-  const response = NextResponse.redirect(buildAuthUrl(family, app, state));
+  const verifier = generateCodeVerifier();
+  const state = createOAuthState({ provider: `social:${family}`, organizationId: user.organizationId, userId: user.id, codeVerifier: verifier, clientId: client.id });
+  const response = NextResponse.redirect(buildAuthUrl(family, app, state, codeChallengeFromVerifier(verifier)));
   response.cookies.set({ name: COOKIE, value: state, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 10 * 60 });
   return response;
 }

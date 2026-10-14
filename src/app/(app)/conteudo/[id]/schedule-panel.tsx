@@ -32,6 +32,7 @@ export interface TargetRow {
   externalUrl: string | null;
   caption: string | null;
   format: string | null;
+  subreddit: string | null;
 }
 
 const field = "h-11 w-full rounded-xl border border-border bg-card-elevated px-3 text-sm text-text-primary focus:border-accent/60 focus:outline-none";
@@ -68,6 +69,7 @@ export function SchedulePanel({
   const [selected, setSelected] = useState<string[]>(() => (live.length ? live.map((t) => t.accountId) : accounts.filter((a) => a.network === post.network && a.status === "ATIVA").map((a) => a.id)));
   const [captions, setCaptions] = useState<Record<string, string>>(() => Object.fromEntries(targets.filter((t) => t.caption).map((t) => [t.accountId, t.caption as string])));
   const [formats, setFormats] = useState<Record<string, string>>(() => Object.fromEntries(targets.filter((t) => t.format).map((t) => [t.accountId, t.format as string])));
+  const [subreddits, setSubreddits] = useState<Record<string, string>>(() => Object.fromEntries(targets.filter((t) => t.subreddit).map((t) => [t.accountId, t.subreddit as string])));
   const [when, setWhen] = useState(() => (live[0] ? toBrtLocalInput(new Date(live[0].scheduledFor)) : defaultWhen(post)));
   const [activeId, setActiveId] = useState<string | null>(selected[0] ?? accounts[0]?.id ?? null);
   const [zones, setZones] = useState(true);
@@ -94,11 +96,11 @@ export function SchedulePanel({
     const out: Record<string, Check[]> = {};
     for (const a of accounts) {
       if (!isSocialNetwork(a.network)) continue;
-      out[a.id] = runChecks({ network: a.network, format: formats[a.id] ?? defaultTargetFormat(a.network, post.format, hasVideo), title: post.title, caption: captions[a.id] ?? post.caption ?? "", media: probes ?? fallback, account: { status: a.status, statusMessage: a.statusMessage }, scheduledFor: Number.isNaN(scheduledDate.getTime()) ? null : scheduledDate, tiktokPublic });
+      out[a.id] = runChecks({ network: a.network, format: formats[a.id] ?? defaultTargetFormat(a.network, post.format, hasVideo), title: post.title, caption: captions[a.id] ?? post.caption ?? "", media: probes ?? fallback, account: { status: a.status, statusMessage: a.statusMessage }, scheduledFor: Number.isNaN(scheduledDate.getTime()) ? null : scheduledDate, tiktokPublic, subreddit: subreddits[a.id] ?? "" });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts, formats, captions, probes, when, post, tiktokPublic]);
+  }, [accounts, formats, captions, probes, when, post, tiktokPublic, subreddits]);
 
   const active = accounts.find((a) => a.id === activeId) ?? null;
   const activeChecks = active ? (checksByAccount[active.id] ?? []) : [];
@@ -113,7 +115,7 @@ export function SchedulePanel({
       const items = ready.map((id) => {
         const a = accounts.find((x) => x.id === id)!;
         const cap = captionFor(a).trim();
-        return { accountId: id, format: formatFor(a), caption: cap && cap !== (post.caption ?? "").trim() ? cap : undefined };
+        return { accountId: id, format: formatFor(a), caption: cap && cap !== (post.caption ?? "").trim() ? cap : undefined, subreddit: a.network === "REDDIT" ? (subreddits[id] ?? "").trim() : undefined };
       });
       const r = await scheduleTargetsAction(post.id, items, when);
       if (r.ok) onDone();
@@ -144,7 +146,7 @@ export function SchedulePanel({
                 );
               })}
             </div>
-            {active && isSocialNetwork(active.network) && <NetworkPreview network={active.network} format={formatFor(active)} accountName={active.name} title={post.title} caption={captionFor(active)} media={previewMedia} showZones={zones} />}
+            {active && isSocialNetwork(active.network) && <NetworkPreview network={active.network} format={formatFor(active)} accountName={active.name} title={post.title} caption={captionFor(active)} media={previewMedia} showZones={zones} subreddit={subreddits[active.id]} />}
             <label className="mx-auto flex items-center gap-2 text-xs text-text-tertiary">
               <input type="checkbox" checked={zones} onChange={(e) => setZones(e.target.checked)} className="accent-[var(--lh-accent)]" /> Mostrar a zona coberta pela rede
             </label>
@@ -211,6 +213,12 @@ export function SchedulePanel({
                         <option key={f.value} value={f.value}>{f.label}</option>
                       ))}
                     </select>
+                  </label>
+                )}
+                {active.network === "REDDIT" && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">Comunidade do Reddit</span>
+                    <input value={subreddits[active.id] ?? ""} onChange={(e) => setSubreddits((c) => ({ ...c, [active.id]: e.target.value }))} placeholder="r/suamarca ou u/usuario" disabled={!canEdit} className={field} />
                   </label>
                 )}
                 <label className="flex flex-col gap-1.5">

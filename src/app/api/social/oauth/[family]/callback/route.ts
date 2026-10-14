@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!app) return fail(state.clientId, "As credenciais do app não estão no cofre de Integrações.");
 
   try {
-    const candidates = await discoverCandidates(family, app, code);
+    const candidates = await discoverCandidates(family, app, code, state.codeVerifier);
     if (candidates.length === 0) return fail(state.clientId, "Não encontrei contas nesta autorização. Marque as páginas e contas ao conectar.");
     const sealed = encryptSecret(JSON.stringify(candidates));
     const session = await db.socialConnectSession.create({
