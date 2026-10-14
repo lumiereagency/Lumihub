@@ -552,6 +552,7 @@ enum ClientStatus {
 
 model Client {
   id             String       @id @default(cuid())
+  contentBatches ContentBatch[]
   organizationId String
   companyName    String
   cnpj           String?
@@ -2458,4 +2459,71 @@ model MediaAISuggestion {
 
   @@index([runId])
   @@map("media_ai_suggestions")
+}
+
+// CONTEÚDO — calendário de posts por cliente, aprovado pelo cliente por link.
+// Um lote = um conjunto de posts (ex.: "Novembro 2026") com um link público.
+model ContentBatch {
+  id              String   @id @default(cuid())
+  organizationId  String
+  clientId        String
+  name            String
+  publicToken     String   @unique
+  createdByUserId String?
+  sentAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  posts  ContentPost[]
+
+  @@index([organizationId, clientId])
+  @@map("content_batches")
+}
+
+model ContentPost {
+  id             String    @id @default(cuid())
+  batchId        String
+  organizationId String
+  title          String
+  caption        String?
+  // INSTAGRAM | FACEBOOK | TIKTOK | LINKEDIN | YOUTUBE | OUTRO
+  network        String
+  // REELS | FEED | STORIES | CARROSSEL | VIDEO | ARTIGO
+  format         String
+  scheduledFor   DateTime?
+  // [{ kind: "video"|"image", url, provider?, storageKey? }]
+  media          Json      @default("[]")
+  // RASCUNHO | AGUARDANDO | APROVADO | AJUSTE | PUBLICADO
+  status         String    @default("RASCUNHO")
+  version        Int       @default(1)
+  feedback       String?
+  feedbackAt     DateTime?
+  approvedAt     DateTime?
+  publishedAt    DateTime?
+  position       Int       @default(0)
+  createdByUserId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  batch  ContentBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  events ContentPostEvent[]
+
+  @@index([batchId, status])
+  @@map("content_posts")
+}
+
+model ContentPostEvent {
+  id        String   @id @default(cuid())
+  postId    String
+  // CRIADO | ENVIADO | APROVADO | AJUSTE | REVISADO | PUBLICADO
+  kind      String
+  note      String?
+  actor     String
+  createdAt DateTime @default(now())
+
+  post ContentPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("content_post_events")
 }

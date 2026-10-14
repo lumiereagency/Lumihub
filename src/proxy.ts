@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   "/orcamento",
   // Link de pagamento enviado na cobrança (token aleatório é a credencial).
   "/pagar",
+  // Aprovação de conteúdo pelo cliente (token aleatório do lote é a credencial).
+  "/aprovacao",
 ];
 
 export function proxy(request: NextRequest) {
@@ -32,6 +34,7 @@ export function proxy(request: NextRequest) {
   const isPublic =
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
     pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/aprovacao/") ||
     // Logo/avatares do Mídia ADESF — a própria rota já não tem gate de
     // permissão de propósito (comentário em route.ts), justamente para
     // aparecer em /midia/login e /midia/publico antes de existir sessão;
