@@ -35,6 +35,7 @@ export function proxy(request: NextRequest) {
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/aprovacao/") ||
+    pathname.startsWith("/api/social/media/") ||
     // Logo/avatares do Mídia ADESF — a própria rota já não tem gate de
     // permissão de propósito (comentário em route.ts), justamente para
     // aparecer em /midia/login e /midia/publico antes de existir sessão;

@@ -11,6 +11,8 @@ export interface OAuthStatePayload {
   organizationId: string;
   userId: string;
   codeVerifier: string;
+  // Conexão de rede social: cliente que receberá as contas.
+  clientId?: string;
   nonce: string;
   exp: number;
 }

@@ -553,6 +553,7 @@ enum ClientStatus {
 model Client {
   id             String       @id @default(cuid())
   contentBatches ContentBatch[]
+  socialAccounts SocialAccount[]
   organizationId String
   companyName    String
   cnpj           String?
@@ -1670,6 +1671,7 @@ enum IntegrationCategory {
   IA
   ARMAZENAMENTO
   AUTOMACAO
+  REDES_SOCIAIS
   OUTROS
 }
 
@@ -1694,6 +1696,9 @@ enum IntegrationProviderKey {
   WEBHOOK_CUSTOM
   CUSTOM_API
   YOUTUBE_DATA_API
+  META_SOCIAL
+  YOUTUBE_PUBLISH
+  TIKTOK_SOCIAL
   AUTENTIQUE
 }
 
@@ -2494,7 +2499,7 @@ model ContentPost {
   scheduledFor   DateTime?
   // [{ kind: "video"|"image", url, provider?, storageKey? }]
   media          Json      @default("[]")
-  // RASCUNHO | AGUARDANDO | APROVADO | AJUSTE | PUBLICADO
+  // RASCUNHO | AGUARDANDO | APROVADO | AJUSTE | AGENDADO | PUBLICADO | FALHOU
   status         String    @default("RASCUNHO")
   version        Int       @default(1)
   feedback       String?
@@ -2507,7 +2512,8 @@ model ContentPost {
   updatedAt      DateTime  @updatedAt
 
   batch  ContentBatch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  events ContentPostEvent[]
+  events  ContentPostEvent[]
+  targets ContentPostTarget[]
 
   @@index([batchId, status])
   @@map("content_posts")
@@ -2526,4 +2532,87 @@ model ContentPostEvent {
 
   @@index([postId])
   @@map("content_post_events")
+}
+
+// Conta de rede social de um cliente, conectada pela API oficial da rede.
+// O token (e o refresh token) ficam criptografados no cofre (AES-256-GCM).
+model SocialAccount {
+  id              String    @id @default(cuid())
+  organizationId  String
+  clientId        String
+  // INSTAGRAM | FACEBOOK | TIKTOK | YOUTUBE
+  network         String
+  // ID na rede: usuário do Instagram, página do Facebook, open_id do TikTok, canal do YouTube
+  externalId      String
+  name            String
+  avatarUrl       String?
+  // ATIVA | EXPIRADA | ERRO
+  status          String    @default("ATIVA")
+  statusMessage   String?
+  tokenEnc        Bytes
+  tokenIv         Bytes
+  tokenTag        Bytes
+  expiresAt       DateTime?
+  // Instagram: { pageId }. TikTok/YouTube: dados extras da conta.
+  meta            Json?
+  connectedByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client  Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  targets ContentPostTarget[]
+
+  @@unique([clientId, network, externalId])
+  @@index([organizationId, clientId])
+  @@map("social_accounts")
+}
+
+// Candidatas a conta encontradas logo após o consentimento na rede (a equipe
+// escolhe quais ligar ao cliente). Expira em 30 minutos e guarda os tokens criptografados.
+model SocialConnectSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  clientId       String
+  network        String
+  userId         String
+  payloadEnc     Bytes
+  payloadIv      Bytes
+  payloadTag     Bytes
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("social_connect_sessions")
+}
+
+// Onde (conta) e quando um post aprovado será publicado automaticamente.
+model ContentPostTarget {
+  id              String    @id @default(cuid())
+  postId          String
+  organizationId  String
+  accountId       String
+  network         String
+  // Legenda só desta rede (se vazia, usa a do post).
+  caption         String?
+  // { format: "REELS"|"FEED"|"STORIES"|"VIDEO", ... }
+  options         Json?
+  scheduledFor    DateTime
+  // AGENDADO | PUBLICANDO | PUBLICADO | FALHOU | CANCELADO
+  status          String    @default("AGENDADO")
+  attempts        Int       @default(0)
+  nextAttemptAt   DateTime?
+  lastError       String?
+  externalId      String?
+  externalUrl     String?
+  publishedAt     DateTime?
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  post    ContentPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, accountId])
+  @@index([status, scheduledFor])
+  @@map("content_post_targets")
 }

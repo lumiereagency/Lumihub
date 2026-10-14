@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { PROVIDER_CATALOG, CATEGORY_LABELS } from "@/lib/integrations/providers";
 import { oauthRedirectUri } from "@/lib/integrations/oauth-providers";
+import { socialRedirectUri } from "@/lib/social/apps";
 import type { IntegrationCategory } from "@/generated/prisma/enums";
 import { ProviderCard, type IntegrationState } from "./provider-card";
 import { OAuthFlash } from "./oauth-flash";
@@ -29,7 +30,7 @@ export function IntegrationsView({
                 provider={provider}
                 state={integrationsByProvider[provider.key] ?? null}
                 canManage={canManage}
-                oauthRedirectUri={provider.oauthOnly ? oauthRedirectUri(provider.key) : undefined}
+                oauthRedirectUri={provider.socialFamily ? socialRedirectUri(provider.socialFamily) : provider.oauthOnly ? oauthRedirectUri(provider.key) : undefined}
               />
             ))}
           </div>

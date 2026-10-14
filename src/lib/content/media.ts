@@ -16,7 +16,7 @@ export const NETWORKS = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE
 export const NETWORK_LABELS: Record<string, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook", TIKTOK: "TikTok", LINKEDIN: "LinkedIn", YOUTUBE: "YouTube", OUTRO: "Outra rede" };
 export const FORMATS = ["REELS", "FEED", "STORIES", "CARROSSEL", "VIDEO", "ARTIGO"] as const;
 export const FORMAT_LABELS: Record<string, string> = { REELS: "Reels", FEED: "Feed", STORIES: "Stories", CARROSSEL: "Carrossel", VIDEO: "Vídeo", ARTIGO: "Artigo" };
-export const STATUS_LABELS: Record<string, string> = { RASCUNHO: "Rascunho", AGUARDANDO: "Aguardando cliente", APROVADO: "Aprovado", AJUSTE: "Ajuste pedido", PUBLICADO: "Publicado" };
+export const STATUS_LABELS: Record<string, string> = { RASCUNHO: "Rascunho", AGUARDANDO: "Aguardando cliente", APROVADO: "Aprovado", AJUSTE: "Ajuste pedido", AGENDADO: "Agendado", PUBLICADO: "Publicado", FALHOU: "Falhou" };
 
 export function parseVideoLink(raw: string): MediaItem | null {
   let url: URL;

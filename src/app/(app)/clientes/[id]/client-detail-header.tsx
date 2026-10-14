@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Mail, Phone, MapPin, AtSign, Globe, FileText } from "lucide-react";
+import { Pencil, Trash2, Mail, Phone, MapPin, AtSign, Globe, FileText, Share2 } from "lucide-react";
 import { updateClientAction, deleteClientAction } from "@/lib/actions/client-actions";
 import { CLIENT_STATUS_LABELS } from "@/lib/validation/clients";
 import { documentLabel, formatDocument } from "@/lib/documents";
@@ -113,6 +113,9 @@ export function ClientDetailHeader({
               <FileText size={15} /> Novo orçamento
             </Link>
           )}
+          <Link href={`/clientes/${client.id}/redes`} className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium text-text-primary hover:bg-card-elevated">
+            <Share2 size={15} /> Redes sociais
+          </Link>
           {permissions.canEdit && (
             <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
               <Pencil size={14} /> Editar

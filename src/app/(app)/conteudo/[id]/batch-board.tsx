@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Copy, Film, ImageIcon, Pencil, Plus, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Copy, Film, ImageIcon, Pencil, Plus, Send, Share2, Trash2, X } from "lucide-react";
 import { deleteBatchAction, deletePostAction, markBatchSentAction, markPublishedAction, previewBatchSendAction, savePostAction, sendBatchWhatsAppAction } from "@/lib/actions/content-actions";
 import { FORMATS, FORMAT_LABELS, NETWORKS, NETWORK_LABELS, STATUS_LABELS } from "@/lib/content/media";
 import { cn } from "@/lib/cn";
@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
+import { scheduleAllAction } from "@/lib/actions/social-actions";
+import { NETWORK_LABEL, TARGET_STATUS_LABEL, type SocialNetwork } from "@/lib/social/networks";
+import { CalendarView } from "./calendar-view";
+import { SchedulePanel, type AccountRow, type TargetRow } from "./schedule-panel";
 
 export interface PostRow {
   id: string;
@@ -22,12 +26,13 @@ export interface PostRow {
   status: string;
   version: number;
   feedback: string | null;
-  media: { kind: "video" | "image"; provider: string | null; url: string; storageKey: string | null; src: string | null }[];
+  media: { kind: "video" | "image"; provider: string | null; url: string; storageKey: string | null; src: string | null; embed: string | null }[];
   events: { id: string; kind: string; note: string | null; actor: string; at: string }[];
 }
 
 interface BatchInfo {
   id: string;
+  clientId: string;
   name: string;
   client: string;
   phone: string | null;
@@ -37,8 +42,8 @@ interface BatchInfo {
 const TZ = "America/Sao_Paulo";
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: TZ }).replace(".", "") : "Sem data");
 const toInput = (iso: string | null) => (iso ? new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, dateStyle: "short", timeStyle: "short" }).format(new Date(iso)).replace(" ", "T") : "");
-const TONE: Record<string, "neutral" | "warning" | "success" | "error" | "accent"> = { RASCUNHO: "neutral", AGUARDANDO: "warning", APROVADO: "success", AJUSTE: "error", PUBLICADO: "accent" };
-const EVENT_LABEL: Record<string, string> = { CRIADO: "Criado", ENVIADO: "Enviado ao cliente", APROVADO: "Aprovado", AJUSTE: "Ajuste pedido", REVISADO: "Nova versão", PUBLICADO: "Publicado" };
+const TONE: Record<string, "neutral" | "warning" | "success" | "error" | "accent" | "info"> = { RASCUNHO: "neutral", AGUARDANDO: "warning", APROVADO: "success", AJUSTE: "error", AGENDADO: "info", PUBLICADO: "accent", FALHOU: "error" };
+const EVENT_LABEL: Record<string, string> = { CRIADO: "Criado", ENVIADO: "Enviado ao cliente", APROVADO: "Aprovado", AJUSTE: "Ajuste pedido", REVISADO: "Nova versão", AGENDADO: "Agendado", AGENDAMENTO_CANCELADO: "Agendamento cancelado", PUBLICADO: "Publicado", FALHA: "Falha ao publicar" };
 const field = "h-11 w-full rounded-xl border border-border bg-card-elevated px-3 text-sm text-text-primary focus:border-accent/60 focus:outline-none";
 
 function PostForm({ batchId, post, onDone }: { batchId: string; post: PostRow | null; onDone: () => void }) {
@@ -126,7 +131,7 @@ function PostForm({ batchId, post, onDone }: { batchId: string; post: PostRow | 
           </div>
         )}
       </div>
-      {post && ["AJUSTE", "APROVADO"].includes(post.status) && <p className="text-xs text-text-tertiary">Ao salvar, o post volta para o cliente aprovar de novo (versão {post.version + 1}).</p>}
+      {post && ["AJUSTE", "APROVADO", "AGENDADO", "FALHOU"].includes(post.status) && <p className="text-xs text-text-tertiary">Ao salvar, o post volta para o cliente aprovar de novo (versão {post.version + 1}).</p>}
       {error && <p className="text-sm text-error">{error}</p>}
       <Button type="submit" variant="accent" disabled={pending} className="w-full">
         {pending ? "Salvando…" : post ? "Salvar post" : "Adicionar post"}
@@ -214,11 +219,14 @@ function SendPanel({ batch, whatsapp, onDone }: { batch: BatchInfo; whatsapp: bo
   );
 }
 
-export function BatchBoard({ batch, posts, whatsapp, perms }: { batch: BatchInfo; posts: PostRow[]; whatsapp: boolean; perms: { create: boolean; edit: boolean; del: boolean } }) {
+export function BatchBoard({ batch, posts, whatsapp, perms, accounts, targetsByPost, tiktokPublic }: { batch: BatchInfo; posts: PostRow[]; whatsapp: boolean; perms: { create: boolean; edit: boolean; del: boolean }; accounts: AccountRow[]; targetsByPost: Record<string, TargetRow[]>; tiktokPublic: boolean | undefined }) {
   const router = useRouter();
   const [editing, setEditing] = useState<PostRow | "new" | null>(null);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [view, setView] = useState<"lista" | "calendario">("lista");
+  const [scheduling, setScheduling] = useState<PostRow | null>(null);
+  const [bulk, setBulk] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const count = (s: string) => posts.filter((p) => p.status === s).length;
   const refresh = () => router.refresh();
@@ -254,13 +262,37 @@ export function BatchBoard({ batch, posts, whatsapp, perms }: { batch: BatchInfo
         <Badge tone="warning">{count("AGUARDANDO")} aguardando cliente</Badge>
         <Badge tone="error">{count("AJUSTE")} com ajuste</Badge>
         <Badge tone="success">{count("APROVADO")} aprovados</Badge>
+        <Badge tone="info">{count("AGENDADO")} agendados</Badge>
         <Badge tone="accent">{count("PUBLICADO")} publicados</Badge>
+        {count("FALHOU") > 0 && <Badge tone="error">{count("FALHOU")} falharam</Badge>}
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 rounded-full border border-border bg-card-elevated p-1">
+          {([["lista", "Lista"], ["calendario", "Calendário"]] as const).map(([v, label]) => (
+            <button key={v} type="button" onClick={() => setView(v)} className={cn("rounded-full px-4 py-1.5 text-xs font-medium", view === v ? "bg-accent text-ink-on" : "text-text-secondary")}>{label}</button>
+          ))}
+        </div>
+        <Link href={`/clientes/${batch.clientId}/redes`} className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-primary">
+          <Share2 size={13} /> Redes do cliente ({accounts.length} {accounts.length === 1 ? "conta" : "contas"})
+        </Link>
+      </div>
+
+      {perms.edit && count("APROVADO") > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-card px-4 py-3 text-sm">
+          <CheckCircle2 size={16} className="text-success" />
+          <span className="text-text-secondary"><b className="font-medium text-accent-light">{count("APROVADO")} {count("APROVADO") === 1 ? "post aprovado" : "posts aprovados"}</b> prontos para agendar na data prevista de cada um</span>
+          <Button size="sm" variant="accent" className="ml-auto" disabled={pending} onClick={() => start(async () => { setBulk(null); const r = await scheduleAllAction(batch.id); setBulk(r.ok ? `${r.scheduled ?? 0} agendado${r.scheduled === 1 ? "" : "s"}.${r.skipped?.length ? ` Ficaram de fora: ${r.skipped.join("; ")}` : ""}` : (r.error ?? "Não foi possível agendar.")); refresh(); })}>{pending ? "Agendando…" : "Agendar todos"}</Button>
+        </div>
+      )}
+      {bulk && <p className="text-sm text-text-secondary">{bulk}</p>}
 
       {perms.edit && posts.length > 0 && <SendPanel batch={batch} whatsapp={whatsapp} onDone={refresh} />}
       {msg && <p className="text-sm text-error">{msg}</p>}
 
-      {posts.length === 0 ? (
+      {posts.length > 0 && view === "calendario" ? (
+        <CalendarView posts={posts} onOpen={(p) => setScheduling(p)} />
+      ) : posts.length === 0 ? (
         <EmptyState icon={<CalendarClock size={26} />} title="Nenhum post neste lote" description="Adicione os posts do mês com vídeo ou imagem, legenda e data. Depois é só enviar o link para o cliente aprovar." />
       ) : (
         <div className="flex flex-col gap-3">
@@ -302,6 +334,14 @@ export function BatchBoard({ batch, posts, whatsapp, perms }: { batch: BatchInfo
                 </div>
               </div>
 
+              {(targetsByPost[p.id] ?? []).filter((t) => t.status !== "CANCELADO").length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(targetsByPost[p.id] ?? []).filter((t) => t.status !== "CANCELADO").map((t) => (
+                    <span key={t.id} className={cn("rounded-full border px-2.5 py-1 text-[11px]", t.status === "FALHOU" ? "border-error/40 text-error" : t.status === "PUBLICADO" ? "border-success/40 text-success" : "border-border text-text-secondary")}>{NETWORK_LABEL[t.network as SocialNetwork] ?? t.network} · {TARGET_STATUS_LABEL[t.status] ?? t.status} · {when(t.scheduledFor)}</span>
+                  ))}
+                </div>
+              )}
+
               {p.status === "AJUSTE" && p.feedback && (
                 <div className="rounded-2xl border border-error/30 bg-error/10 px-4 py-3 text-sm">
                   <p className="text-xs font-medium text-error">O cliente pediu ajuste</p>
@@ -311,6 +351,11 @@ export function BatchBoard({ batch, posts, whatsapp, perms }: { batch: BatchInfo
               )}
 
               <div className="flex flex-wrap items-center gap-2">
+                {["APROVADO", "AGENDADO", "FALHOU", "PUBLICADO"].includes(p.status) && (
+                  <Button size="sm" variant="accent" onClick={() => setScheduling(p)}>
+                    <CalendarClock size={14} /> {p.status === "APROVADO" ? "Agendar publicação" : "Ver agendamento"}
+                  </Button>
+                )}
                 {perms.edit && p.status === "APROVADO" && (
                   <Button size="sm" variant="secondary" disabled={pending} onClick={() => act(() => markPublishedAction(p.id, true))}>
                     <CheckCircle2 size={14} /> Marcar como publicado
@@ -351,6 +396,23 @@ export function BatchBoard({ batch, posts, whatsapp, perms }: { batch: BatchInfo
         >
           Excluir este lote
         </button>
+      )}
+
+      {scheduling && (
+        <SchedulePanel
+          key={scheduling.id}
+          post={posts.find((p) => p.id === scheduling.id) ?? scheduling}
+          clientId={batch.clientId}
+          accounts={accounts}
+          targets={targetsByPost[scheduling.id] ?? []}
+          tiktokPublic={tiktokPublic}
+          canEdit={perms.edit}
+          onClose={() => setScheduling(null)}
+          onDone={() => {
+            setScheduling(null);
+            refresh();
+          }}
+        />
       )}
 
       <Drawer open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Novo post" : "Editar post"}>

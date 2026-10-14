@@ -110,7 +110,9 @@ export async function savePostAction(batchId: string, postId: string | null, for
     if (batch.sentAt) await db.contentPost.update({ where: { id: post.id }, data: { status: "AGUARDANDO" } });
   } else {
     // Editou um post que o cliente já viu (ajuste pedido ou aprovado): volta para aprovação.
-    const reopen = batch.sentAt && ["AJUSTE", "APROVADO"].includes(existing.status);
+    const reopen = batch.sentAt && ["AJUSTE", "APROVADO", "AGENDADO", "FALHOU"].includes(existing.status);
+    // O conteúdo mudou: o que estava agendado deixa de valer até o cliente aprovar de novo.
+    if (reopen) await db.contentPostTarget.updateMany({ where: { postId: existing.id, status: { in: ["AGENDADO", "FALHOU"] } }, data: { status: "CANCELADO" } });
     await db.contentPost.update({
       where: { id: existing.id },
       data: { ...data, ...(reopen ? { status: "AGUARDANDO", version: { increment: 1 }, approvedAt: null } : {}), ...(reopen ? { events: { create: { kind: "REVISADO", actor: user.name, note: `Versão ${existing.version + 1} enviada para aprovação` } } } : {}) },

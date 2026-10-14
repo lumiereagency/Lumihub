@@ -32,7 +32,8 @@ export default async function ApprovalPage({ params }: PageProps<"/aprovacao/[to
     format: FORMAT_LABELS[p.format] ?? p.format,
     vertical: p.format === "REELS" || p.format === "STORIES",
     scheduledFor: p.scheduledFor?.toISOString() ?? null,
-    status: p.status,
+    // O cliente só vê o lado dele: agendado ou com falha de publicação continua “aprovado”.
+    status: p.status === "AGENDADO" || p.status === "FALHOU" ? "APROVADO" : p.status,
     feedback: p.feedback,
     media: ((p.media as unknown as MediaItem[]) ?? []).map((m, i) => ({ kind: m.kind, provider: m.provider ?? null, embed: m.embed ?? null, url: m.url, src: m.storageKey ? `/api/aprovacao/${token}/${p.id}/${i}` : null })),
   }));

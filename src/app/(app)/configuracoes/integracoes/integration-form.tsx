@@ -39,11 +39,11 @@ export function IntegrationForm({
     <form action={formAction} className="flex flex-col gap-4">
       <FormMessage error={state.error} success={state.success} />
 
-      {provider.oauthOnly && oauthRedirectUri && (
+      {oauthRedirectUri && (
         <div className="rounded-xl border border-border bg-card p-3 text-xs text-text-secondary">
           <p className="mb-1.5">
-            Antes de salvar, cadastre este Redirect URI exato no console do provedor (Google Cloud Console ou Azure
-            Portal):
+            Antes de salvar, cadastre este endereço de retorno (Redirect URI) exatamente assim no painel do provedor
+            (Google Cloud, Azure, Meta ou TikTok for Developers):
           </p>
           <code className="block select-all break-all rounded-[6px] bg-background px-2 py-1.5 text-accent-light">
             {oauthRedirectUri}

@@ -120,6 +120,30 @@ const VERIFIERS: Partial<Record<IntegrationProviderKey, Verifier>> = {
     }
   },
   AUTENTIQUE: (creds) => verifyAutentiqueKey(creds.apiKey),
+  META_SOCIAL: async (creds) => {
+    try {
+      const res = await fetchWithTimeout(`https://graph.facebook.com/oauth/access_token?${new URLSearchParams({ client_id: creds.clientId, client_secret: creds.clientSecret, grant_type: "client_credentials" })}`);
+      if (res.ok) return { ok: true, message: "A Meta validou o ID e a chave do app. Agora conecte as contas em cada cliente → Redes." };
+      const body = await res.json().catch(() => null);
+      return { ok: false, message: `A Meta recusou o app (HTTP ${res.status})${body?.error?.message ? `: ${body.error.message}` : "."}` };
+    } catch (err) {
+      return { ok: false, message: `Falha ao contatar a Meta: ${(err as Error).message}` };
+    }
+  },
+  TIKTOK_SOCIAL: async (creds) => {
+    try {
+      const res = await fetchWithTimeout("https://open.tiktokapis.com/v2/oauth/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_key: creds.clientId, client_secret: creds.clientSecret, grant_type: "client_credentials" }).toString(),
+      });
+      const body = (await res.json().catch(() => ({}))) as { access_token?: string; error_description?: string };
+      if (res.ok && body.access_token) return { ok: true, message: "O TikTok validou a chave do app. Agora conecte as contas em cada cliente → Redes." };
+      return { ok: false, message: `O TikTok recusou o app${body.error_description ? `: ${body.error_description}` : ` (HTTP ${res.status})`}.` };
+    } catch (err) {
+      return { ok: false, message: `Falha ao contatar o TikTok: ${(err as Error).message}` };
+    }
+  },
   N8N: (creds) => pingReachability(creds.webhookUrl),
   MAKE: (creds) => pingReachability(creds.webhookUrl),
   ZAPIER: (creds) => pingReachability(creds.webhookUrl),

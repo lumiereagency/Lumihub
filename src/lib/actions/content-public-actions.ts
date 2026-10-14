@@ -26,7 +26,7 @@ async function tell(post: NonNullable<Awaited<ReturnType<typeof load>>>, title: 
 export async function approvePostAction(token: string, postId: string): Promise<{ ok: boolean; error?: string }> {
   const post = await load(token, postId);
   if (!post) return { ok: false, error: "Link inválido." };
-  if (post.status === "APROVADO" || post.status === "PUBLICADO") return { ok: true };
+  if (["APROVADO", "AGENDADO", "FALHOU", "PUBLICADO"].includes(post.status)) return { ok: true };
   if (post.status !== "AGUARDANDO") return { ok: false, error: "Este post ainda não está liberado para aprovação." };
   await db.contentPost.update({
     where: { id: post.id },
@@ -40,7 +40,7 @@ export async function approvePostAction(token: string, postId: string): Promise<
 export async function requestAdjustmentAction(token: string, postId: string, topics: string[], comment: string): Promise<{ ok: boolean; error?: string }> {
   const post = await load(token, postId);
   if (!post) return { ok: false, error: "Link inválido." };
-  if (post.status !== "AGUARDANDO" && post.status !== "APROVADO") return { ok: false, error: "Este post não pode mais receber ajuste por aqui." };
+  if (!["AGUARDANDO", "APROVADO", "AGENDADO", "FALHOU"].includes(post.status)) return { ok: false, error: "Este post não pode mais receber ajuste por aqui." };
   const text = String(comment ?? "").trim().slice(0, 1000);
   if (text.length < 3) return { ok: false, error: "Escreva o que gostaria de mudar." };
   const allowed = ["Legenda", "Vídeo ou imagem", "Data e hora", "Outro"];
@@ -50,6 +50,8 @@ export async function requestAdjustmentAction(token: string, postId: string, top
     where: { id: post.id },
     data: { status: "AJUSTE", feedback: note, feedbackAt: new Date(), approvedAt: null, events: { create: { kind: "AJUSTE", actor: "Cliente", note } } },
   });
+  // Pediu mudança depois de aprovar: o que estava agendado deixa de valer.
+  await db.contentPostTarget.updateMany({ where: { postId: post.id, status: { in: ["AGENDADO", "FALHOU"] } }, data: { status: "CANCELADO" } });
   await tell(post, "Cliente pediu ajuste ✏️", `${post.batch.client.companyName} sobre "${post.title}": ${note.slice(0, 140)}`);
   revalidatePath(`/conteudo/${post.batchId}`);
   return { ok: true };

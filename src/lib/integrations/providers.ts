@@ -1,4 +1,5 @@
 import type { IntegrationCategory, IntegrationProviderKey } from "@/generated/prisma/enums";
+import type { ConnectFamily } from "@/lib/social/networks";
 
 export interface ProviderField {
   key: string;
@@ -22,6 +23,8 @@ export interface ProviderDefinition {
   // Conexão via QR code (Baileys/WhatsApp Web) — não tem campos de
   // formulário, a UI mostra o pareamento em vez do IntegrationForm genérico.
   qrOnly?: boolean;
+  // App de rede social: as contas dos clientes são conectadas na página "Redes" de cada cliente.
+  socialFamily?: ConnectFamily;
 }
 
 export const PROVIDER_CATALOG: ProviderDefinition[] = [
@@ -203,6 +206,40 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
     fields: [{ key: "apiKey", label: "API Key", type: "password", secret: true, required: true }],
   },
   {
+    key: "META_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "Instagram e Facebook (Meta)",
+    description: "App da agência na Meta para publicar nas páginas e contas profissionais dos clientes. Depois de salvar, conecte as contas em cada cliente → Redes.",
+    socialFamily: "meta",
+    fields: [
+      { key: "clientId", label: "ID do app (App ID)", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Chave secreta do app (App Secret)", type: "password", secret: true, required: true },
+    ],
+  },
+  {
+    key: "YOUTUBE_PUBLISH",
+    category: "REDES_SOCIAIS",
+    label: "YouTube (publicação)",
+    description: "Projeto do Google Cloud para publicar vídeos nos canais dos clientes. Depois de salvar, conecte os canais em cada cliente → Redes.",
+    socialFamily: "youtube",
+    fields: [
+      { key: "clientId", label: "ID do cliente OAuth (Client ID)", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Chave secreta do cliente (Client Secret)", type: "password", secret: true, required: true },
+    ],
+  },
+  {
+    key: "TIKTOK_SOCIAL",
+    category: "REDES_SOCIAIS",
+    label: "TikTok",
+    description: "App da agência no TikTok for Developers para publicar vídeos nas contas dos clientes. Depois de salvar, conecte as contas em cada cliente → Redes.",
+    socialFamily: "tiktok",
+    fields: [
+      { key: "clientId", label: "Client key", type: "text", secret: false, required: true },
+      { key: "clientSecret", label: "Client secret", type: "password", secret: true, required: true },
+      { key: "audited", label: "Auditoria do TikTok aprovada (libera publicar como público)", type: "checkbox", secret: false, required: false },
+    ],
+  },
+  {
     key: "AUTENTIQUE",
     category: "OUTROS",
     label: "Autentique",
@@ -222,6 +259,7 @@ export const CATEGORY_LABELS: Record<IntegrationCategory, string> = {
   IA: "Inteligência Artificial",
   ARMAZENAMENTO: "Armazenamento",
   AUTOMACAO: "Automação",
+  REDES_SOCIAIS: "Redes sociais",
   OUTROS: "Outros",
 };
 

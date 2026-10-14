@@ -3,6 +3,7 @@
 # Uso no crontab:
 #   */15 * * * * sh /home/lumibase/app/scripts/cron.sh notifications
 #   */15 * * * * sh /home/lumibase/app/scripts/cron.sh process-reminders
+#   */5 * * * * sh /home/lumibase/app/scripts/cron.sh publish-social
 set -eu
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ROUTE="${1:?informe a rota, ex: notifications}"
