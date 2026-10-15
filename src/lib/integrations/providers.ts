@@ -214,6 +214,7 @@ export const PROVIDER_CATALOG: ProviderDefinition[] = [
     fields: [
       { key: "clientId", label: "ID do app (App ID)", type: "text", secret: false, required: true },
       { key: "clientSecret", label: "Chave secreta do app (App Secret)", type: "password", secret: true, required: true },
+      { key: "configId", label: "ID de configuração (só se o painel da Meta usar \"Login do Facebook para Empresas\")", type: "text", secret: false, required: false },
     ],
   },
   {

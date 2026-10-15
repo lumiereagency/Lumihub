@@ -23,6 +23,8 @@ export interface SocialApp {
   audited: boolean;
   // LinkedIn: Community Management API aprovada (páginas de empresa).
   organizations: boolean;
+  // Meta: ID de configuração do Login do Facebook para Empresas (opcional).
+  configId: string;
   // Reddit: usuário dono do app (vai no User-Agent exigido pelo Reddit).
   redditUser: string;
 }
@@ -42,6 +44,7 @@ export async function getSocialApp(organizationId: string, family: ConnectFamily
     audited: config.audited === "on",
     organizations: config.organizations === "on",
     redditUser: config.redditUser ?? "",
+    configId: config.configId ?? "",
   };
 }
 

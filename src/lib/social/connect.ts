@@ -36,7 +36,9 @@ export function buildAuthUrl(family: ConnectFamily, app: SocialApp, state: strin
     u.searchParams.set("client_id", app.clientId);
     u.searchParams.set("redirect_uri", redirect);
     u.searchParams.set("state", state);
-    u.searchParams.set("scope", META_SCOPES.join(","));
+    // Login do Facebook para Empresas usa o ID de configuração no lugar das permissões soltas.
+    if (app.configId) u.searchParams.set("config_id", app.configId);
+    else u.searchParams.set("scope", META_SCOPES.join(","));
     u.searchParams.set("response_type", "code");
     return u.toString();
   }
